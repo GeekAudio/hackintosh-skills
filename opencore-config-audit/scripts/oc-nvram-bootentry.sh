@@ -135,7 +135,7 @@ def dp_text(dp):
             out.append("HD(%d,GPT,%s,0x%x,0x%x)" % (
                 int.from_bytes(body[0:4], "little"),
                 "%s-%s-%s-%s-%s" % (body[20:24][::-1].hex(), body[24:26][::-1].hex(),
-                                    body[26:28][::-1].hex(), body[28:32].hex(), body[32:36].hex()),
+                                    body[26:28][::-1].hex(), body[28:30].hex(), body[30:36].hex()),
                 int.from_bytes(body[4:12], "little"), int.from_bytes(body[12:20], "little")))
         elif (t, st) == (0x04, 0x04): out.append(body.decode("utf-16-le", "replace"))
         elif (t, st) == (0x7f, 0xff): pass
