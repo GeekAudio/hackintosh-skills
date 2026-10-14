@@ -26,7 +26,7 @@
 
 | Skill | 一句话 | 规模 |
 |---|---|---|
-| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置 —— 覆盖从装机到日常化、再到系统大版本升级的全生命周期，并含**启动选择器（OpenCanopy）主题**与**换机型 / 三码** | 19 条铁律 · 24 份参考 · 14 个脚本 |
+| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置 —— 覆盖从装机到日常化、再到系统大版本升级的全生命周期，并含**启动选择器（OpenCanopy）主题**与**换机型 / 三码** | 19 条铁律 · 25 份参考 · 14 个脚本 |
 
 技能目录里有一份 `USAGE.md`（**随安装一起复制**），在对话里问「使用说明」即可拿到。
 
@@ -77,7 +77,7 @@ hackintosh-skills/
 │   │   └── plugin.json          # ← 插件元数据
 │   ├── SKILL.md                 # 主流程 + 19 条铁律 + 资源表
 │   ├── USAGE.md                 # ← 使用说明（随安装一起复制）
-│   ├── references/              # 24 份专题文档（见下表）
+│   ├── references/              # 25 份专题文档（见下表）
 │   └── scripts/                 # 14 个脚本（见下表）
 ```
 
@@ -206,6 +206,7 @@ hackintosh-skills/
 | `broadcom-wifi.md` | 博通网卡：**按 Sequoia / Tahoe 分路线**、OCLP root patch、验证判据 |
 | `network-en0-order.md` | **`en0` 归属与网络接口顺序**：谁依赖 `en0`、**修补 Wi-Fi 后必须确认无线是 `en0`**、怎么钉住、连带影响 |
 | `ethernet-drivers.md` | **有线网卡第三方驱动**：Intel I225/I226 · I210/I211/I350 · Realtek RTL8125/8126 的方案对照与判据 |
+| `ecosystem-sources.md` | ★★ **黑苹果生态权威来源索引**：Acidanthera / Dortania 官方 · **corpnewt 工具链**（ProperTree / GenSMBIOS / SSDTTime / USBMap）· `USBToolBox` · `blacktop/ipsw-diffs` · 驱动作者 · 中文资源 · ★ **「做什么事信谁」对照表** |
 | `laobamac-toolkit.md` | **laobamac 工具与补丁索引（48 仓库全表）**：驱动 · 装机 · ★ **硬件避坑（`SimpleBuyersGuide`）** · 维护工具（`SimpleLoader`）· macOS 26 启动台 · 参考补丁（`OC-little-zh`）· AMD · fork 说明 · ★ **哪些已存档** |
 | `applealc-custom.md` | 板载声卡：★★★ **macOS 26 的 `AppleHDA` 恢复（`SimpleHDA`，无需补丁）**、先搜前人经验、按 codec 定制、本地构建、提 PR |
 | `hidpi.md` | 非 Retina 屏开 HiDPI：写入位置、两个模式、恢复路径、与 NVIDIA 驱动的风险 |

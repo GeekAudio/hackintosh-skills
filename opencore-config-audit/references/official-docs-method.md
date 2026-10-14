@@ -1,5 +1,9 @@
 # 官方文档取用与逐键判定法
 
+> ★★ **「该信谁」的总索引** ⇒ **`ecosystem-sources.md`**（Acidanthera / Dortania 权威来源 ·
+> corpnewt 工具链 · 驱动作者 · 中文资源 · 论坛）。
+> **权威性排序：官方文档 > 驱动作者 README > 论坛帖子。**
+
 ## 1. 先确定「用哪一版文档」
 
 ```bash
