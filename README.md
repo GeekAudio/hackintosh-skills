@@ -21,7 +21,7 @@
 
 | Skill | 一句话 | 规模 |
 |---|---|---|
-| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置，并覆盖从装机到日常化的全生命周期 | 14 条铁律 · 17 份参考 · 10 个脚本 |
+| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置，并覆盖从装机到日常化的全生命周期 | 14 条铁律 · 18 份参考 · 10 个脚本 |
 | **`opencore-picker-theme`** | 配置、制作与排错图形启动选择器（OpenCanopy）主题 | 4 份参考 · 2 个脚本 |
 
 ---
@@ -53,7 +53,7 @@ hackintosh-skills/
 ├── README.md
 ├── opencore-config-audit/
 │   ├── SKILL.md                 # 主流程 + 14 条铁律 + 资源表
-│   ├── references/              # 17 份专题文档（见下表）
+│   ├── references/              # 18 份专题文档（见下表）
 │   └── scripts/                 # 10 个脚本（见下表）
 └── opencore-picker-theme/
     ├── SKILL.md
@@ -104,6 +104,7 @@ hackintosh-skills/
 |---|---|
 | **NVIDIA 独显**（NullMoth） | 适用卡范围、两条安装路线、★「装 `/Library/Extensions` 从 AuxKC 加载 ⇒ 不要再从 `EFI/OC/Kexts` 注入」、必需 OC 设置、恢复路径、上报纪律 |
 | **Intel 无线**（AirportItlwm / itlwm） | 两种形态、★「Sequoia 与 Tahoe 是两套 ABI 与产物 ⇒ 双系统共用配置必须用 `MinKernel`/`MaxKernel` 分开」、蓝牙配套、macOS 26 的能力与限制 |
+| **MediaTek 无线**（MT7921 / MT7922 / RZ608） | ★★ **分两条线**：**蓝牙（USB）可用**（`SimpleMtkBtFw` 有 release）；**Wi-Fi（PCIe）是实验性**（`SimpleMtkWlan` 无 release、能扫描但关联/连接仍在修）⇒ **要稳定就换卡**；含蓝牙两个致命坑（别改 USB 产品名 + NVRAM 两条 data） |
 | **博通网卡**（BCM943602CDP / BCM43602） | ★ **按系统分路线**：Sequoia 用 `IO80211FamilyLegacy`，Tahoe 用独立 `AirPortBrcmNIC-Tahoe.kext`；OCLP root patch 前置保护；★ 判死活看 `ifconfig en1` |
 | **板载声卡**（AppleALC） | 先搜同型号前人 layout-id（推荐路线）→ 搜不到再按 codec 定制 → 本地构建 → 提 PR；自定义 layout 只能用 11–99 |
 | **HiDPI**（one-key-hidpi） | 非 Retina 屏清晰度；★ 本机 NVIDIA 驱动未完善，含风险与恢复路径；★ 别和引导期 `UIScale` 混 |
@@ -145,6 +146,7 @@ hackintosh-skills/
 | `rapidefi-first-efi.md` | 从零：Windows 上用 RapidEFI 生成基础 EFI 及收尾 |
 | `nvidia-driver.md` | NullMoth NVIDIA 驱动：适用范围、安装、必需 OC 设置、恢复、故障对照 |
 | `intel-wifi.md` | Intel 无线网卡：版本线、注入、蓝牙配套、排错 |
+| `mediatek-wifi.md` | MediaTek 无线网卡：**蓝牙可用 / Wi-Fi 实验性**两条线、芯片认型、NVRAM 两坑、自编译流程、决策树 |
 | `broadcom-wifi.md` | 博通网卡：**按 Sequoia / Tahoe 分路线**、OCLP root patch、验证判据 |
 | `applealc-custom.md` | 板载声卡：先搜前人经验、按 codec 定制、本地构建、提 PR |
 | `hidpi.md` | 非 Retina 屏开 HiDPI：写入位置、两个模式、恢复路径、与 NVIDIA 驱动的风险 |

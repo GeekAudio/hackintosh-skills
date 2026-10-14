@@ -93,6 +93,9 @@ Intel 无线网卡上的**蓝牙**不由 itlwm 负责，需要：
 - 换卡后 `en0` 归属可能变化：内核按**驱动挂载先后**给 `en` 编号，与 PCI 顺序无关；要强制无线为 `en0`，可临时禁用有线驱动（如 `AppleIGC.kext` 的 `Enabled=false`）+ 删 `NetworkInterfaces.plist` 后重启
 - 重启后无线可能先锁在 2.4 GHz，用 `networksetup -setairportpower en0 off` / `on` 复位
 
+> **同一台机器不要同时注入多套网卡驱动**。除 Intel / Broadcom 之外，MediaTek（MT7921 / MT7922 / RZ608）见
+> `mediatek-wifi.md` —— 那里的结论是「**蓝牙可用、Wi-Fi 仍实验性**，要稳定就换卡」。
+
 ## 6. 安全提示
 
 - 第三方 kext（非 Apple 签名）⇒ 需要 `SecureBootModel=Disabled`，SIP 视情况放宽。**只在你确实要用这张网卡时这么做**
