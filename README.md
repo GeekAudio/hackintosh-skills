@@ -21,7 +21,7 @@
 
 | Skill | 一句话 | 规模 |
 |---|---|---|
-| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置，并覆盖从装机到日常化的全生命周期 | 14 条铁律 · 18 份参考 · 10 个脚本 |
+| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置，并覆盖从装机到日常化、再到系统大版本升级的全生命周期 | 15 条铁律 · 19 份参考 · 10 个脚本 |
 | **`opencore-picker-theme`** | 配置、制作与排错图形启动选择器（OpenCanopy）主题 | 4 份参考 · 2 个脚本 |
 
 ---
@@ -52,8 +52,8 @@ python3 <skill-creator>/scripts/quick_validate.py ~/.workbuddy-ai/skills/opencor
 hackintosh-skills/
 ├── README.md
 ├── opencore-config-audit/
-│   ├── SKILL.md                 # 主流程 + 14 条铁律 + 资源表
-│   ├── references/              # 18 份专题文档（见下表）
+│   ├── SKILL.md                 # 主流程 + 15 条铁律 + 资源表
+│   ├── references/              # 19 份专题文档（见下表）
 │   └── scripts/                 # 10 个脚本（见下表）
 └── opencore-picker-theme/
     ├── SKILL.md
@@ -98,7 +98,16 @@ hackintosh-skills/
   用「停顿窗口」定位卡顿（`launchd.log` 找最大空档 → **流式过滤** `log show`，绕过其时间过滤失效），
   并给出耗时来源处置表（含驱动侧 `nvrmsettle` / `-wegnoigpu` 两类已知固定延迟）
 
-**④ 驱动与硬件特性**
+**④ 系统大版本升级（如 macOS 15 → 26）**
+
+- ★★ **核心 = 给按版本分构建的 kext 加 `MinKernel` / `MaxKernel`**：旧版条目上限钉 `24.99.99`，
+  新版条目写 `MinKernel 25.0.0`（博通 `AirPortBrcmNIC-Tahoe.kext`、Intel `AirportItlwm-Tahoe` 都是这么分的）
+- **升级会必然打断**：Wi-Fi 消失、OCLP root patch 全丢、第三方 kext 可能被搬走 —— 这是设计使然，不是配置坏了
+- **时序**：升级前关 FileVault + 保护第三方 kext → 升级后补 kext 条目 → 重打 OCLP root patch → 验证
+- **机型**：Tahoe 的 Intel 白名单只剩 `iMac20,1` `iMac20,2` `MacPro7,1` `MacBookPro16,x`，`iMacPro1,1` 被剔除
+- **macOS 26 新增环境坑**：EFI 挂载必须提权、FAT 改 FSKit、EFI 上删文件会留 `.Trashes`
+
+**⑤ 驱动与硬件特性**
 
 | 主题 | 要点 |
 |---|---|
@@ -138,6 +147,7 @@ hackintosh-skills/
 | 文档 | 内容 |
 |---|---|
 | `lifecycle.md` | **六阶段全流程**：Win 生成 → 安装 → 换 DEBUG → 收日志 → 修补 → 日常化 |
+| `os-upgrade-15-to-26.md` | **系统大版本升级**（15 Sequoia → 26 Tahoe）：**`MinKernel`/`MaxKernel` 版本分流**、逐部件清单、升级时序、机型白名单、macOS 26 新坑、OCLP vs BCMC |
 | `official-docs-method.md` | 官方文档取用方法、逐键判定法、**成对关系表** |
 | `logs-and-debug.md` | `Target` / `DisplayLevel` 位定义、日志判据、刷屏归因 |
 | `boot-timeline.md` | **启动耗时 / 时间线分析**：三段拆解、流式过滤、停顿窗口定位 |

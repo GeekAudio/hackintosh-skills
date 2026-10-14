@@ -12,6 +12,9 @@
 | Wi-Fi | **BCM43602** | **PCIe**，`14e4:43ba` | FullMAC，3×3 802.11ac；subsystem `0x14E4,0x16D`（= Apple） |
 | 蓝牙 | **BCM20703** | **USB**（主板 9-pin 内部排针） | Apple 原厂芯片，macOS 原生支持 |
 
+> ★ **从 15 升到 26 时这张卡的驱动要换**（`AirPortBrcmNIC-Tahoe.kext`，`MinKernel 25.0.0`）
+> ⇒ 完整升级流程见 `os-upgrade-15-to-26.md`。
+
 - ★ **蓝牙不走 PCIe**：卡上那条 9-pin 内部 USB 线不接就只有 Wi-Fi、没有蓝牙
 - ★ **BCM20703 固件在卡上** ⇒ 一般**不需要** `BrcmPatchRAM3` / `BrcmFirmwareData`（那是给非原厂博通卡的）
 - ★ 拔掉/屏蔽**原来的 Intel 网卡**（本机是 AX201，蓝牙 `8087:0026`）：两个蓝牙控制器会让 macOS 犯迷糊

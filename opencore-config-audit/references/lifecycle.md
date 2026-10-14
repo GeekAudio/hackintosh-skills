@@ -166,3 +166,13 @@ nvram 4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102:opencore-version    # 期望 1.0.8-20
 - [ ] ESP 上排障期攒下的 `opencore-*.txt` 按需清理（可留最近几份备查）
 - [ ] 再跑一次 `scripts/oc-verify.sh` 确认仍是 `No issues found`
 - [ ] 报告里记录：本次生命周期各阶段做了什么、最终 sha、以及「明确不动」清单
+
+---
+
+## ⑦ 之后：系统大版本升级（不是装机的第七阶段，是另一件事）
+
+装好、稳定运行之后，如果要从 **macOS 15 (Sequoia)** 升到 **26 (Tahoe)**，
+那是**另一套流程**（升级会必然打断 Wi-Fi 与 OCLP root patch）⇒ 见 **`os-upgrade-15-to-26.md`**。
+
+一句话：**核心动作是给按版本分构建的 kext 加 `MinKernel`/`MaxKernel`**（旧版上限 `24.99.99`、新版 `MinKernel 25.0.0`），
+升级前关 FileVault + 保护第三方 kext，升级后补条目 + 重打 root patch。
