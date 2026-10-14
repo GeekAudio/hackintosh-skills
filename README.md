@@ -21,7 +21,7 @@
 
 | Skill | 一句话 | 规模 |
 |---|---|---|
-| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置，并覆盖从装机到日常化、再到系统大版本升级的全生命周期 | 15 条铁律 · 19 份参考 · 10 个脚本 |
+| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置，并覆盖从装机到日常化、再到系统大版本升级的全生命周期 | 16 条铁律 · 19 份参考 · 10 个脚本 |
 | **`opencore-picker-theme`** | 配置、制作与排错图形启动选择器（OpenCanopy）主题 | 4 份参考 · 2 个脚本 |
 
 ---
@@ -52,7 +52,7 @@ python3 <skill-creator>/scripts/quick_validate.py ~/.workbuddy-ai/skills/opencor
 hackintosh-skills/
 ├── README.md
 ├── opencore-config-audit/
-│   ├── SKILL.md                 # 主流程 + 15 条铁律 + 资源表
+│   ├── SKILL.md                 # 主流程 + 16 条铁律 + 资源表
 │   ├── references/              # 19 份专题文档（见下表）
 │   └── scripts/                 # 10 个脚本（见下表）
 └── opencore-picker-theme/
@@ -104,7 +104,9 @@ hackintosh-skills/
   新版条目写 `MinKernel 25.0.0`（博通 `AirPortBrcmNIC-Tahoe.kext`、Intel `AirportItlwm-Tahoe` 都是这么分的）
 - **升级会必然打断**：Wi-Fi 消失、OCLP root patch 全丢、第三方 kext 可能被搬走 —— 这是设计使然，不是配置坏了
 - **时序**：升级前关 FileVault + 保护第三方 kext → 升级后补 kext 条目 → 重打 OCLP root patch → 验证
-- **机型**：Tahoe 的 Intel 白名单只剩 `iMac20,1` `iMac20,2` `MacPro7,1` `MacBookPro16,x`，`iMacPro1,1` 被剔除
+- ★★ **硬约束：升级时不许改机型** —— `PlatformInfo` 的 `SystemProductName` / `BoardProduct` / 三码全不动。
+  机型不在新版白名单里（Tahoe 的 Intel 只剩 `iMac20,1` `iMac20,2` `MacPro7,1` `MacBookPro16,x`，`iMacPro1,1` 被剔除）
+  ⇒ **加 boot-arg 绕过**：`-no_compat_check`（能启动）+ `revpatch=sbvmm`（能收到更新），**两个都要**，而不是换机型
 - **macOS 26 新增环境坑**：EFI 挂载必须提权、FAT 改 FSKit、EFI 上删文件会留 `.Trashes`
 
 **⑤ 驱动与硬件特性**

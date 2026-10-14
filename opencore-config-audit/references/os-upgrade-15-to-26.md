@@ -4,6 +4,12 @@
 > 核心命题：**同一份 OpenCore 配置要同时服务两个 Darwin 大版本 ⇒ 必须用 `MinKernel` / `MaxKernel` 把按版本分构建的 kext 分流**。
 > 本机实测基线：macOS **26.7.1 (25G241)** / Darwin **25.6.0**，机型 `MacPro7,1`，网卡 BCM943602CDP。
 
+## ★★ 两条硬约束（先读这两条，再往下）
+
+1. **升级时不许改机型** —— `PlatformInfo` 里任何 `SystemProductName` / `BoardProduct` / 三码都不动。
+   **机型不在新版白名单里 ⇒ 加 boot-arg 绕过**（`-no_compat_check` + `revpatch=sbvmm`），**不是换机型**。详见 §5。
+2. **按版本分构建的 kext 必须做版本分流** —— 用 `MinKernel` / `MaxKernel`。详见 §1、§2。
+
 ## 0. 结论先行：升级会「必然」打断什么
 
 | 会被打断的 | 为什么 | 是不是「配置坏了」 |
@@ -132,6 +138,9 @@ MaxKernel      = 24.99.99
    ```
 3. **备份 EFI**（整个 `EFI` 文件夹，不只 config）+ 记下当前 `opencore-version` 与 `uname -r`。
 4. **准备 Tahoe 专用 kext**：从 **OCLP 3.0.0-rc.3+** 取 `AirPortBrcmNIC-Tahoe.kext`（或 Intel 的 `AirportItlwm-Tahoe`）。
+5. **★ 确认机型不在白名单时，加绕过参数（不动机型）**：`-no_compat_check` + `revpatch=sbvmm`（§5.3）。
+   > 这一步**只改 boot-args**。**不要**顺手把机型换成白名单里的 —— 那是另一件事（§5.2）。
+6. **★ 核对一遍「不许动」清单**：`PlatformInfo` 三处 `SystemProductName`、`BoardProduct`、三码 —— 全都没动。
 
 ### 阶段 B：升级**中**
 
@@ -197,37 +206,98 @@ Count / Skip / Limit = 0
 
 | token | 什么时候要 |
 |---|---|
-| `-no_compat_check` | **保留 Tahoe 不支持的机型时必需**（见 §5） |
+| **`-no_compat_check`** | ★ **机型不在新版白名单里时必需**（见 §5）—— 解决「能不能启动」 |
+| **`revpatch=sbvmm`** | ★ **同上，解决「能不能收到/安装系统更新」**（见 §5.3）—— 这个容易被漏掉 |
+| `revpatch=cpuname` + `revcpu=1` + `revcpuname=<名字>` | CPU 名称显示（本机 `revcpu=1`） |
 | `-wegnoigpu` | 藏掉无驱动的核显（否则 `IOGraphicsFamily` bring-up 会等它，实测慢 ~60 s） |
-| `revpatch=sbvmm` | `MacPro7,1` 机型下的内存/PCI 相关补丁（`RestrictEvents`） |
 | `-v` | **偏好项，必须问客户**（见 `lifecycle.md` §6.3） |
+
+> 用 `revpatch=` / `revcpu=` 需要 **`RestrictEvents.kext`**（Lilu 插件）。
 
 ---
 
-## 5. 机型：Tahoe 的 Intel 机型白名单
+## 5. ★★ 硬约束：升级时不改机型，用参数绕过
 
-**macOS 26 大幅削减了 Intel 机型支持。** 参考上游脚本的判定，白名单是：
+### 5.1 约束
+
+> **升级系统时，`PlatformInfo` 的机型相关字段一个都不动。**
+> **机型不在新版白名单里 ⇒ 加 boot-arg 绕过，不是换机型。**
+
+具体「不许动」的：
+
+- `PlatformInfo > Generic > SystemProductName`
+- `PlatformInfo > SMBIOS > SystemProductName`
+- `PlatformInfo > DataHub > SystemProductName`
+- `PlatformInfo > SMBIOS > BoardProduct`（board-id）
+- 序列号 / MLB / UUID（三码）
+
+### 5.2 为什么这是硬约束，而不是「两种路线可选」
+
+换机型**不是一个孤立改动，而是一次耦合改动**：
+
+| 连带影响 | 后果 |
+|---|---|
+| macOS 会按「机型 + 控制器名」附加**内置 USB 图** | 与 `UTBMap` 在 `AppleUSBHostMergeProperties` **合并冲突** ⇒ 本机实测**卡在 `AppleUSBHost*` 开不了机** |
+| **board-id 变了** | 触发**系统卷重建 / 校验** ⇒ 若 OCLP 已破封印，**可能卡住**（本机 10-12 就踩过） |
+| XCPM profile 跟着换 | CPU 频率行为变化（`MacPro7,1` 强制 `hwp=on` ⇒ 必须重做 CPUFriend 数据） |
+| AGDC 路径、ByHost 偏好 | 显示/服务行为漂移，排查面变大 |
+
+⇒ **升级本身已经是高风险操作，不要在同一轮里叠加第二个耦合改动。**
+机型该不该换是**独立的决策**（见 `smbios-and-serials.md`），跟升级解耦。
+
+### 5.3 绕过用什么参数（两个都要，别只加一个）
+
+| 参数 | 解决什么 | 不加的后果 |
+|---|---|---|
+| **`-no_compat_check`** | **能不能启动** —— 关掉对机型的兼容性检查 | 直接拒绝启动 |
+| **`revpatch=sbvmm`** | **能不能更新** —— 强制 VMM SB 机型，*"allowing OTA updates for unsupported models on macOS 11.3 or newer"*（RestrictEvents 原文） | 能开机，但**收不到 / 装不上系统更新** |
+| `revpatch=cpuname` + `revcpu=1` + `revcpuname=<名字>` | CPU 名称显示 | 「关于本机」里 CPU 名字不对 |
+| `revpatch=pci` / `revblock=pci` | 屏蔽 `MacPro7,1` 机型的 PCI / RAM 配置警告 | 弹配置警告（机型是 MacPro7,1 但硬件不匹配时） |
+
+**★ 最容易漏的是 `revpatch=sbvmm`** —— 很多人只加 `-no_compat_check`，能开机就以为完事了，
+结果到了下次系统更新才发现「收不到更新」。**两个是不同层次的问题。**
+
+### 5.4 白名单（**只用来判断「需不需要绕过」**）
+
+macOS 26 大幅削减了 Intel 机型支持。参考上游脚本的判定，白名单是：
 
 ```
 iMac20,1   iMac20,2   MacPro7,1   MacBookPro16,1   MacBookPro16,2   MacBookPro16,4
 ```
 
-**★ `iMacPro1,1` 被剔除了** —— 它正是 Sequoia 时代最常用的 Intel 机型。两条出路：
+**`iMacPro1,1` 被剔除了** —— 它正是 Sequoia 时代最常用的 Intel 机型。
 
-| 路线 | 做法 | 代价 |
+| 机型在不在白名单 | 该怎么做 |
+|---|---|
+| **在** | 什么都不用加 |
+| **不在** | **加 `-no_compat_check` + `revpatch=sbvmm`**，机型保持不变 |
+
+### 5.5 ★ 明确不要做的事
+
+| 不要做 | 为什么 |
+|---|---|
+| 改任何一处 `SystemProductName` | 违反约束；且会连带 USB 图/board-id 问题（§5.2） |
+| 改 `BoardProduct`（board-id） | 触发系统卷重建，与 OCLP 冲突 |
+| **跑 `nullmoth-setup.sh --update prepare --pkg <包>`** | ★ **最隐蔽的陷阱**：它会**自动**把机型改成 `MacPro7,1`、board-id 改成 `Mac-27AD2F918AE68F61`、补 `RestrictEvents.kext`。**这条路径与约束正面冲突，必须避开。**<br>（正常点按钮 / 正常更新驱动**不会**触发它 —— 该按钮在 1.0.15 起已从 App UI 移除，只剩脚本能力；本机实测 `PlatformInfo` 仍是原机型） |
+| 用 OCLP 的 "Build and Install OpenCore" | 会重写整个 EFI，冲掉调好的 boot-args / SMBIOS / DeviceProperties |
+
+### 5.6 约束的代价（要如实告知）
+
+保留原机型 = **放弃新版专属的机型界面**。例如 `PlatformInfo > Memory` 的 `Devices` 数组
+**只在 MacPro 机型上**才会画出那张 12 槽内存图（见 `memory-injection.md`）——
+机型不是 MacPro 就做不出来，**没有 boot-arg 能替代**。
+
+所以取舍是：
+
+| | 保留原机型 + 参数绕过（**约束默认**） | 换机型 |
 |---|---|---|
-| **换机型** | 换成白名单里的（本机最终用 `MacPro7,1`） | ★ 换机型会连带换掉 macOS 想附加的**内置 USB 图** ⇒ 与 `UTBMap` 在 `AppleUSBHostMergeProperties` 冲突 ⇒ **必须先换成完整 USB 图 + 备 U 盘**；还会连带换 XCPM profile / AGDC 路径 / ByHost 偏好，且 `MacPro7,1` 强制 `hwp=on` ⇒ **必须重做 CPUFriend 数据**。详见 `smbios-and-serials.md` |
-| **硬扛** | 保留 `iMacPro1,1` + boot-args `-no_compat_check` | 系统不认这个机型，部分功能（如某些更新）可能异常 |
+| 能开机 / 能更新 | ✅（靠 `-no_compat_check` + `revpatch=sbvmm`） | ✅ |
+| 升级风险 | **低**（只动 boot-args） | 高（USB 图 + board-id + CPUFriend 一起动） |
+| 机型专属界面 | ❌ 拿不到 | ✅ |
+| 与升级是否解耦 | ✅ **解耦** | ❌ 耦合 |
 
-**★ 改机型时三处都要改**（只改 `Generic` 不够）：
-`PlatformInfo > Generic > SystemProductName`、`PlatformInfo > SMBIOS > SystemProductName`、`PlatformInfo > DataHub > SystemProductName`；
-board-id 也要跟着换（`MacPro7,1` = `Mac-27AD2F918AE68F61`）。
-> 若用 `UpdateSMBIOSMode = Custom`（本机就是），实际只有 `Generic` 段生效，另两段可留空。
-
-**★ 注意上游「一键升级」脚本会替你改机型**：`nullmoth-setup.sh --update prepare --pkg <包>` 会把机型改成 `MacPro7,1`、
-board-id 改成 `Mac-27AD2F918AE68F61`、补 `RestrictEvents.kext`。
-**改 board-id 会触发系统卷重建/校验 ⇒ 若 OCLP 已破封印，可能卡住**。要走「保留 `iMacPro1,1`」路线就**避开这条路径**。
-（正常点按钮/正常更新驱动**不会**触发它 —— 该按钮在 1.0.15 起已从 App UI 移除，只剩脚本能力。）
+⇒ **默认走左边。** 真想要机型专属功能时，**单独一次**做机型切换（走 `smbios-and-serials.md` 的完整流程），
+**不要**把它塞进升级那一次。
 
 ---
 
@@ -311,7 +381,10 @@ ls -lt /Volumes/EFI/opencore-*.txt | head
 | `IOSkywalkFamily` 在，但 `IO80211FamilyLegacy` 不在 | 看 OC 日志（`opencore-*.txt`）里该 kext 的注入结果；确认 `Kernel > Block` 没把它自己挡住 |
 | root patch 打不上 | FileVault 是否真关了（`fdesetup status`）；是否用了 2.5.1（**它没有 Tahoe 支持**） |
 | 打补丁时 NVIDIA kext 不见了 | 没跑 §3 的前置保护脚本。去 `/Library/Relocated Extensions` 找回来 |
-| 换机型后开不了机 | 机型↔USB 图冲突（见 `smbios-and-serials.md`）；用 U 盘 EFI 启动并回退 |
+| **机型不被支持、开不了机** | 加 `-no_compat_check`（**别去换机型**，§5.3） |
+| **能开机但收不到系统更新** | 漏了 **`revpatch=sbvmm`**（§5.3）—— `-no_compat_check` 不解决这个问题 |
+| 开不了机（**如果**你换了机型） | 机型↔USB 图冲突（见 `smbios-and-serials.md`）；用 U 盘 EFI 启动并回退。**这也是「升级时不许改机型」这条约束的原因** |
+| 发现机型被改了 | 大概率跑过 `nullmoth-setup.sh --update prepare --pkg`（§5.5）。用升级前的 EFI 备份还原 `PlatformInfo` |
 | EFI 挂不上 | 见 §7：要提权；或先 `diskutil repairVolume` |
 | 升级后开机很慢 | 见 `boot-timeline.md`（`nvrmsettle` / `-wegnoigpu` 两类已知固定延迟） |
 
@@ -320,7 +393,7 @@ ls -lt /Volumes/EFI/opencore-*.txt | head
 ## 11. 与其它 reference 的关系
 
 - **网卡细节** → `broadcom-wifi.md`（博通，按系统分路线）、`intel-wifi.md`（Intel，Sequoia/Tahoe 两套 ABI）、`mediatek-wifi.md`（MediaTek）
-- **换机型与三码** → `smbios-and-serials.md`（机型↔USB 图冲突、CPUFriend 重做）
-- **安全改 ESP 的流程** → `SKILL.md` 铁律 1–14 + `scripts/oc-edit-safe.sh`
+- **机型与三码**（**独立决策，不跟升级混在一起做**）→ `smbios-and-serials.md`（机型↔USB 图冲突、CPUFriend 重做）
+- **安全改 ESP 的流程** → `SKILL.md` 铁律 1–16 + `scripts/oc-edit-safe.sh`
 - **日志判读** → `logs-and-debug.md`；**耗时分析** → `boot-timeline.md`
 - **装机六阶段** → `lifecycle.md`（本文是它的「大版本升级」补充）
