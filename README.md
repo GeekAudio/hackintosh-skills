@@ -21,7 +21,7 @@
 
 | Skill | 一句话 | 规模 |
 |---|---|---|
-| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置，并覆盖从装机到日常化、再到系统大版本升级的全生命周期 | 16 条铁律 · 19 份参考 · 10 个脚本 |
+| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置，并覆盖从装机到日常化、再到系统大版本升级的全生命周期 | 17 条铁律 · 20 份参考 · 11 个脚本 |
 | **`opencore-picker-theme`** | 配置、制作与排错图形启动选择器（OpenCanopy）主题 | 4 份参考 · 2 个脚本 |
 
 ---
@@ -52,8 +52,8 @@ python3 <skill-creator>/scripts/quick_validate.py ~/.workbuddy-ai/skills/opencor
 hackintosh-skills/
 ├── README.md
 ├── opencore-config-audit/
-│   ├── SKILL.md                 # 主流程 + 16 条铁律 + 资源表
-│   ├── references/              # 19 份专题文档（见下表）
+│   ├── SKILL.md                 # 主流程 + 17 条铁律 + 资源表
+│   ├── references/              # 20 份专题文档（见下表）
 │   └── scripts/                 # 10 个脚本（见下表）
 └── opencore-picker-theme/
     ├── SKILL.md
@@ -71,6 +71,18 @@ hackintosh-skills/
 最后用**引导期日志**判定现状，按安全流程落盘 —— 每一步都有依据、都能回滚。
 
 ### 能力
+
+**⓪ BIOS / UEFI 审查（装机前先做）**
+
+- **三份清单合起来看**：OpenCore 官方文档（9 条检查清单）+ Dortania（Intel / AMD 分开）+ 社区实战补充
+- ★ **官方与 Dortania 都没写、但踩到就装不上的两项**：**VMD 必须关**（否则装系统「找不到任何驱动器」）、
+  **Intel Speed Shift 必须开**（否则 `wrmsr(0x770,1)` #GP）
+- ★ **区分三类**：**必须关**（Fast Boot / Secure Boot / CSM / CFG Lock / VMD / RST / SGX / PTT / 串口）·
+  **必须开**（VT-x·SVM / Above 4G / HT / XD / XHCI Hand-off / OS Type=Windows UEFI / AHCI / DVMT≥64MB）·
+  **看情况**（Re-BAR / XMP / iGPU / Thunderbolt / ErP）—— **不是一律关或一律开**
+- **厂商命名对照表**（ASUS / MSI / Gigabyte / ASRock 同一设置不同叫法）+ **CFG Lock 专题**（三种查法 + 隐藏选项路线）
+- **Windows 只读审查脚本**：直接判定固件类型 / Secure Boot / TPM / VT-x / HT / XMP / VMD·RST / 串口 / 内存槽位，
+  判不了的明确标成「需人工核」
 
 **① 全流程生命周期**
 
@@ -143,6 +155,7 @@ hackintosh-skills/
 | `mask-other-disks.sh` | 按 UUID 写 fstab 屏蔽非系统卷（默认 dry-run，永不碰 EFI） |
 | `cpu-freq-probe.sh` | CPU 实际频率探针（内联汇编，防编译器折叠）—— 验证睿频 / 对比机型 |
 | `mem-check.sh` | 校验内存注入摆位（数组序号 → 预测图位，判定是否与「系统信息」错位） |
+| `bios-audit.ps1` | **Windows 侧 BIOS 审查（只读）**：判定固件类型/Secure Boot/TPM/VT-x/HT/XMP/**VMD·RST**/串口/内存槽位 |
 
 ### 参考文档
 
@@ -154,6 +167,7 @@ hackintosh-skills/
 | `logs-and-debug.md` | `Target` / `DisplayLevel` 位定义、日志判据、刷屏归因 |
 | `boot-timeline.md` | **启动耗时 / 时间线分析**：三段拆解、流式过滤、停顿窗口定位 |
 | `acpi-ssdt.md` | 官方 AcpiSamples 逐条适用条件、设备存在性检查、命名规范 |
+| `bios-settings.md` | **BIOS/UEFI 审查**：官方 9 条 + Dortania + 社区补充（**VMD**/Speed Shift）、**必须关/必须开/看情况**三类、CFG Lock 专题、**厂商命名对照表** |
 | `disks-and-kexts.md` | 磁盘屏蔽与 kext 精简的判据与「不能删」清单 |
 | `rapidefi-first-efi.md` | 从零：Windows 上用 RapidEFI 生成基础 EFI 及收尾 |
 | `nvidia-driver.md` | NullMoth NVIDIA 驱动：适用范围、安装、必需 OC 设置、恢复、故障对照 |
