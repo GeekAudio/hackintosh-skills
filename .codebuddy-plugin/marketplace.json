@@ -1,7 +1,7 @@
 {
   "name": "hackintosh-skills",
-  "description": "黑苹果（OpenCore）技能集：EFI 配置审查与维护、启动选择器主题。",
-  "description_en": "Hackintosh (OpenCore) skill collection: EFI configuration audit & maintenance, and boot picker theming.",
+  "description": "黑苹果（OpenCore）EFI 配置审查与维护技能：BIOS 审查、配置校验、日志取证、驱动安装、系统升级、选择器主题。",
+  "description_en": "Hackintosh (OpenCore) EFI configuration audit & maintenance skill: BIOS audit, config verification, log forensics, driver installs, OS upgrades and boot-picker theming.",
   "owner": {
     "name": "GeekAudio"
   },
@@ -12,9 +12,9 @@
     {
       "name": "opencore-config-audit",
       "source": "./opencore-config-audit",
-      "description": "审查、修改与维护黑苹果的 OpenCore EFI 配置与驱动安装：BIOS/UEFI 审查、逐键对照官方文档、ACPI/SSDT 巡检、kext 精简、引导日志与启动耗时取证、系统大版本升级（含网卡 kext 的 MinKernel/MaxKernel 版本分流）、磁盘屏蔽，以及 NVIDIA / Intel 无线 / MediaTek / 博通网卡、AppleALC 声卡、HiDPI、Intel 睿频、内存定制、SMBIOS 三码等驱动与硬件特性。",
-      "description_en": "Audit, edit and maintain a hackintosh OpenCore EFI configuration and its driver installs: BIOS/UEFI settings audit, per-key verification against the official docs, ACPI/SSDT review, kext trimming, boot-log and boot-timeline forensics, major macOS upgrade planning (including per-Darwin-version kext gating with MinKernel/MaxKernel), disk masking, plus NVIDIA / Intel WiFi / MediaTek / Broadcom cards, AppleALC audio, HiDPI, Intel Turbo Boost, memory injection and SMBIOS/serials.",
-      "version": "0.6.0",
+      "description": "审查、修改与维护黑苹果的 OpenCore EFI 配置与驱动安装：BIOS/UEFI 审查、逐键对照官方文档、ACPI/SSDT 巡检、kext 精简、引导日志与启动耗时取证、系统大版本升级（含网卡 kext 的 MinKernel/MaxKernel 版本分流）、磁盘屏蔽，以及 NVIDIA / Intel 无线 / MediaTek / 博通网卡、AppleALC 声卡、HiDPI、Intel 睿频、内存定制、SMBIOS 三码等驱动与硬件特性，以及启动界面外观（OpenCanopy 主题：图标集、PickerAttributes、Flavour、标签/字体/音频/背景）。",
+      "description_en": "Audit, edit and maintain a hackintosh OpenCore EFI configuration and its driver installs: BIOS/UEFI settings audit, per-key verification against the official docs, ACPI/SSDT review, kext trimming, boot-log and boot-timeline forensics, major macOS upgrade planning (including per-Darwin-version kext gating with MinKernel/MaxKernel), disk masking, plus NVIDIA / Intel WiFi / MediaTek / Broadcom cards, AppleALC audio, HiDPI, Intel Turbo Boost, memory injection SMBIOS/serials, and OpenCanopy boot-picker theming.",
+      "version": "0.7.0",
       "author": {
         "name": "GeekAudio"
       },
@@ -27,27 +27,6 @@
         "macos",
         "bios",
         "kext"
-      ],
-      "category": "development"
-    },
-    {
-      "name": "opencore-picker-theme",
-      "source": "./opencore-picker-theme",
-      "description": "配置、制作与排错 OpenCore 的图形启动选择器（OpenCanopy）主题：图标集、PickerAttributes 属性位、Flavour 系统、标签、位图字体、音频辅助、背景图与 HiDPI。含必需图标清单与尺寸、官方图标集缺哪些可选图标的权威对照，以及 Resources 树合规检查脚本。",
-      "description_en": "Configure, build and troubleshoot the OpenCore graphical boot picker (OpenCanopy) theme: icon sets, PickerAttributes, the flavour system, labels, bitmap fonts, audio assist, background image and HiDPI. Includes the mandatory-icon list with dimensions, which optional icons the official icon sets do NOT ship, and a Resources-tree compliance checker.",
-      "version": "0.1.0",
-      "author": {
-        "name": "GeekAudio"
-      },
-      "repository": "https://github.com/GeekAudio/hackintosh-skills",
-      "license": "MIT",
-      "keywords": [
-        "hackintosh",
-        "opencore",
-        "opencanopy",
-        "boot-picker",
-        "theme",
-        "icons"
       ],
       "category": "development"
     }

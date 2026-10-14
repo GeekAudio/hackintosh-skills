@@ -5,7 +5,6 @@
 | 技能 | 使用说明 |
 |---|---|
 | `opencore-config-audit` | [`opencore-config-audit/USAGE.md`](opencore-config-audit/USAGE.md) |
-| `opencore-picker-theme` | [`opencore-picker-theme/USAGE.md`](opencore-picker-theme/USAGE.md) |
 
 > 放在技能目录内是**有意的**：安装时 `cp -R <skill> ...` 只复制技能目录，
 > 放在这里的说明会**跟着一起装过去**，用户在对话里问「使用说明」就能拿到。
@@ -56,14 +55,12 @@
 ```bash
 /plugin marketplace add GeekAudio/hackintosh-skills
 /plugin install opencore-config-audit@hackintosh-skills
-/plugin install opencore-picker-theme@hackintosh-skills
 ```
 
 **方式二：手动复制（离线 / 只装一个）**
 
 ```bash
 cp -R opencore-config-audit ~/.workbuddy-ai/skills/
-cp -R opencore-picker-theme  ~/.workbuddy-ai/skills/
 ```
 
 装完后，新建一个对话，随便说一句上面的示例话术验证是否生效。

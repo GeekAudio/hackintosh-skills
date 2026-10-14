@@ -22,6 +22,7 @@
 | 换机型 | 「换一下 SMBIOS 机型」「三码怎么配」 |
 | 升系统 | 「从 15 升到 26 要改什么」「升级后 Wi-Fi 没了」 |
 | 换构建 | 「从 release 换成 debug 版 OpenCore 并开日志」 |
+| **换主题** | 「换个 OpenCore 主题」「图标集怎么装」「选择器界面不出现」「图标显示不对/变形」「启动没有声音」「PickerAttributes 怎么配」 |
 | 首次装机 | 「第一次装黑苹果，EFI 怎么生成」 |
 
 ## 你会拿到什么
@@ -31,7 +32,7 @@
 - **校验过的清单**：SSDT 该加哪个、kext 该删哪个，逐条给依据
 - **分析文档**：启动耗时、日志取证这类会落成文件
 
-## 配套脚本（11 个）
+## 配套脚本（14 个）
 
 | 脚本 | 作用 |
 |---|---|
@@ -47,15 +48,17 @@
 | `cpu-freq-probe.sh` | CPU 实际频率探针 |
 | `mem-check.sh` | 校验内存注入摆位 |
 | `redact-check.sh` | **发布前脱敏自检**（扫三码 / MAC / 密钥等） |
+| `oc-theme-check.sh` | **Resources 树合规检查**（必需图标 / 真实像素尺寸 / 标签 / 字体 / 音频） |
+| `oc-fetch-iconset.sh` | 从官方 OcBinaryData 取图标集 / 字体 / 标签 / 音频 |
 
-## 参考文档（20 份）
+## 参考文档（21 份）
 
 按主题挑：`bios-settings.md`（BIOS）· `lifecycle.md`（全流程）· `os-upgrade-15-to-26.md`（升系统）·
 `nvidia-driver.md` · `intel-wifi.md` · `mediatek-wifi.md` · `broadcom-wifi.md`（四类网卡/显卡）·
 `applealc-custom.md`（声卡）· `hidpi.md`（显示）· `intel-turbo.md`（CPU）· `memory-injection.md`（内存）·
 `smbios-and-serials.md`（机型三码）· `boot-timeline.md` / `logs-and-debug.md`（日志）·
 `acpi-ssdt.md` · `disks-and-kexts.md` · `official-docs-method.md` · `rapidefi-first-efi.md` ·
-`pitfalls.md`（踩过的坑）· `machine-facts.md`（参考机器事实）
+`pitfalls.md`（踩过的坑）· `theme-opencanopy.md`（选择器主题）· `machine-facts.md`（参考机器事实）
 
 ## 注意
 

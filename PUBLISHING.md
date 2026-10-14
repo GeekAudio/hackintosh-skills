@@ -20,16 +20,12 @@
 hackintosh-skills/
 ├── .codebuddy-plugin/
 │   └── marketplace.json          ← 市场清单（必需，缺了整仓库都不显示）
-├── opencore-config-audit/
-│   ├── .codebuddy-plugin/
-│   │   └── plugin.json           ← 插件元数据（每个插件一个）
-│   ├── SKILL.md                  ← 技能正文
-│   ├── USAGE.md
-│   ├── references/  scripts/
-└── opencore-picker-theme/
-    ├── .codebuddy-plugin/plugin.json
-    ├── SKILL.md
-    └── …
+└── opencore-config-audit/
+    ├── .codebuddy-plugin/
+    │   └── plugin.json           ← 插件元数据
+    ├── SKILL.md                  ← 技能正文
+    ├── USAGE.md
+    ├── references/  scripts/
 ```
 
 ### A.2 用户怎么装（三步）
@@ -40,7 +36,6 @@ hackintosh-skills/
 
 # ② 安装插件（<插件名>@<市场名>）
 /plugin install opencore-config-audit@hackintosh-skills
-/plugin install opencore-picker-theme@hackintosh-skills
 ```
 
 > 快捷方式：`/plugin market` = `/plugin marketplace`；`rm` = `remove`。
@@ -121,12 +116,10 @@ hackintosh-skills/
 ```bash
 # ① JSON 语法
 python3 -c "import json;[json.load(open(p)) for p in ['.codebuddy-plugin/marketplace.json',
-  'opencore-config-audit/.codebuddy-plugin/plugin.json',
-  'opencore-picker-theme/.codebuddy-plugin/plugin.json']];print('JSON OK')"
+  'opencore-config-audit/.codebuddy-plugin/plugin.json']];print('JSON OK')"
 
 # ② 每个 skill 仍然合法
 python3 <skill-creator>/scripts/quick_validate.py opencore-config-audit
-python3 <skill-creator>/scripts/quick_validate.py opencore-picker-theme
 
 # ③ source 指向的目录确实存在，且里面有 .codebuddy-plugin/plugin.json
 ```
@@ -150,14 +143,12 @@ python3 <skill-creator>/scripts/quick_validate.py opencore-picker-theme
 
 ```bash
 python3 <skill-creator>/scripts/package_skill.py opencore-config-audit ./dist
-python3 <skill-creator>/scripts/package_skill.py opencore-picker-theme  ./dist
 ```
 
 产物（zip 内**自带技能名作为顶层目录**）：
 
 ```
-dist/opencore-config-audit.zip     ~144 KB
-dist/opencore-picker-theme.zip     ~23 KB
+dist/opencore-config-audit.zip     ~150 KB
 ```
 
 ### B.2 上传前自检（对照平台的文件要求）
@@ -175,7 +166,7 @@ dist/opencore-picker-theme.zip     ~23 KB
 # ① 内容自检（SKILL.md + YAML frontmatter + 文件数）
 python3 - <<'EOF'
 import zipfile
-for z in ('dist/opencore-config-audit.zip','dist/opencore-picker-theme.zip'):
+for z in ('dist/opencore-config-audit.zip',):
     zf=zipfile.ZipFile(z); n=zf.namelist()
     md=[x for x in n if x.endswith('/SKILL.md')][0]
     fm=zf.read(md).decode('utf-8').split('---')[1]
@@ -185,7 +176,6 @@ EOF
 
 # ② ★ 脱敏自检（技能里带了脚本，直接跑）
 bash opencore-config-audit/scripts/redact-check.sh opencore-config-audit
-bash opencore-config-audit/scripts/redact-check.sh opencore-picker-theme
 # 退出码 0 = 干净；1 = 有命中，先处理再打包
 ```
 

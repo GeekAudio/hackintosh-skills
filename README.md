@@ -8,7 +8,7 @@
 
 > **不知道怎么用？**
 > ① 在对话里直接问 **「opencore-config-audit 怎么用」** —— 技能会输出它自己的使用说明；
-> ② 或看 [`opencore-config-audit/USAGE.md`](opencore-config-audit/USAGE.md) / [`opencore-picker-theme/USAGE.md`](opencore-picker-theme/USAGE.md)；
+> ② 或看 [`opencore-config-audit/USAGE.md`](opencore-config-audit/USAGE.md)；
 > ③ 调用机制与「怎么改技能」见 [`USAGE.md`](USAGE.md)。
 
 **目录**
@@ -18,7 +18,6 @@
 - [目录结构](#目录结构)
 - [发布到 WorkBuddy](#发布到-workbuddy)
 - [1. `opencore-config-audit` — 配置审查与维护](#1-opencore-config-audit--opencore-配置审查与维护)
-- [2. `opencore-picker-theme` — 选择器主题](#2-opencore-picker-theme--选择器主题opencanopy)
 - [适用性与边界](#适用性与边界)
 
 ---
@@ -27,10 +26,9 @@
 
 | Skill | 一句话 | 规模 |
 |---|---|---|
-| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置，并覆盖从装机到日常化、再到系统大版本升级的全生命周期 | 17 条铁律 · 20 份参考 · 11 个脚本 |
+| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置 —— 覆盖从装机到日常化、再到系统大版本升级的全生命周期，**并含启动选择器（OpenCanopy）主题** | 18 条铁律 · 21 份参考 · 14 个脚本 |
 
-每个技能目录里都有一份 `USAGE.md`（**随安装一起复制**），在对话里问「使用说明」即可拿到。
-| **`opencore-picker-theme`** | 配置、制作与排错图形启动选择器（OpenCanopy）主题 | 4 份参考 · 2 个脚本 |
+技能目录里有一份 `USAGE.md`（**随安装一起复制**），在对话里问「使用说明」即可拿到。
 
 ---
 
@@ -46,7 +44,6 @@
 
 # ② 安装插件（<插件名>@<市场名>）
 /plugin install opencore-config-audit@hackintosh-skills
-/plugin install opencore-picker-theme@hackintosh-skills
 ```
 
 **方式二：手动复制（离线 / 只装一个）**
@@ -54,7 +51,6 @@
 ```bash
 # 用户级（所有项目都能用）
 cp -R opencore-config-audit ~/.workbuddy-ai/skills/
-cp -R opencore-picker-theme  ~/.workbuddy-ai/skills/
 
 # 或项目级（只在该项目里可用）
 cp -R <skill> <项目目录>/.workbuddy-ai/skills/
@@ -79,21 +75,15 @@ hackintosh-skills/
 ├── opencore-config-audit/
 │   ├── .codebuddy-plugin/
 │   │   └── plugin.json          # ← 插件元数据
-│   ├── SKILL.md                 # 主流程 + 17 条铁律 + 资源表
-│   ├── USAGE.md                 # ← 本技能的使用说明（随安装一起复制）
-│   ├── references/              # 20 份专题文档（见下表）
-│   └── scripts/                 # 11 个脚本（见下表）
-└── opencore-picker-theme/
-    ├── .codebuddy-plugin/plugin.json
-    ├── SKILL.md
-    ├── USAGE.md                 # ← 本技能的使用说明（随安装一起复制）
-    ├── references/              # 4 份
-    └── scripts/                 # 2 个
+│   ├── SKILL.md                 # 主流程 + 18 条铁律 + 资源表
+│   ├── USAGE.md                 # ← 使用说明（随安装一起复制）
+│   ├── references/              # 21 份专题文档（见下表）
+│   └── scripts/                 # 14 个脚本（见下表）
 ```
 
 ---
 
-## 1. `opencore-config-audit` — OpenCore 配置审查与维护
+## `opencore-config-audit` — OpenCore 配置审查与维护
 
 ### 它解决什么
 
@@ -168,6 +158,7 @@ hackintosh-skills/
 | **MacPro 机型内存定制** | ★ **分两层**：「系统信息」= 全机型通用（SMBIOS Type 17）；「关于本机」内存图 = MacPro 专有（**摆位规则 + 12 槽映射表**） |
 | **SMBIOS 机型切换 + 三码** | ★ 换机型会连带换掉内置 USB 图 ⇒ 与 UTBMap 冲突；序列号三类判据；ROM 用真实 en0 MAC；换码风控纪律。★ **与系统升级解耦** —— 升级时不动机型（见 §④） |
 | **首次生成 EFI**（RapidEFI） | Windows 上生成基础 EFI，及之后必须做的收尾 |
+| **选择器主题**（OpenCanopy） | 图标集、`PickerAttributes` 位表、Flavour 规则、标签/字体/音频/背景、HiDPI；★ **必需图标缺一个就不启动**、**官方图标集不提供哪些可选图标**（解释日志里的 `Not Found` 为什么正常） |
 
 ### 内置的安全流程（最重要的一部分）
 
@@ -189,6 +180,9 @@ hackintosh-skills/
 | `cpu-freq-probe.sh` | CPU 实际频率探针（内联汇编，防编译器折叠）—— 验证睿频 / 对比机型 |
 | `mem-check.sh` | 校验内存注入摆位（数组序号 → 预测图位，判定是否与「系统信息」错位） |
 | `bios-audit.ps1` | **Windows 侧 BIOS 审查（只读）**：判定固件类型/Secure Boot/TPM/VT-x/HT/XMP/**VMD·RST**/串口/内存槽位 |
+| `redact-check.sh` | **发布前脱敏自检（只读）**：扫三码 / MAC / 密钥 / 卷 UUID / 邮箱 / 内网 IP |
+| `oc-theme-check.sh` | **Resources 树合规检查**（必需图标 / 真实像素尺寸 / 标签 / 字体 / 音频） |
+| `oc-fetch-iconset.sh` | 从官方 OcBinaryData 取图标集 / 字体 / 标签 / 音频 |
 
 ### 参考文档
 
@@ -212,38 +206,9 @@ hackintosh-skills/
 | `intel-turbo.md` | Intel 睿频 / 限频：CPU-S 验证、根因定位、CPUFriend 修法、BIOS 硬前提 |
 | `memory-injection.md` | MacPro 内存定制：**12 槽映射表**、**摆位规则 f**、A 层通用字段 |
 | `smbios-and-serials.md` | 机型切换 + 三码：机型↔USB 图冲突、序列号判据、ROM、风控纪律 |
+| `theme-opencanopy.md` | **选择器主题（OpenCanopy）**：开关总表、资源目录、**图标清单（必需/可选/官方不提供）**、Flavour 规则、标签/字体/音频/背景、排错 |
 | `pitfalls.md` | 全部踩过的坑 |
 | `machine-facts.md` | 参考机器（Z690 / Alder Lake / macOS 26）的具体事实 |
-
----
-
-## 2. `opencore-picker-theme` — 选择器主题（OpenCanopy）
-
-配置、制作与排错图形启动界面：图标集、属性位、Flavour、标签、字体、音频辅助、背景、HiDPI。
-
-### 能力
-
-- **权威对照**：必需图标清单与尺寸（**缺一个 OpenCanopy 就不启动**）、官方图标集**不提供**哪些可选图标
-  （解释了日志里那些 `OCUI: … Not Found` 为什么是正常的）、标签 / 字体 / 音频的格式要求
-- **Flavour 系统**：图标选择与回退链、`Ext` 前缀的安全规则、`.contentFlavour`、`.VolumeIcon.icns` 优先级
-- **`PickerAttributes` 全位表** + 依赖关系（如 `0x0008` 必须搭 `0x0001`）
-- **排错顺序**：界面不出现 / 图标不对 / 变形 / 没有声音 / 字体异常
-
-### 脚本
-
-| 脚本 | 作用 |
-|---|---|
-| `oc-theme-check.sh` | Resources 树合规检查（必需图标、**真实像素尺寸**、Selector/SetDefault 同宽、标签/字体/音频） |
-| `oc-fetch-iconset.sh` | 从官方 OcBinaryData 取图标集 / 字体 / 标签 / 音频 |
-
-### 参考文档
-
-| 文档 | 内容 |
-|---|---|
-| `opencanopy-resources.md` | 目录结构、必需/可选图标清单、尺寸与格式要求 |
-| `picker-attributes.md` | `PickerAttributes` 位定义与依赖关系 |
-| `flavours.md` | Flavour 命名、解析与回退链 |
-| `theme-troubleshooting.md` | 界面不出现 / 图标不对 / 变形 / 无声 / 字体异常的排查顺序 |
 
 ---
 
