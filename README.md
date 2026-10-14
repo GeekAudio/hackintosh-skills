@@ -26,7 +26,7 @@
 
 | Skill | 一句话 | 规模 |
 |---|---|---|
-| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置 —— 覆盖从装机到日常化、再到系统大版本升级的全生命周期，并含**启动选择器（OpenCanopy）主题**与**换机型 / 三码** | 19 条铁律 · 26 份参考 · 14 个脚本 |
+| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置 —— 覆盖从装机到日常化、再到系统大版本升级的全生命周期，并含**启动选择器（OpenCanopy）主题**与**换机型 / 三码** | 19 条铁律 · 26 份参考 · 15 个脚本 |
 
 技能目录里有一份 `USAGE.md`（**随安装一起复制**），在对话里问「使用说明」即可拿到。
 
@@ -78,7 +78,7 @@ hackintosh-skills/
 │   ├── SKILL.md                 # 主流程 + 19 条铁律 + 资源表
 │   ├── USAGE.md                 # ← 使用说明（随安装一起复制）
 │   ├── references/              # 26 份专题文档（见下表）
-│   └── scripts/                 # 14 个脚本（见下表）
+│   └── scripts/                 # 15 个脚本（见下表）
 ```
 
 ---
@@ -134,7 +134,11 @@ hackintosh-skills/
   并给出耗时来源处置表（含驱动侧 `nvrmsettle` / `-wegnoigpu` 两类已知固定延迟）
 - ★ **固件启动项（`Boot####`）**：**「用 U 盘引导一次后，硬盘的 OpenCore 启动项从 BIOS 里消失、只剩 Windows」**
   的根因与修法 —— `LauncherOption=Full` 会**按文件路径后缀认自己的项（不看盘）**，从别的盘引导就把它重指过去；
-  ⇒ **两个 ESP 都改 `Disabled`** + 留 `\EFI\BOOT\BOOTx64.efi` 兜底（含取证命令与 **ASUS 的 `Boot0000` 坑**）
+  ⇒ **定案组合 = 目标盘 `Full`（自建+自愈）/ 另一份 `Disabled`**（★ 两个都 `Disabled` 就没人建项了）
+- ★ **在 macOS 里加 / 改启动项**：六条路线对照（`LauncherOption=Full` 让 OpenCore 自己写 · OpenShell `bcfg` ·
+  `FullNvramAccess` 工具 · `nvram` 直写 · `bless` · Windows EasyUEFI）；★ **写 NVRAM 必须提权**；
+  ★ `RequestBootVarRouting=true` 会把 `Boot*` 重定向到 `OC_VENDOR:OCBt*` ⇒ **回读一致证明不了落固件** ⇒ 验收只看 BIOS
+- ★ **从 U 盘启动改成硬盘启动**：完整迁移步骤 + 三步验收（BIOS 有且第一 / `boot-path` 指向硬盘 / **拔掉 U 盘再重启**）
 
 **④ 系统大版本升级（如 macOS 15 → 26）**
 
@@ -186,6 +190,7 @@ hackintosh-skills/
 | `cpu-freq-probe.sh` | CPU 实际频率探针（内联汇编，防编译器折叠）—— 验证睿频 / 对比机型 |
 | `mem-check.sh` | 校验内存注入摆位（数组序号 → 预测图位，判定是否与「系统信息」错位） |
 | `bios-audit.ps1` | **Windows 侧 BIOS 审查（只读）**：判定固件类型/Secure Boot/TPM/VT-x/HT/XMP/**VMD·RST**/串口/内存槽位 |
+| `oc-nvram-bootentry.sh` | **固件启动项（`Boot####` / `BootOrder`）读写**：`dump`（解析名字/设备路径）· `backup` / `restore` · `add`（含 `--dry-run`）· `del`。★ 写操作要提权 |
 | `redact-check.sh` | **发布前脱敏自检（只读）**：扫三码 / MAC / 密钥 / 卷 UUID / 邮箱 / 内网 IP |
 | `oc-theme-check.sh` | **Resources 树合规检查**（必需图标 / 真实像素尺寸 / 标签 / 字体 / 音频） |
 | `oc-fetch-iconset.sh` | 从官方 OcBinaryData 取图标集 / 字体 / 标签 / 音频 |

@@ -24,8 +24,17 @@
 - **ESP 在 512 G 盘上**（ZHITAI）：`disk1s1`，卷名 `EFI`，卷 UUID **⟨你的 ESP 卷 UUID，用 `diskutil info diskXs1 | grep UUID` 取⟩**，FAT16，119.5 MB
 - OpenCore = **`DBG-108-2026-09-27`**（= **1.0.8 DEBUG 构建**，`OpenCore.efi` 868,352 B，sha `11ba0b76…`；官方 RELEASE 是 626,688 B / `9ef21f9d…`）
 - config 版本存档：`xh_adls3修复-20261013/config.plist.vNN-<说明>`；工作区镜像 `_oc-current.plist`
-- **现行（10-15 02:20 起）**：`LauncherOption=Disabled`，sha `b06951b2ce3b4a57afaefbe5613c748f320d0f0700f9cc3ac589bc859f2f3a86`；
-  存档 `_oc-v-LauncherOption-Disabled-20261015-022110.plist`（此前版本 v45–v51 在 `xh_adls3修复-20261013/`）
+- **现行（10-15 02:41 起）**：硬盘 ESP 的 config sha **`a08dfed350b5c9263cce35eab252cc88b0bae9e9d7f7f6287e0d3b9d83e4c5c7`**，`LauncherOption=Full`；
+  U 盘 ESP 的 config sha **`d01b859a…`**，`LauncherOption=Disabled`。
+  存档：`_oc-v-LauncherOption-Full-restored-20261015-024154.plist`；备份 `_oc-backup-before-launcheropt-back-to-full-20261015-024132.plist`。
+  （中间版本：`b06951b2…` = 两边都 Disabled 那一版，已回退；更早 v45–v51 在 `xh_adls3修复-20261013/`）
+- **两个 ESP（★ 盘号会漂，按容量/角色认）**：
+  | ESP | 盘 | 容量 | config | 角色 |
+  |---|---|---|---|---|
+  | 硬盘 ESP `disk2s1` | ZHITAI PC005 NVMe 512 GB | 119.5 MB | `DBG-108`（DEBUG，868,352 B） | **目标引导盘** |
+  | U 盘 ESP `disk9s1` | 32 GB 外接盘 | 1.1 GB | `REL-108`（RELEASE，626,688 B），机型 `iMacPro1,1` 的 FALLBACK 配置 | 救援盘 |
+- **★ 当前从哪引导**：`nvram 4D1FDA02-…:boot-path` 实测 = `…/USB(0x18,0x0)/USB(0x0,0x0)/USB(0x2,0x0)/HD(1,GPT,…)/EFI\OC\OpenCore.efi`
+  ⇒ **10-15 02:55 时仍从 U 盘引导**（跑的是 U 盘那份 `REL-108`）
 
 ## 关键开关现状（v45）
 
@@ -37,7 +46,7 @@
 | `Misc>Security>SecureBootModel` | `Disabled` | 与 `FixupAppleEfiImages=true` 成对 |
 | `Misc>Security>Vault` | `Optional` | 无 vault.plist |
 | `Misc>Security>ExposeSensitiveData` | `7` | `0x01` 是 1401 App 找 OpenCore 用的 `boot-path`，**别降成 6** |
-| `Misc>Boot>LauncherOption` / `RequestBootVarRouting` | **`Disabled`** / `true` | 10-15 02:20 由 `Full` 改 `Disabled`（**修「用 U 盘引导后启动项消失」**，见 `boot-entries.md`）；`RequestBootVarRouting` 保持 `true` |
+| `Misc>Boot>LauncherOption` / `RequestBootVarRouting` | **`Full`** / `true` | ★ **10-15 02:41 定案：硬盘那份 `Full`（自建+自愈）/ U 盘那份 `Disabled`（不改写 NVRAM）** —— 中间一度两边都改过 `Disabled`，但那样**没人建启动项**，已回退。见 `boot-entries.md` §3 |
 | `Misc>Boot>PickerMode/Variant/Attributes` | `External` / `Acidanthera\GoldenGate` / `144` | 主题，保留 |
 | `Misc>Boot>HideAuxiliary` | `true` | 隐藏 recovery / 工具项（按空格展开） |
 | `Booter>Quirks>EnableWriteUnprotector` | `false` | 依据 `OCABC: MAT support is 1` |
