@@ -35,7 +35,7 @@ cp -R <skill> <项目目录>/.workbuddy-ai/skills/
 - **kext 精简**：找禁用项与孤儿文件，含「不能删」清单
 - **驱动安装**：NVIDIA（NullMoth）、Intel 无线（AirportItlwm / itlwm）、
   **博通网卡**（BCM943602CDP / BCM43602 —— ★ 按 Sequoia / Tahoe 分路线，含 OCLP root patch 与前置保护）、
-  从零生成基础 EFI（RapidEFI）、
+  从零生成基础 EFI（RapidEFI）、**HiDPI**（非 Retina 屏清晰度；★ 本机 NVIDIA 驱动未完善，含风险与恢复路径）、
   **板载声卡 AppleALC**（先搜同型号前人 layout-id → 搜不到再按 codec 定制 → 本地构建 → 提 PR）
 
 **内置的安全流程（最重要的一部分）**
@@ -54,7 +54,7 @@ cp -R <skill> <项目目录>/.workbuddy-ai/skills/
 
 参考文档：`official-docs-method.md`（含**成对关系表**）、`logs-and-debug.md`、`acpi-ssdt.md`、
 `disks-and-kexts.md`、`lifecycle.md`（**六阶段全流程**）、`nvidia-driver.md`、`intel-wifi.md`、
-`rapidefi-first-efi.md`、`applealc-custom.md`、`broadcom-wifi.md`、`pitfalls.md`、`machine-facts.md`
+`rapidefi-first-efi.md`、`applealc-custom.md`、`broadcom-wifi.md`、`hidpi.md`、`pitfalls.md`、`machine-facts.md`
 
 ---
 

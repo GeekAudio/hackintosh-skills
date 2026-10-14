@@ -1,7 +1,7 @@
 ---
 name: opencore-config-audit
-description: 审查、修改与维护黑苹果的 OpenCore（OpenCorePkg）EFI 配置与驱动安装：逐键对照官方文档并用官方 ocvalidate 校验 config.plist、巡检 ACPI/SSDT（对照官方 AcpiSamples）、精简注入的 kext、读取 OpenCore 引导日志与内核日志取证、用 /etc/fstab 屏蔽磁盘、调整 boot-args 与调试开关；并含从零生成基础 EFI（Windows 上用 RapidEFI）、NVIDIA 驱动（NullMoth nvidia-macos-driver）、Intel 无线网卡驱动（AirportItlwm / itlwm）、博通网卡（BCM943602CDP / BCM43602，按 Sequoia/Tahoe 分路线）与板载声卡 AppleALC（先搜前人 layout-id、搜不到再按 codec 定制并提 PR）的完整方法。当任务涉及 OpenCore、config.plist、EFI/OC、ocvalidate、SSDT/ACPI、boot-args、kext 注入、启动选择器、开机刷屏或日志、屏蔽磁盘/隐藏磁盘、首次生成 EFI、装 NVIDIA 驱动、装 Intel 无线驱动、板载声卡/AppleALC/layout-id、博通网卡/BCM943602CDP/OCLP root patch 时使用。内置「改 ESP 的安全流程」（备份 → 语义 diff → lint → sha 校验 → 镜像/存档 → 卸载重挂复验）。
-description_en: Audit, edit and maintain a hackintosh OpenCore (OpenCorePkg) EFI configuration and its driver installs — verify every config.plist switch against the official documentation and ocvalidate, review ACPI/SSDT tables against the official AcpiSamples, trim injected kexts, read OpenCore boot logs and kernel logs for evidence, mask disks with /etc/fstab, and follow the NullMoth NVIDIA driver, Intel WiFi (AirportItlwm), Broadcom WiFi (BCM943602CDP, Sequoia vs Tahoe routes), onboard audio (AppleALC layout-id / codec customisation) and first-time base-EFI generation (RapidEFI on Windows) workflows. Includes a mandatory safe-edit protocol for the EFI system partition.
+description: 审查、修改与维护黑苹果的 OpenCore（OpenCorePkg）EFI 配置与驱动安装：逐键对照官方文档并用官方 ocvalidate 校验 config.plist、巡检 ACPI/SSDT（对照官方 AcpiSamples）、精简注入的 kext、读取 OpenCore 引导日志与内核日志取证、用 /etc/fstab 屏蔽磁盘、调整 boot-args 与调试开关；并含从零生成基础 EFI（Windows 上用 RapidEFI）、NVIDIA 驱动（NullMoth nvidia-macos-driver）、Intel 无线网卡驱动（AirportItlwm / itlwm）、博通网卡（BCM943602CDP / BCM43602，按 Sequoia/Tahoe 分路线）、板载声卡 AppleALC 与 HiDPI（非 Retina 屏清晰度）（先搜前人 layout-id、搜不到再按 codec 定制并提 PR）的完整方法。当任务涉及 OpenCore、config.plist、EFI/OC、ocvalidate、SSDT/ACPI、boot-args、kext 注入、启动选择器、开机刷屏或日志、屏蔽磁盘/隐藏磁盘、首次生成 EFI、装 NVIDIA 驱动、装 Intel 无线驱动、板载声卡/AppleALC/layout-id、博通网卡/BCM943602CDP/OCLP root patch、HiDPI/显示不清晰/缩放时使用。内置「改 ESP 的安全流程」（备份 → 语义 diff → lint → sha 校验 → 镜像/存档 → 卸载重挂复验）。
+description_en: Audit, edit and maintain a hackintosh OpenCore (OpenCorePkg) EFI configuration and its driver installs — verify every config.plist switch against the official documentation and ocvalidate, review ACPI/SSDT tables against the official AcpiSamples, trim injected kexts, read OpenCore boot logs and kernel logs for evidence, mask disks with /etc/fstab, and follow the NullMoth NVIDIA driver, Intel WiFi (AirportItlwm), Broadcom WiFi (BCM943602CDP, Sequoia vs Tahoe routes), onboard audio (AppleALC layout-id / codec customisation), HiDPI scaling on non-Retina displays and first-time base-EFI generation (RapidEFI on Windows) workflows. Includes a mandatory safe-edit protocol for the EFI system partition.
 version: 0.2.0
 agent_created: true
 ---
@@ -128,7 +128,7 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 （换了硬件的驱动、功能已被其它开关覆盖的补丁）。删除前先把原件备份到工作区，再删文件 + 删条目。
 判据与「不能删」清单见 `references/disks-and-kexts.md`。
 
-### 阶段 8 · 驱动安装（NVIDIA / Intel 无线 / 板载声卡）
+### 阶段 8 · 驱动与显示（NVIDIA / Intel 无线 / 博通网卡 / 板载声卡 / HiDPI）
 
 - **NVIDIA 独显** ⇒ `references/nvidia-driver.md`：适用卡范围（Turing+）、两条安装路线（官方包 / 1401 App）、
   ★「kext 装 `/Library/Extensions` 从 AuxKC 加载 ⇒ **不要**再从 `EFI/OC/Kexts` 注入」、
@@ -145,6 +145,12 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
   NVRAM 两条蓝牙 data、USB 端口设 Internal(255)、`built-in=<01>`；
   ★ **打 OCLP root patch 前必须先跑保护脚本**（否则 mtime=epoch 的 NVIDIA kext 会被搬到 `Relocated Extensions`）；
   ★ 判 Wi-Fi 死活**看 `ifconfig en1`，别只看 `system_profiler`**
+- **显示不清晰 ⇒ HiDPI** ⇒ `references/hidpi.md`：用 `xzhih/one-key-hidpi` 给非 Retina 屏模拟 HiDPI
+  （写 `/Library/Displays/Contents/Resources/Overrides/`，**不动密封系统卷**；两个模式：只注入 `scale-resolutions` /
+  连同 patched EDID 一起注入，**先试前者**）；
+  ★★ **本机驱动是 NullMoth 的 NVIDIA 驱动，自述未完善** —— 而 HiDPI 正踩在「显示模式/缩放/元数据」这条它出过真 bug 的路径上
+  （本机显示器尺寸报错就是这个根因）⇒ **开之前先记录基线、一次只改一项、先确认 `.hidpi-disable` 与 Recovery 恢复路径**；
+  ★ 别和**引导期** HiDPI（`UEFI>Output>UIScale`）搞混，两者独立
 - **板载声卡（AppleALC）** ⇒ `references/applealc-custom.md`：
   ★ **先搜同型号前人经验（推荐路线）**：查官方 `Supported-codecs` 表 → 搜 `repo:acidanthera/AppleALC <codec>` 的 issue/PR →
     搜「主板型号 + layout-id」→ 逐个试 `alcid=N`；
@@ -186,6 +192,7 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 - `references/intel-wifi.md` —— Intel 无线网卡驱动（AirportItlwm / itlwm）：版本线、注入、蓝牙配套、排错
 - `references/applealc-custom.md` —— 板载声卡（AppleALC）：先搜前人经验、按 codec 定制、本地构建、测试、提 PR
 - `references/broadcom-wifi.md` —— 博通网卡（BCM43602/BCM20703）：**按 Sequoia/Tahoe 分路线**、OCLP root patch、验证判据
+- `references/hidpi.md` —— 非 Retina 屏开 HiDPI（one-key-hidpi）：写入位置、两个模式、恢复路径、**与 NVIDIA 驱动的风险**
 - `references/rapidefi-first-efi.md` —— 从零开始：在 Windows 上用 RapidEFI 生成基础 EFI，及之后必须做的收尾
 - `references/lifecycle.md` —— **六阶段全流程**：Win 生成 → 安装 → 换 DEBUG → 收日志 → 修补 → 日常化
 - `references/pitfalls.md` —— 全部踩过的坑
