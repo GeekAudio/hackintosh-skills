@@ -6,8 +6,8 @@
 
 每个子目录就是一个可直接使用的 skill：把整个目录复制到你的 skills 目录即可。
 
-> **不知道怎么用？** 见 **[`USAGE.md`](USAGE.md)** —— 怎么调用（自动 / 手动）、SKILL.md 里控制调用的字段、
-> 两个 skill 的「说这句话就触发」速查表、以及为什么没被调用的排查。
+> **不知道怎么用？** 见 **[`USAGE.md`](USAGE.md)** —— 怎么调用（自动 / 手动）、两个 skill 的「说这句话就触发」速查表；
+> 要改 skill 本身（加触发词、调调用方式）的人，另见其中的「调用控制字段 / 覆盖设置 / 排查」。
 
 **目录**
 
@@ -54,7 +54,7 @@ hackintosh-skills/
 ├── opencore-config-audit/
 │   ├── SKILL.md                 # 主流程 + 17 条铁律 + 资源表
 │   ├── references/              # 20 份专题文档（见下表）
-│   └── scripts/                 # 10 个脚本（见下表）
+│   └── scripts/                 # 11 个脚本（见下表）
 └── opencore-picker-theme/
     ├── SKILL.md
     ├── references/              # 4 份
@@ -96,7 +96,8 @@ hackintosh-skills/
 **② 配置审查**
 
 - **逐键对照官方文档**：按机器上的 OpenCore 版本取官方发布包，用官方 `ocvalidate` 校验，并把
-  `Configuration.tex` 里**全部 420 个配置键**的 `Type / Failsafe / Description` 抽成键库，
+  `Configuration.tex` 里**全部配置条目**（**420 个**，其中带 `Type` 的配置项 **401 个**）的
+  `Type / Failsafe / Description` 抽成键库，
   逐键判定「你的取值 vs 官方默认」，分成三类：**有依据的正确偏离 / 与文档相反 / 冗余残留**
 - **ACPI / SSDT 巡检**：用官方 `Docs/AcpiSamples/`（18 个样例）逐条对照你的实际设备
 - **kext 精简**：找禁用项与孤儿文件，含「不能删」清单
@@ -112,13 +113,15 @@ hackintosh-skills/
 
 **④ 系统大版本升级（如 macOS 15 → 26）**
 
-- ★★ **核心 = 给按版本分构建的 kext 加 `MinKernel` / `MaxKernel`**：旧版条目上限钉 `24.99.99`，
+- ★★ **硬约束 ①：给按版本分构建的 kext 加 `MinKernel` / `MaxKernel`** —— 旧版条目上限钉 `24.99.99`，
   新版条目写 `MinKernel 25.0.0`（博通 `AirPortBrcmNIC-Tahoe.kext`、Intel `AirportItlwm-Tahoe` 都是这么分的）
 - **升级会必然打断**：Wi-Fi 消失、OCLP root patch 全丢、第三方 kext 可能被搬走 —— 这是设计使然，不是配置坏了
-- **时序**：升级前关 FileVault + 保护第三方 kext → 升级后补 kext 条目 → 重打 OCLP root patch → 验证
-- ★★ **硬约束：升级时不许改机型** —— `PlatformInfo` 的 `SystemProductName` / `BoardProduct` / 三码全不动。
-  机型不在新版白名单里（Tahoe 的 Intel 只剩 `iMac20,1` `iMac20,2` `MacPro7,1` `MacBookPro16,x`，`iMacPro1,1` 被剔除）
-  ⇒ **加 boot-arg 绕过**：`-no_compat_check`（能启动）+ `revpatch=sbvmm`（能收到更新），**两个都要**，而不是换机型
+- **时序**：升级前**备份整个 EFI** + 关 FileVault + 保护第三方 kext → 升级 → 补 kext 条目 → 重打 OCLP root patch → 重启验证
+- ★★ **硬约束 ②：升级时不许改机型** —— `PlatformInfo` 的 `SystemProductName` / `BoardProduct` / 三码全不动。
+  白名单**只用来判断「需不需要绕过」**，不是「要不要换机型」的依据：
+  Tahoe 的 Intel 只剩 `iMac20,1` `iMac20,2` `MacPro7,1` `MacBookPro16,x`（`iMacPro1,1` 被剔除）；
+  **不在名单里 ⇒ 加 boot-arg 绕过**：`-no_compat_check`（能启动）+ `revpatch=sbvmm`（能收到更新），**两个都要**
+- **换机型是独立的一件事，不要塞进升级那一次** —— 它连带内置 USB 图冲突、board-id 触发系统卷重建、XCPM profile 变化（见 §⑤ 与 `smbios-and-serials.md`）
 - **macOS 26 新增环境坑**：EFI 挂载必须提权、FAT 改 FSKit、EFI 上删文件会留 `.Trashes`
 
 **⑤ 驱动与硬件特性**
@@ -133,7 +136,7 @@ hackintosh-skills/
 | **HiDPI**（one-key-hidpi） | 非 Retina 屏清晰度；★ NVIDIA 驱动未完善，含风险与恢复路径；★ 别和引导期 `UIScale` 混 |
 | **Intel 睿频** | CPU 被压低频 → **CPU-S 验证** → CPUFriend 修法；★ BIOS `Speed Shift` 必须 Enabled |
 | **MacPro 机型内存定制** | ★ **分两层**：「系统信息」= 全机型通用（SMBIOS Type 17）；「关于本机」内存图 = MacPro 专有（**摆位规则 + 12 槽映射表**） |
-| **SMBIOS 机型切换 + 三码** | ★ 换机型会连带换掉内置 USB 图 ⇒ 与 UTBMap 冲突；序列号三类判据；ROM 用真实 en0 MAC；换码风控纪律 |
+| **SMBIOS 机型切换 + 三码** | ★ 换机型会连带换掉内置 USB 图 ⇒ 与 UTBMap 冲突；序列号三类判据；ROM 用真实 en0 MAC；换码风控纪律。★ **与系统升级解耦** —— 升级时不动机型（见 §④） |
 | **首次生成 EFI**（RapidEFI） | Windows 上生成基础 EFI，及之后必须做的收尾 |
 
 ### 内置的安全流程（最重要的一部分）
@@ -145,7 +148,7 @@ hackintosh-skills/
 
 | 脚本 | 作用 |
 |---|---|
-| `fetch-opencore-docs.sh` | 取同版官方包（`ocvalidate` + `Sample.plist` + `AcpiSamples`）并建 420 键键库 |
+| `fetch-opencore-docs.sh` | 取同版官方包（`ocvalidate` + `Sample.plist` + `AcpiSamples`）并建键库（420 条目 / 401 项带 `Type`） |
 | `oc-verify.sh` | 一键校验：`plutil` + `ocvalidate` + ACPI/Kexts 引用完整性 + 孤儿文件 + sha |
 | `oc-swap-build.sh` | RELEASE ↔ DEBUG 换构建（连官方同名 Drivers 一起换，保留第三方驱动） |
 | `oc-edit-safe.sh` | 安全改 config 的包装（`begin` 备份 / `finish` 校验存档落盘复验） |
@@ -161,8 +164,8 @@ hackintosh-skills/
 
 | 文档 | 内容 |
 |---|---|
-| `lifecycle.md` | **六阶段全流程**：Win 生成 → 安装 → 换 DEBUG → 收日志 → 修补 → 日常化 |
-| `os-upgrade-15-to-26.md` | **系统大版本升级**（15 Sequoia → 26 Tahoe）：**`MinKernel`/`MaxKernel` 版本分流**、逐部件清单、升级时序、机型白名单、macOS 26 新坑、OCLP vs BCMC |
+| `lifecycle.md` | **六阶段全流程**：Win 生成 → 安装 → 换 DEBUG → 收日志 → 修补 → 日常化（另有 ⑦ 指向系统大版本升级） |
+| `os-upgrade-15-to-26.md` | **系统大版本升级**（15 Sequoia → 26 Tahoe）：★★ **两条硬约束**（kext 版本分流 · **不改机型**）、逐部件清单、升级时序、macOS 26 新坑、OCLP vs BCMC |
 | `official-docs-method.md` | 官方文档取用方法、逐键判定法、**成对关系表** |
 | `logs-and-debug.md` | `Target` / `DisplayLevel` 位定义、日志判据、刷屏归因 |
 | `boot-timeline.md` | **启动耗时 / 时间线分析**：三段拆解、流式过滤、停顿窗口定位 |
@@ -217,7 +220,7 @@ hackintosh-skills/
 ## 适用性与边界
 
 - **流程通用**：文档、校验器、样例、资源都来自官方发布包 / 官方仓库，对任何 OpenCore 机器适用。
-- **本机事实隔离**：`opencore-config-audit/references/machine-facts.md` 记录的是**某一台机器**的事实
+- **参考机器事实隔离**：`opencore-config-audit/references/machine-facts.md` 记录的是**某一台机器**的事实
   （Z690 / Alder Lake / RTX 3080 / macOS 26）。换机器时按 `SKILL.md` 的**阶段 0**重新核实即可，
   不要把那份事实当成通用配置。
 - **第三方工具不是权威**：RapidEFI 等工具生成的结果适合作为**起点**，仍需回到官方文档 + `ocvalidate` 复核。
