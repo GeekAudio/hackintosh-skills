@@ -133,3 +133,9 @@ system_profiler SPDisplaysDataType | head -20     # 应显示你的 GeForce、Me
 
 装这个驱动必须放宽系统安全边界：`SecureBootModel=Disabled` + `csr-active-config` 放宽 SIP + AMFI 参数（`amfi_get_out_of_my_way`）。
 这是**有意降低系统安全性**换图形加速，只在明确需要时做；不装驱动时把这几项恢复原值。
+
+> ★★ **关 AMFI 有一个隐性代价：TCC 权限弹窗全部失效** ——
+> 语音 / 摄像头类 App 会「报没权限 + 不弹窗 + 隐私列表里也没有它」。
+> **首选解法是改用 `AMFIPass.kext`（保留 AMFI）**，但**本驱动的上游明确不接受它**
+> ⇒ 本机只能「保驱动 + 手工注入 TCC 条目」（**不持久**）。
+> 详见 **`amfi-and-tcc.md`**（含字段格式、`csreq` 生成、排查判据、撤销）。
