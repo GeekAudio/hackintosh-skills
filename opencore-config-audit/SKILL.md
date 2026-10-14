@@ -1,7 +1,7 @@
 ---
 name: opencore-config-audit
-description: 审查、修改与维护黑苹果的 OpenCore（OpenCorePkg）EFI 配置与驱动安装：逐键对照官方文档并用官方 ocvalidate 校验 config.plist、巡检 ACPI/SSDT（对照官方 AcpiSamples）、精简注入的 kext、读取 OpenCore 引导日志与内核日志取证、用 /etc/fstab 屏蔽磁盘、调整 boot-args 与调试开关；并含从零生成基础 EFI（Windows 上用 RapidEFI）、NVIDIA 驱动（NullMoth nvidia-macos-driver）、Intel 无线网卡驱动（AirportItlwm / itlwm）、博通网卡（BCM943602CDP / BCM43602，按 Sequoia/Tahoe 分路线）、板载声卡 AppleALC、HiDPI（非 Retina 屏清晰度）、Intel 睿频/CPU 限频（CPU-S 验证 + CPUFriend 修法）与 MacPro 机型内存定制（摆位规则 + 映射表）（先搜前人 layout-id、搜不到再按 codec 定制并提 PR）的完整方法。当任务涉及 OpenCore、config.plist、EFI/OC、ocvalidate、SSDT/ACPI、boot-args、kext 注入、启动选择器、开机刷屏或日志、屏蔽磁盘/隐藏磁盘、首次生成 EFI、装 NVIDIA 驱动、装 Intel 无线驱动、板载声卡/AppleALC/layout-id、博通网卡/BCM943602CDP/OCLP root patch、HiDPI/显示不清晰/缩放、CPU 睿频/限频/卡顿（CPU-S）、内存定制/关于本机内存图/插槽映射时使用。内置「改 ESP 的安全流程」（备份 → 语义 diff → lint → sha 校验 → 镜像/存档 → 卸载重挂复验）。
-description_en: Audit, edit and maintain a hackintosh OpenCore (OpenCorePkg) EFI configuration and its driver installs — verify every config.plist switch against the official documentation and ocvalidate, review ACPI/SSDT tables against the official AcpiSamples, trim injected kexts, read OpenCore boot logs and kernel logs for evidence, mask disks with /etc/fstab, and follow the NullMoth NVIDIA driver, Intel WiFi (AirportItlwm), Broadcom WiFi (BCM943602CDP, Sequoia vs Tahoe routes), onboard audio (AppleALC layout-id / codec customisation), HiDPI scaling on non-Retina displays, Intel Turbo Boost / CPU frequency capping (verified with CPU-S, fixed with CPUFriend), MacPro memory injection (slot layout mapping) and first-time base-EFI generation (RapidEFI on Windows) workflows. Includes a mandatory safe-edit protocol for the EFI system partition.
+description: 审查、修改与维护黑苹果的 OpenCore（OpenCorePkg）EFI 配置与驱动安装：逐键对照官方文档并用官方 ocvalidate 校验 config.plist、巡检 ACPI/SSDT（对照官方 AcpiSamples）、精简注入的 kext、读取 OpenCore 引导日志与内核日志取证、用 /etc/fstab 屏蔽磁盘、调整 boot-args 与调试开关；并含从零生成基础 EFI（Windows 上用 RapidEFI）、NVIDIA 驱动（NullMoth nvidia-macos-driver）、Intel 无线网卡驱动（AirportItlwm / itlwm）、博通网卡（BCM943602CDP / BCM43602，按 Sequoia/Tahoe 分路线）、板载声卡 AppleALC、HiDPI（非 Retina 屏清晰度）、Intel 睿频/CPU 限频（CPU-S 验证 + CPUFriend 修法）、MacPro 机型内存定制（摆位规则 + 映射表）与 SMBIOS 机型切换/三码（含 USB 图冲突与风控纪律）（先搜前人 layout-id、搜不到再按 codec 定制并提 PR）的完整方法。当任务涉及 OpenCore、config.plist、EFI/OC、ocvalidate、SSDT/ACPI、boot-args、kext 注入、启动选择器、开机刷屏或日志、屏蔽磁盘/隐藏磁盘、首次生成 EFI、装 NVIDIA 驱动、装 Intel 无线驱动、板载声卡/AppleALC/layout-id、博通网卡/BCM943602CDP/OCLP root patch、HiDPI/显示不清晰/缩放、CPU 睿频/限频/卡顿（CPU-S）、内存定制/关于本机内存图/插槽映射、换机型/SMBIOS/三码/序列号/ROM/iMessage 登录时使用。内置「改 ESP 的安全流程」（备份 → 语义 diff → lint → sha 校验 → 镜像/存档 → 卸载重挂复验）。
+description_en: Audit, edit and maintain a hackintosh OpenCore (OpenCorePkg) EFI configuration and its driver installs — verify every config.plist switch against the official documentation and ocvalidate, review ACPI/SSDT tables against the official AcpiSamples, trim injected kexts, read OpenCore boot logs and kernel logs for evidence, mask disks with /etc/fstab, and follow the NullMoth NVIDIA driver, Intel WiFi (AirportItlwm), Broadcom WiFi (BCM943602CDP, Sequoia vs Tahoe routes), onboard audio (AppleALC layout-id / codec customisation), HiDPI scaling on non-Retina displays, Intel Turbo Boost / CPU frequency capping (verified with CPU-S, fixed with CPUFriend), MacPro memory injection (slot layout mapping), SMBIOS model switching and serials/MLB/UUID/ROM (iMessage, USB map conflict) and first-time base-EFI generation (RapidEFI on Windows) workflows. Includes a mandatory safe-edit protocol for the EFI system partition.
 version: 0.2.0
 agent_created: true
 ---
@@ -128,7 +128,7 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 （换了硬件的驱动、功能已被其它开关覆盖的补丁）。删除前先把原件备份到工作区，再删文件 + 删条目。
 判据与「不能删」清单见 `references/disks-and-kexts.md`。
 
-### 阶段 8 · 驱动与硬件特性（NVIDIA / Intel 无线 / 博通网卡 / 板载声卡 / HiDPI / **Intel 睿频**）
+### 阶段 8 · 驱动与硬件特性（NVIDIA / Intel 无线 / 博通网卡 / 板载声卡 / HiDPI / Intel 睿频 / **内存定制 / SMBIOS+三码**）
 
 - **NVIDIA 独显** ⇒ `references/nvidia-driver.md`：适用卡范围（Turing+）、两条安装路线（官方包 / 1401 App）、
   ★「kext 装 `/Library/Extensions` 从 AuxKC 加载 ⇒ **不要**再从 `EFI/OC/Kexts` 注入」、
@@ -145,6 +145,14 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
   NVRAM 两条蓝牙 data、USB 端口设 Internal(255)、`built-in=<01>`；
   ★ **打 OCLP root patch 前必须先跑保护脚本**（否则 mtime=epoch 的 NVIDIA kext 会被搬到 `Relocated Extensions`）；
   ★ 判 Wi-Fi 死活**看 `ifconfig en1`，别只看 `system_profiler`**
+- **换机型 / 三码** ⇒ `references/smbios-and-serials.md`：
+  ★★ **换机型不是「改 4 个键」** —— 它会连带换掉 macOS 想附加的**内置 USB 图**（按「机型 + 控制器名」附加）
+  ⇒ 与 `UTBMap` 在 `AppleUSBHostMergeProperties` 合并冲突 ⇒ **本机实测卡在 `AppleUSBHost*` 开不了机**
+  ⇒ **「换机型」和「换 USB 图」是耦合的同一个改动**（先把 UTBMap 换成完整图 + 备 U 盘 EFI，再换机型）；
+  还会连带换 XCPM profile / AGDC 路径 / ByHost 偏好，且 **`MacPro7,1` 强制 `hwp=on` ⇒ 换机型必须重做 CPUFriend 数据**；
+  Tahoe 的 Intel 机型只剩 4 款（`iMacPro1,1` 被剔除）⇒ **把换机型绑死在升 Tahoe 那一次**；
+  三码：官方 `macserial` 生成、**序列号三类判据**（官网「无效」=可用 / 显示保修=必须换 / 「核实购买日期」=最理想）、
+  **ROM 必须是 en0 真实 MAC**、改 ROM 可用 **base64 等长替换**、★ **换码要克制（脏码+频繁换号触发风控）**、换完**先 FaceTime 再信息**
 - **内存定制（`PlatformInfo > Memory`）** ⇒ `references/memory-injection.md`：
   ★★ **分两层别混** —— **A 层「系统信息 → 内存」= 全机型通用**（就是标准 SMBIOS Type 17 字段，
   `DeviceLocator` 决定显示的名字、`MaxCapacity` 单位是 **bytes**、键名是 **`SerialNumber`**）；
@@ -212,6 +220,7 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 - `references/hidpi.md` —— 非 Retina 屏开 HiDPI（one-key-hidpi）：写入位置、两个模式、恢复路径、**与 NVIDIA 驱动的风险**
 - `references/intel-turbo.md` —— Intel 睿频/CPU 限频：**CPU-S 验证**、根因定位（机型 profile + hwp）、CPUFriend 修法、BIOS 硬前提
 - `references/memory-injection.md` —— MacPro 机型内存定制：**12 槽映射表**、**摆位规则 f**、A 层通用字段、踩坑
+- `references/smbios-and-serials.md` —— SMBIOS 机型切换 + 三码：机型↔USB 图冲突、切换脚本三态、序列号判据、ROM、风控纪律
 - `references/rapidefi-first-efi.md` —— 从零开始：在 Windows 上用 RapidEFI 生成基础 EFI，及之后必须做的收尾
 - `references/lifecycle.md` —— **六阶段全流程**：Win 生成 → 安装 → 换 DEBUG → 收日志 → 修补 → 日常化
 - `references/pitfalls.md` —— 全部踩过的坑

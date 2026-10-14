@@ -38,6 +38,7 @@ cp -R <skill> <项目目录>/.workbuddy-ai/skills/
   从零生成基础 EFI（RapidEFI）、**HiDPI**（非 Retina 屏清晰度；★ 本机 NVIDIA 驱动未完善，含风险与恢复路径）、
   **Intel 睿频**（CPU 被压低频 → 用 CPU-S 验证 → CPUFriend 修法，含 BIOS 硬前提）、
   **MacPro 机型内存定制**（★ 分两层：「系统信息」全机型通用 /「关于本机」内存图是 MacPro 专有的**摆位规则 + 12 槽映射表**）、
+  **SMBIOS 机型切换 + 三码**（★ 换机型会连带换掉内置 USB 图 ⇒ 与 UTBMap 冲突；序列号三类判据；ROM 用真实 en0 MAC；换码风控纪律）、
   **板载声卡 AppleALC**（先搜同型号前人 layout-id → 搜不到再按 codec 定制 → 本地构建 → 提 PR）
 
 **内置的安全流程（最重要的一部分）**
@@ -58,7 +59,7 @@ cp -R <skill> <项目目录>/.workbuddy-ai/skills/
 
 参考文档：`official-docs-method.md`（含**成对关系表**）、`logs-and-debug.md`、`acpi-ssdt.md`、
 `disks-and-kexts.md`、`lifecycle.md`（**六阶段全流程**）、`nvidia-driver.md`、`intel-wifi.md`、
-`rapidefi-first-efi.md`、`applealc-custom.md`、`broadcom-wifi.md`、`hidpi.md`、`intel-turbo.md`、`memory-injection.md`、`pitfalls.md`、`machine-facts.md`
+`rapidefi-first-efi.md`、`applealc-custom.md`、`broadcom-wifi.md`、`hidpi.md`、`intel-turbo.md`、`memory-injection.md`、`smbios-and-serials.md`、`pitfalls.md`、`machine-facts.md`
 
 ---
 
