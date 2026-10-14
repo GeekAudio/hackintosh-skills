@@ -2,13 +2,14 @@
 
 > 把本仓库的 skill 装进 WorkBuddy 有**两条路线**，先看这张表选一条。
 
-| | **路线 A：自有市场仓库**（推荐，**本仓库已配好**） | **路线 B：官方 SkillHub 上架** |
+| | **路线 A：自有市场仓库**（推荐，**本仓库已配好**） | **路线 B：上架到 SkillHub** |
 |---|---|---|
-| 面向 | 公开分发 / 小范围分享 / 团队内部 | 进官方市场被搜索到 |
-| 用户怎么装 | `/plugin marketplace add GeekAudio/hackintosh-skills` 然后 `/plugin install …` | 从「技能」面板搜索并安装 |
-| 需要审核吗 | **不需要** | **需要**（打包 → 上传 → 审核 → 发布） |
-| 需要账号/后台吗 | 不需要（只要有公开仓库） | 需要平台账号与上传后台 |
-| 更新方式 | 改完 `git push` 即可，用户端同步市场元数据 | 重新走一遍上传流程 |
+| 面向 | 公开分发 / 小范围分享 / 团队内部 | 进公共技能商店被搜到 |
+| 用户怎么装 | `/plugin marketplace add GeekAudio/hackintosh-skills` 然后 `/plugin install …` | 在 **<https://skillhub.cn>** 上浏览并安装 |
+| **在哪操作** | 你的 Git 仓库 | **网页：<https://skillhub.cn>**（登录后提交） |
+| 需要审核吗 | **不需要** | 平台侧有校验 / 精选机制 |
+| 需要账号吗 | 不需要（只要有公开仓库） | **需要** SkillHub 账号 |
+| 更新方式 | 改完 `git push` 即可，用户端同步市场元数据 | 重新走一遍提交流程 |
 
 ---
 
@@ -135,119 +136,70 @@ python3 <skill-creator>/scripts/quick_validate.py opencore-config-audit
 
 ---
 
-## 路线 B：上架官方 SkillHub
+## 路线 B：上架到 SkillHub（公共技能商店）
 
-### B.1 打包（这一步已经做好了）
+### ★ 先分清三件容易混的事
 
-用官方 skill-creator 的打包脚本（**会先自动校验再压缩**）：
+| 你以为的 | 实际是什么 | 是不是「上架商店」 |
+|---|---|---|
+| WorkBuddy 技能面板 → **「上传技能」** | 弹窗标题其实是 **`Import Skill`** —— 把技能**导入到你自己的**个人库 / 项目 | ❌ **不是**（这是本地导入） |
+| 技能设置里的 **「上传到 WorkBuddy Cloud」** | 说明原文：*"{names} will be available in **cloud sessions** after upload"* —— 同步到**你自己的云端会话**（功能开关 `EnableSkillToCloud` **默认关闭**） | ❌ **不是**（这是同步自己的云） |
+| **`https://skillhub.cn`** | **SkillHub —— 专为中国用户优化的 AI Skills 社区**（腾讯云托管），有精选、分类、下载量/星标、付费技能、企业专区、比赛 | ✅ **这才是商店** |
+
+### B.1 商店与接口地址
+
+| 用途 | 地址 |
+|---|---|
+| **商店网站（人去的）** | **<https://skillhub.cn>** |
+| 技能列表页 | `https://skillhub.cn/skills` |
+| **教程** | `https://skillhub.cn/tutorials` ← **上架前先看这个** |
+| **签名验证文档** | `https://skillhub.cn/docs/verify-signature` ← 与发布校验有关 |
+| 比赛 / 获奖 | `https://skillhub.cn/contest` · `/contest/winners` |
+| 企业专区 | `https://skillhub.cn/enterprise-zone` |
+| 技能 API | `https://api.skillhub.cn` —— `/api/skills`（列表）· `/api/v1/categories`（分类）· `/api/v1/search?q=`（语义搜索） |
+| 技能详情页 | `https://api.skillhub.cn/<作者>/<slug>`（例：`/indiv-ebandao/dev-expert`） |
+| 应用侧网关 | `https://lightmake.site`（WorkBuddy 内部用它拉列表/搜索/分类） |
+
+> 站点的 `robots.txt` + `sitemap.xml` 是公开的，上面这些路由都来自它。
+
+### B.2 上架前：把包准备好
 
 ```bash
 python3 <skill-creator>/scripts/package_skill.py opencore-config-audit ./dist
+# → dist/opencore-config-audit.zip（内含 SKILL.md，带 YAML 的 name + description）
 ```
 
-产物（zip 内**自带技能名作为顶层目录**）：
-
-```
-dist/opencore-config-audit.zip     ~150 KB
-```
-
-### B.2 上传前自检（对照平台的文件要求）
-
-平台弹窗里写明的两条要求：
-
-| 要求 | 本仓库的情况 |
-|---|---|
-| **文件夹或 `.zip` 必须包含 `SKILL.md`** | ✅ |
-| **`.md` 里必须有 YAML 格式的 `name` 与 `description`** | ✅ |
-
-自己再核一遍：
+**自检**：
 
 ```bash
-# ① 内容自检（SKILL.md + YAML frontmatter + 文件数）
+# ① 内容
 python3 - <<'EOF'
 import zipfile
-for z in ('dist/opencore-config-audit.zip',):
-    zf=zipfile.ZipFile(z); n=zf.namelist()
-    md=[x for x in n if x.endswith('/SKILL.md')][0]
-    fm=zf.read(md).decode('utf-8').split('---')[1]
-    print(z, '| SKILL.md ✅' if ('name:' in fm and 'description:' in fm) else '❌',
-          '| 文件数', len(n))
+z='dist/opencore-config-audit.zip'; zf=zipfile.ZipFile(z); n=zf.namelist()
+md=[x for x in n if x.endswith('/SKILL.md')][0]
+fm=zf.read(md).decode('utf-8').split('---')[1]
+print(z, '| SKILL.md ✅' if ('name:' in fm and 'description:' in fm) else '❌', '| 文件数', len(n))
 EOF
 
-# ② ★ 脱敏自检（技能里带了脚本，直接跑）
+# ② ★ 脱敏（必做）
 bash opencore-config-audit/scripts/redact-check.sh opencore-config-audit
 # 退出码 0 = 干净；1 = 有命中，先处理再打包
 ```
 
-> ★★ **打包前务必扫敏感信息**：三码（serial/MLB/UUID）、ROM 用的 MAC、内存条序列号、
-> 主机名、任何 token / 密钥。**这些一旦上传就公开了** —— 三码 + ROM MAC 等同于这台机器的
-> Apple 身份凭证（iMessage / FaceTime 认的就是它们）。
->
-> `scripts/redact-check.sh` 就是干这个的（只读）。**注意：自动扫描只是兜底**，
-> 它按模式匹配，判不了「这个值是不是本机专有的」—— 仍要人工扫一眼。
+> ★★ **三码（serial/MLB/UUID）+ ROM 用的 MAC 等同于这台机器的 Apple 身份**（iMessage / FaceTime 认的就是它们）。
+> **上传即公开** —— 打包前务必跑一遍 `redact-check.sh`，再人工扫一眼。
 
-### B.3 上传（在应用里操作）
+### B.3 上架
 
-**入口**：技能面板 → **「上传技能」**（也可以在输入框左下角 `+` → 技能）。
+**在浏览器里打开 <https://skillhub.cn>** → 登录 → 找提交/发布入口（先看 `/tutorials`）。
 
-技能面板的标签页：**推荐 / SkillHub / 插件 / Knot / 企业技能 / 已安装**。
+> ⚠️ **具体入口我没法替你确认**：站点是 SPA 且提交入口在登录之后，
+> 我这边只能用 curl 拿到外壳 HTML，看不到登录后的界面。**以站内教程为准。**
 
-**弹窗流程**：
+### B.4 这一步需要你来做
 
-1. **拖入**（或点选）**文件夹或 `.zip`**
-   - 拖文件夹时若为空会提示「请选包含 SKILL.md 的技能文件夹」
-   - 文件夹打包超时会提示改用点选
-2. **选择上传作用域** —— **个人库**（Personal Library）或 **项目**（Project）
-3. 填 **name / title / description**
-4. 点 **「选择并导入」** → 依次看到 **Security checking… → Uploading… → Importing…**
-
-**上传时实际提交的字段**（后台接口）：
-
-| 字段 | 说明 |
-|---|---|
-| `entity_type` | 固定 `skill` |
-| `file` | 你的 zip / 文件夹 |
-| `name` | 技能标识（必填） |
-| `title` | 标题（可选） |
-| `description` | 描述（可选） |
-
-### B.4 ★ 上传前会有一道 `preflight` 检查（会被拦或要求确认）
-
-上传不是直接传 —— 先跑一次 **preflight**，返回三件事：
-
-| 返回 | 含义 | 你要做什么 |
-|---|---|---|
-| `can_upload: false` | **被拦下**，不允许上传 | 按返回的 `issues` 逐条修 |
-| `need_confirmation: true` | **要求确认**后才能传 | 逐项确认 `confirmation_types` |
-| `confirmation_types` | 需要确认的类别 | ★ 其中一类是 **`credential`** —— **检测到疑似凭据** ⇒ 回去把密钥/token 从技能里清掉 |
-
-> ⇒ **所以「打包前扫敏感信息」不是可选项** —— 扫出来不清，上传时会被要求确认，甚至直接拦。
-
-### B.5 上传后：服务端检查（这就是「审核」）
-
-上传成功后会返回一个 `status`，前端**轮询**直到出结果：
-
-- 成功 → 拿到 `version` / `updated_at`
-- 失败 → 看 `check_error`
-
-所以「审核」是**在服务端做的**，不是人工先审 —— 先把包传上去，再由服务端判定。
-
-### B.6 可能被策略挡住的几种情况
-
-| 提示 | 原因 |
-|---|---|
-| `Your administrator has disabled personal Skill uploads.` | 管理员关掉了个人上传 |
-| `You are not on the allowlist for Skill uploads.` | 不在允许名单里 |
-| `You are not allowed to upload Skills.` | 在禁止名单里 |
-| `Skill package exceeds the {limit} size limit.` | **包体积超限**（本仓库两个包都只有百 KB 级，不用担心） |
-| `Service unavailable, please contact your administrator.` | 服务不可用 |
-
-### B.7 这一步需要你来做
-
-打包和自检**本仓库已经做完**（`dist/` 里就是可直接上传的 zip）。
-但**上传必须有你的账号**，我代替不了。
-
-> 上架后如果平台反馈需要改（描述字数、图标、分类等），改完**重新打包再传**即可。
+打包与自检**本仓库已经做完**（`dist/` 里就是可直接上传的包）。
+但**登录与提交必须有你的账号**，我代替不了。
 
 ### 两条路线可以并存
 
