@@ -1,7 +1,7 @@
 ---
 name: opencore-config-audit
-description: 审查、修改与维护黑苹果的 OpenCore（OpenCorePkg）EFI 配置与驱动安装：逐键对照官方文档并用官方 ocvalidate 校验 config.plist、巡检 ACPI/SSDT（对照官方 AcpiSamples）、精简注入的 kext、读取 OpenCore 引导日志与内核日志取证、用 /etc/fstab 屏蔽磁盘、调整 boot-args 与调试开关；并含从零生成基础 EFI（Windows 上用 RapidEFI）、NVIDIA 驱动（NullMoth nvidia-macos-driver）与 Intel 无线网卡驱动（AirportItlwm / itlwm）的完整安装方法。当任务涉及 OpenCore、config.plist、EFI/OC、ocvalidate、SSDT/ACPI、boot-args、kext 注入、启动选择器、开机刷屏或日志、屏蔽磁盘/隐藏磁盘、首次生成 EFI、装 NVIDIA 驱动、装 Intel 无线驱动时使用。内置「改 ESP 的安全流程」（备份 → 语义 diff → lint → sha 校验 → 镜像/存档 → 卸载重挂复验）。
-description_en: Audit, edit and maintain a hackintosh OpenCore (OpenCorePkg) EFI configuration and its driver installs — verify every config.plist switch against the official documentation and ocvalidate, review ACPI/SSDT tables against the official AcpiSamples, trim injected kexts, read OpenCore boot logs and kernel logs for evidence, mask disks with /etc/fstab, and follow the NullMoth NVIDIA driver, Intel WiFi (AirportItlwm) and first-time base-EFI generation (RapidEFI on Windows) workflows. Includes a mandatory safe-edit protocol for the EFI system partition.
+description: 审查、修改与维护黑苹果的 OpenCore（OpenCorePkg）EFI 配置与驱动安装：逐键对照官方文档并用官方 ocvalidate 校验 config.plist、巡检 ACPI/SSDT（对照官方 AcpiSamples）、精简注入的 kext、读取 OpenCore 引导日志与内核日志取证、用 /etc/fstab 屏蔽磁盘、调整 boot-args 与调试开关；并含从零生成基础 EFI（Windows 上用 RapidEFI）、NVIDIA 驱动（NullMoth nvidia-macos-driver）、Intel 无线网卡驱动（AirportItlwm / itlwm）与板载声卡 AppleALC（先搜前人 layout-id、搜不到再按 codec 定制并提 PR）的完整方法。当任务涉及 OpenCore、config.plist、EFI/OC、ocvalidate、SSDT/ACPI、boot-args、kext 注入、启动选择器、开机刷屏或日志、屏蔽磁盘/隐藏磁盘、首次生成 EFI、装 NVIDIA 驱动、装 Intel 无线驱动、板载声卡/AppleALC/layout-id 时使用。内置「改 ESP 的安全流程」（备份 → 语义 diff → lint → sha 校验 → 镜像/存档 → 卸载重挂复验）。
+description_en: Audit, edit and maintain a hackintosh OpenCore (OpenCorePkg) EFI configuration and its driver installs — verify every config.plist switch against the official documentation and ocvalidate, review ACPI/SSDT tables against the official AcpiSamples, trim injected kexts, read OpenCore boot logs and kernel logs for evidence, mask disks with /etc/fstab, and follow the NullMoth NVIDIA driver, Intel WiFi (AirportItlwm), onboard audio (AppleALC layout-id / codec customisation) and first-time base-EFI generation (RapidEFI on Windows) workflows. Includes a mandatory safe-edit protocol for the EFI system partition.
 version: 0.2.0
 agent_created: true
 ---
@@ -128,7 +128,7 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 （换了硬件的驱动、功能已被其它开关覆盖的补丁）。删除前先把原件备份到工作区，再删文件 + 删条目。
 判据与「不能删」清单见 `references/disks-and-kexts.md`。
 
-### 阶段 8 · 驱动安装（NVIDIA / Intel 无线）
+### 阶段 8 · 驱动安装（NVIDIA / Intel 无线 / 板载声卡）
 
 - **NVIDIA 独显** ⇒ `references/nvidia-driver.md`：适用卡范围（Turing+）、两条安装路线（官方包 / 1401 App）、
   ★「kext 装 `/Library/Extensions` 从 AuxKC 加载 ⇒ **不要**再从 `EFI/OC/Kexts` 注入」、
@@ -138,6 +138,12 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
   ★「Sequoia 与 Tahoe 是**两套 ABI 与产物** ⇒ 双系统共用一个配置时必须用 `MinKernel`/`MaxKernel` 分开」、
   macOS 26 的能力与限制（HE 默认关，需 `itlwm_he=1`；不支持 WPA3-only / 强制 PMF / AWDL / AirDrop / MLO）、
   Intel 蓝牙要另装 `IntelBluetoothFirmware` + `IntelBTPatcher`（+ `BlueToolFixup`）、排错与「换网卡后要清理」清单
+- **板载声卡（AppleALC）** ⇒ `references/applealc-custom.md`：
+  ★ **先搜同型号前人经验（推荐路线）**：查官方 `Supported-codecs` 表 → 搜 `repo:acidanthera/AppleALC <codec>` 的 issue/PR →
+    搜「主板型号 + layout-id」→ 逐个试 `alcid=N`；
+  搜不到才走定制路线：官方 6 步算法、`Resources/<CODEC>/Info.plist` 字段、
+  ★ **自定义 layout 只能用 11–99**（1–10 保留给 Mirone/Toleda）、每条都要写机型与作者注释、
+  官方 CI 的构建命令、`layout-id` 注入与 `-alcdbg` 调试、**官方禁止把 HDAS 改名成 HDEF**、PR 要带 codec dump + 机型 + 结果
 
 > 装第三方驱动一定会动到安全边界（`SecureBootModel=Disabled`、放宽 SIP、AMFI 参数）——
 > **在报告里明确写出来**，并给出「不装时如何恢复」。
@@ -171,6 +177,7 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 - `references/disks-and-kexts.md` —— 磁盘屏蔽与 kext 精简的判据与「不能删」清单
 - `references/nvidia-driver.md` —— NullMoth NVIDIA 驱动：适用范围、安装、必需 OC 设置、恢复、故障对照
 - `references/intel-wifi.md` —— Intel 无线网卡驱动（AirportItlwm / itlwm）：版本线、注入、蓝牙配套、排错
+- `references/applealc-custom.md` —— 板载声卡（AppleALC）：先搜前人经验、按 codec 定制、本地构建、测试、提 PR
 - `references/rapidefi-first-efi.md` —— 从零开始：在 Windows 上用 RapidEFI 生成基础 EFI，及之后必须做的收尾
 - `references/lifecycle.md` —— **六阶段全流程**：Win 生成 → 安装 → 换 DEBUG → 收日志 → 修补 → 日常化
 - `references/pitfalls.md` —— 全部踩过的坑
