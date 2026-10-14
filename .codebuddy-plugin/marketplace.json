@@ -1,7 +1,7 @@
 {
   "name": "hackintosh-skills",
-  "description": "黑苹果（OpenCore）技能集：EFI 配置审查与维护（含 BIOS/驱动/系统升级/选择器主题）、机型切换与三码。",
-  "description_en": "Hackintosh (OpenCore) skill collection: EFI configuration audit & maintenance (BIOS, drivers, OS upgrades, boot-picker theming) plus SMBIOS model switching and board serials.",
+  "description": "黑苹果（OpenCore）EFI 配置审查与维护：BIOS 审查、配置校验、日志取证、驱动安装、系统升级、选择器主题、换机型与三码。",
+  "description_en": "Hackintosh (OpenCore) EFI configuration audit & maintenance: BIOS audit, config verification, log forensics, driver installs, OS upgrades, boot-picker theming, SMBIOS switching and board serials.",
   "owner": {
     "name": "GeekAudio"
   },
@@ -12,9 +12,9 @@
     {
       "name": "opencore-config-audit",
       "source": "./opencore-config-audit",
-      "description": "审查、修改与维护黑苹果的 OpenCore EFI 配置与驱动安装：BIOS/UEFI 审查、逐键对照官方文档、ACPI/SSDT 巡检、kext 精简、引导日志与启动耗时取证、系统大版本升级（含网卡 kext 的 MinKernel/MaxKernel 版本分流）、磁盘屏蔽，以及 NVIDIA / Intel 无线 / MediaTek / 博通网卡、AppleALC 声卡、HiDPI、Intel 睿频、内存定制、SMBIOS 三码等驱动与硬件特性，以及启动界面外观（OpenCanopy 主题：图标集、PickerAttributes、Flavour、标签/字体/音频/背景）。",
-      "description_en": "Audit, edit and maintain a hackintosh OpenCore EFI configuration and its driver installs: BIOS/UEFI settings audit, per-key verification against the official docs, ACPI/SSDT review, kext trimming, boot-log and boot-timeline forensics, major macOS upgrade planning (including per-Darwin-version kext gating with MinKernel/MaxKernel), disk masking, plus NVIDIA / Intel WiFi / MediaTek / Broadcom cards, AppleALC audio, HiDPI, Intel Turbo Boost, memory injection SMBIOS/serials, and OpenCanopy boot-picker theming.",
-      "version": "0.7.0",
+      "description": "审查、修改与维护黑苹果的 OpenCore EFI 配置与驱动安装：BIOS/UEFI 审查、逐键对照官方文档、ACPI/SSDT 巡检、kext 精简、引导日志与启动耗时取证、系统大版本升级（含网卡 kext 的 MinKernel/MaxKernel 版本分流）、磁盘屏蔽，以及 NVIDIA / Intel 无线 / MediaTek / 博通网卡、AppleALC 声卡、HiDPI、Intel 睿频、内存定制、SMBIOS 三码等驱动与硬件特性，以及启动界面外观（OpenCanopy 主题：图标集、PickerAttributes、Flavour、标签/字体/音频/背景）与 **SMBIOS 机型切换/三码**（★ 先完善 SSDT → 再换机型 → 再重做 CPUFriend；含主板 OEM SSDT 与 AE_NOT_FOUND 根因）。",
+      "description_en": "Audit, edit and maintain a hackintosh OpenCore EFI configuration and its driver installs: BIOS/UEFI settings audit, per-key verification against the official docs, ACPI/SSDT review, kext trimming, boot-log and boot-timeline forensics, major macOS upgrade planning (including per-Darwin-version kext gating with MinKernel/MaxKernel), disk masking, plus NVIDIA / Intel WiFi / MediaTek / Broadcom cards, AppleALC audio, HiDPI, Intel Turbo Boost, memory injection SMBIOS/serials, OpenCanopy boot-picker theming, and SMBIOS model switching with board serials (finish SSDT first, then SMBIOS, then CPUFriend).",
+      "version": "0.8.0",
       "author": {
         "name": "GeekAudio"
       },
@@ -27,27 +27,6 @@
         "macos",
         "bios",
         "kext"
-      ],
-      "category": "development"
-    },
-    {
-      "name": "opencore-smbios-switch",
-      "source": "./opencore-smbios-switch",
-      "description": "黑苹果（OpenCore）机型切换与三码的完整流程：判断该不该换机型、换机型与内置 USB 图的耦合冲突、board-id 变化带来的系统卷重建、CPUFriendDataProvider 必须同步重做、序列号/MLB/UUID 生成与三类判据、ROM 必须是 en0 真实 MAC、换码风控纪律，以及正确顺序与救援路径。",
-      "description_en": "Full workflow for switching the SMBIOS model and regenerating board serials on a hackintosh OpenCore setup — deciding whether to switch, the coupling conflict between the SMBIOS model and Apple's built-in USB maps, the system-volume rebuild caused by a new board-id, why CPUFriendDataProvider must be rebuilt in the same change, serial/MLB/UUID generation with the three-class validity check, why ROM must be the real en0 MAC, account-flagging discipline, and the correct order with a rescue path.",
-      "version": "1.0.0",
-      "author": {
-        "name": "GeekAudio"
-      },
-      "repository": "https://github.com/GeekAudio/hackintosh-skills",
-      "license": "MIT",
-      "keywords": [
-        "hackintosh",
-        "opencore",
-        "smbios",
-        "serial",
-        "board-id",
-        "imessage"
       ],
       "category": "development"
     }

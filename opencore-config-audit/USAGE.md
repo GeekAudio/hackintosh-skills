@@ -19,7 +19,7 @@
 | 精简 | 「kext 精简一下，不用的删掉」「屏蔽一下其它磁盘」 |
 | 装驱动 | 「装 NVIDIA 驱动」「Intel 无线网卡怎么配」「我这块 MT7922 能用吗」「博通网卡怎么配」 |
 | 调 CPU | 「CPU 频率被压住了」「睿频怎么开」 |
-| 换机型 | ★ **不在这里** —— 换机型用另一个技能 `opencore-smbios-switch` |
+| **换机型 / 三码** | 「换一下 SMBIOS 机型」「三码怎么配」「序列号怎么生成」「ROM 填什么」「换了机型开不了机」 |
 | 升系统 | 「从 15 升到 26 要改什么」「升级后 Wi-Fi 没了」 |
 | 换构建 | 「从 release 换成 debug 版 OpenCore 并开日志」 |
 | **换主题** | 「换个 OpenCore 主题」「图标集怎么装」「选择器界面不出现」「图标显示不对/变形」「启动没有声音」「PickerAttributes 怎么配」 |
@@ -57,7 +57,7 @@
 `nvidia-driver.md` · `intel-wifi.md` · `mediatek-wifi.md` · `broadcom-wifi.md`（四类网卡/显卡）·
 `applealc-custom.md`（声卡）· `hidpi.md`（显示）· `intel-turbo.md`（CPU）· `memory-injection.md`（内存）· `boot-timeline.md` / `logs-and-debug.md`（日志）·
 `acpi-ssdt.md` · `disks-and-kexts.md` · `official-docs-method.md` · `rapidefi-first-efi.md` ·
-`pitfalls.md`（踩过的坑）· `theme-opencanopy.md`（选择器主题）· `machine-facts.md`（参考机器事实）
+`smbios-and-serials.md`（换机型 + 三码）· `pitfalls.md`（踩过的坑）· `theme-opencanopy.md`（选择器主题）· `machine-facts.md`（参考机器事实）
 
 ## 注意
 

@@ -16,7 +16,6 @@
 - [包含的 Skill](#包含的-skill)
 - [安装](#安装)
 - [目录结构](#目录结构)
-- [2. `opencore-smbios-switch` — 换机型 + 三码](#2-opencore-smbios-switch--换机型--三码)
 - [发布到 WorkBuddy](#发布到-workbuddy)
 - [1. `opencore-config-audit` — 配置审查与维护](#1-opencore-config-audit--opencore-配置审查与维护)
 - [适用性与边界](#适用性与边界)
@@ -27,8 +26,7 @@
 
 | Skill | 一句话 | 规模 |
 |---|---|---|
-| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置 —— 覆盖从装机到日常化、再到系统大版本升级的全生命周期，**并含启动选择器（OpenCanopy）主题**。★ **它不动机型**（这是它的约束） | 18 条铁律 · 20 份参考 · 14 个脚本 |
-| **`opencore-smbios-switch`** | **换机型 + 三码**（独立的一次高风险操作）：先完善 SSDT → 再换 SMBIOS → 再重做 CPU 电源数据 | 9 条铁律 · 1 份参考 |
+| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置 —— 覆盖从装机到日常化、再到系统大版本升级的全生命周期，并含**启动选择器（OpenCanopy）主题**与**换机型 / 三码** | 19 条铁律 · 21 份参考 · 14 个脚本 |
 
 技能目录里有一份 `USAGE.md`（**随安装一起复制**），在对话里问「使用说明」即可拿到。
 
@@ -46,7 +44,6 @@
 
 # ② 安装插件（<插件名>@<市场名>）
 /plugin install opencore-config-audit@hackintosh-skills
-/plugin install opencore-smbios-switch@hackintosh-skills
 ```
 
 **方式二：手动复制（离线 / 只装一个）**
@@ -54,7 +51,6 @@
 ```bash
 # 用户级（所有项目都能用）
 cp -R opencore-config-audit ~/.workbuddy-ai/skills/
-cp -R opencore-smbios-switch ~/.workbuddy-ai/skills/
 
 # 或项目级（只在该项目里可用）
 cp -R <skill> <项目目录>/.workbuddy-ai/skills/
@@ -79,15 +75,10 @@ hackintosh-skills/
 ├── opencore-config-audit/
 │   ├── .codebuddy-plugin/
 │   │   └── plugin.json          # ← 插件元数据
-│   ├── SKILL.md                 # 主流程 + 18 条铁律 + 资源表
+│   ├── SKILL.md                 # 主流程 + 19 条铁律 + 资源表
 │   ├── USAGE.md                 # ← 使用说明（随安装一起复制）
-│   ├── references/              # 20 份专题文档（见下表）
+│   ├── references/              # 21 份专题文档（见下表）
 │   └── scripts/                 # 14 个脚本（见下表）
-└── opencore-smbios-switch/
-    ├── .codebuddy-plugin/plugin.json
-    ├── SKILL.md                 # 换机型 + 三码
-    ├── USAGE.md
-    └── references/              # 1 份
 ```
 
 ---
@@ -165,7 +156,7 @@ hackintosh-skills/
 | **HiDPI**（one-key-hidpi） | 非 Retina 屏清晰度；★ NVIDIA 驱动未完善，含风险与恢复路径；★ 别和引导期 `UIScale` 混 |
 | **Intel 睿频** | CPU 被压低频 → **CPU-S 验证** → CPUFriend 修法；★ BIOS `Speed Shift` 必须 Enabled |
 | **MacPro 机型内存定制** | ★ **分两层**：「系统信息」= 全机型通用（SMBIOS Type 17）；「关于本机」内存图 = MacPro 专有（**摆位规则 + 12 槽映射表**） |
-| **SMBIOS 机型切换 + 三码** | ★ 换机型会连带换掉内置 USB 图 ⇒ 与 UTBMap 冲突；序列号三类判据；ROM 用真实 en0 MAC；换码风控纪律。★ **与系统升级解耦** —— 升级时不动机型（见 §④） |
+| **SMBIOS 机型切换 + 三码** | ★★★ **顺序：先完善 SSDT/ACPI（旧机型下验证）→ 再换 SMBIOS → 再重做 CPUFriend**；★ 真正让本机进不去系统的是**主板 OEM SSDT**（ASUS Z690 的 `xh_adls3` ⇒ `HS06 AE_NOT_FOUND`），修法 = `ACPI>Delete` 删原表 + 加 `SSDT-XHADLS3.aml`；已排除 USB 图/OCLP/机型本身/15 口/NVRAM；序列号三类判据、ROM 用真实 en0 MAC、换码风控纪律。★ **与系统升级解耦**（升级时不动机型） |
 | **首次生成 EFI**（RapidEFI） | Windows 上生成基础 EFI，及之后必须做的收尾 |
 | **选择器主题**（OpenCanopy） | 图标集、`PickerAttributes` 位表、Flavour 规则、标签/字体/音频/背景、HiDPI；★ **必需图标缺一个就不启动**、**官方图标集不提供哪些可选图标**（解释日志里的 `Not Found` 为什么正常） |
 
@@ -214,40 +205,11 @@ hackintosh-skills/
 | `hidpi.md` | 非 Retina 屏开 HiDPI：写入位置、两个模式、恢复路径、与 NVIDIA 驱动的风险 |
 | `intel-turbo.md` | Intel 睿频 / 限频：CPU-S 验证、根因定位、CPUFriend 修法、BIOS 硬前提 |
 | `memory-injection.md` | MacPro 内存定制：**12 槽映射表**、**摆位规则 f**、A 层通用字段 |
+| `smbios-and-serials.md` | **换机型 + 三码**：★★★ 主板 OEM SSDT（`xh_adls3`）与 ACPI 根因、**顺序铁律（先完善 SSDT）**、检查清单、决策依据、序列号判据、ROM、切换脚本三态、操作教训 |
 | `smbios-and-serials.md` | 机型切换 + 三码：机型↔USB 图冲突、序列号判据、ROM、风控纪律 |
 | `theme-opencanopy.md` | **选择器主题（OpenCanopy）**：开关总表、资源目录、**图标清单（必需/可选/官方不提供）**、Flavour 规则、标签/字体/音频/背景、排错 |
 | `pitfalls.md` | 全部踩过的坑 |
 | `machine-facts.md` | 参考机器（Z690 / Alder Lake / macOS 26）的具体事实 |
-
----
-
-## 2. `opencore-smbios-switch` — 换机型 + 三码
-
-**换机型**是一件**独立的高风险耦合操作**，所以单独成一个技能。
-`opencore-config-audit` 那边只保留一条约束（**它不动机型**），真要换就换到这里做。
-
-### 它解决什么
-
-换机型不是「改几个键」：它会触发 ACPI 表重新解析、换掉 macOS 想附加的东西、并要求 CPU 电源数据同步重做。
-顺序错了直接进不去系统 —— 这个技能把**顺序**和**排查方向**定死。
-
-### 能力
-
-- ★★★ **顺序铁律**：**先完善 SSDT / ACPI（在旧机型下做完并验证）→ 再换 SMBIOS → 再重做 CPUFriend 数据**
-- ★★ **真正让本机进不去系统的是什么**：本机（ASUS Z690）BIOS 里有一张 `OEM Table ID = xh_adls3` 的 SSDT，
-  换机型触发 ACPI 重新解析 ⇒ `HS06 AE_NOT_FOUND` ⇒ **循环重启**。
-  **修法 = `ACPI>Delete` 删原表 + `ACPI>Add` 加载打补丁的替换表**（实测有效）
-- **已排除的方向**（别白试）：USB 端口图 · OCLP 根补丁 · 机型本身 · 15 端口上限 · NVRAM 残留
-- **决策依据**：功能收益 / 成本 / 风险三条摆清楚 —— **能不换就不换**；被新版系统逼的优先走 boot-arg 绕过
-- **三码**：序列号三类判据、`ROM` 必须是 `en0` 真实 MAC、换码风控纪律、换完先 FaceTime 再信息
-- **救援路径**：U 盘 EFI + 备选方案（保留原机型 + `-no_compat_check` + `revpatch=sbvmm`）
-
-### 参考文档
-
-| 文档 | 内容 |
-|---|---|
-| `smbios-and-serials.md` | 决策依据 · **厂商 OEM SSDT 与 ACPI 根因** · 顺序铁律 · 检查清单 · 三码生成与判据 · 操作教训 |
-
 
 ---
 
