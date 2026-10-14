@@ -213,6 +213,9 @@ Dortania 的口径是「ROM = `en0` 的真实 MAC」。但 `en0` 的归属会**�
 
 ⇒ **这是个需要自己拍板的取舍**，没有唯一正确答案。换之前先把两边的 MAC 都记下来。
 
+> ★★ **`en0` 归属为什么会变、怎么把它钉住** ⇒ 见 **`network-en0-order.md`**
+> （驱动挂载顺序、`NetworkInterfaces.plist`、以及它对 iMessage / Continuity 的连带影响）。
+
 ## 7. 两条操作教训（都吃过亏）
 
 | 教训 | 事实 |

@@ -311,6 +311,8 @@ uname -r                              # 期望 25.x
 kmutil showloaded --list-only | grep -E "IOSkywalkFamily|IO80211FamilyLegacy|AirPort.BrcmNIC|corecapture"
 
 # ③ ★ Wi-Fi 死活看 en1，别只看 system_profiler
+#    ★★ 并确认「无线 = en0」（打补丁/换卡会改变驱动挂载顺序）⇒ network-en0-order.md
+networksetup -listallhardwareports
 ifconfig en1                          # 期望有 inet + status: active
 ifconfig awdl0                        # 在 = AirDrop / 接力可用
 

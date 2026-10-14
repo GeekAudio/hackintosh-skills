@@ -115,7 +115,13 @@ DeviceProperties → Add →
 3) 打开 OpenCore-Patcher.app → Post-Install Root Patch → Start Root Patching
    应看到 "Networking: Modern Wireless"（OCLP 按 PCI 的 0x43BA 识别，在官方支持列表里）
 4) 重建 dyld shared cache 可能要 10–30 分钟，别中断 → 重启
+5) ★★ 重启后确认 **Wi-Fi 是 `en0`**（打补丁会改变驱动挂载顺序，可能把无线挤到 `en1`）
+   ⇒ 见 `network-en0-order.md`
 ```
+
+> ★★ **为什么这一步不能省**：`en0` 是 Apple 服务认定的「主网卡」——
+> `ROM`、iMessage / FaceTime、Continuity / AirDrop 都挂在它上面。
+> 打补丁 / 换卡后 `en0` 换人 ⇒ 这些会**静默失效**。查法与「钉住」方法见 **`network-en0-order.md`**。
 
 ### 3.1 ★★ 打补丁前必须先跑保护脚本（否则 NVIDIA 驱动会失效）
 

@@ -90,8 +90,8 @@ Intel 无线网卡上的**蓝牙**不由 itlwm 负责，需要：
 
 - **必须**把 Intel 无线/蓝牙那三个 kext 从 `Kernel → Add` 里**禁用或删除**，并把 `EFI/OC/Kexts/` 下的文件删掉 —— 否则它们仍会尝试匹配不存在的设备（白加载、日志噪音，某些版本还可能干扰 Bluetooth 栈）
 - 删除前先把原件备份出来；判断「是否真的不用」见 `disks-and-kexts.md` 的删除判据
-- 换卡后 `en0` 归属可能变化：内核按**驱动挂载先后**给 `en` 编号，与 PCI 顺序无关；要强制无线为 `en0`，可临时禁用有线驱动（如 `AppleIGC.kext` 的 `Enabled=false`）+ 删 `NetworkInterfaces.plist` 后重启
-- 重启后无线可能先锁在 2.4 GHz，用 `networksetup -setairportpower en0 off` / `on` 复位
+- ★★ **换卡后要确认 `en0` 归属** —— 内核按**驱动挂载先后**给 `en` 编号（与 PCI 顺序无关），
+  换卡 / 增删驱动会让 `en0` 换人 ⇒ **详见 `network-en0-order.md`**（含「怎么把无线钉到 `en0`」与连带影响）
 
 > **同一台机器不要同时注入多套网卡驱动**。除 Intel / Broadcom 之外，MediaTek（MT7921 / MT7922 / RZ608）见
 > `mediatek-wifi.md` —— 那里的结论是「**蓝牙可用、Wi-Fi 仍实验性**，要稳定就换卡」。

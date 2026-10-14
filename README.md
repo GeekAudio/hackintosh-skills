@@ -26,7 +26,7 @@
 
 | Skill | 一句话 | 规模 |
 |---|---|---|
-| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置 —— 覆盖从装机到日常化、再到系统大版本升级的全生命周期，并含**启动选择器（OpenCanopy）主题**与**换机型 / 三码** | 19 条铁律 · 21 份参考 · 14 个脚本 |
+| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置 —— 覆盖从装机到日常化、再到系统大版本升级的全生命周期，并含**启动选择器（OpenCanopy）主题**与**换机型 / 三码** | 19 条铁律 · 22 份参考 · 14 个脚本 |
 
 技能目录里有一份 `USAGE.md`（**随安装一起复制**），在对话里问「使用说明」即可拿到。
 
@@ -77,7 +77,7 @@ hackintosh-skills/
 │   │   └── plugin.json          # ← 插件元数据
 │   ├── SKILL.md                 # 主流程 + 19 条铁律 + 资源表
 │   ├── USAGE.md                 # ← 使用说明（随安装一起复制）
-│   ├── references/              # 21 份专题文档（见下表）
+│   ├── references/              # 22 份专题文档（见下表）
 │   └── scripts/                 # 14 个脚本（见下表）
 ```
 
@@ -201,6 +201,7 @@ hackintosh-skills/
 | `intel-wifi.md` | Intel 无线网卡：版本线、注入、蓝牙配套、排错 |
 | `mediatek-wifi.md` | MediaTek 无线网卡：**蓝牙可用 / Wi-Fi 实验性**两条线、芯片认型、NVRAM 两坑、自编译流程、决策树 |
 | `broadcom-wifi.md` | 博通网卡：**按 Sequoia / Tahoe 分路线**、OCLP root patch、验证判据 |
+| `network-en0-order.md` | **`en0` 归属与网络接口顺序**：谁依赖 `en0`、**修补 Wi-Fi 后必须确认无线是 `en0`**、怎么钉住、连带影响 |
 | `applealc-custom.md` | 板载声卡：先搜前人经验、按 codec 定制、本地构建、提 PR |
 | `hidpi.md` | 非 Retina 屏开 HiDPI：写入位置、两个模式、恢复路径、与 NVIDIA 驱动的风险 |
 | `intel-turbo.md` | Intel 睿频 / 限频：CPU-S 验证、根因定位、CPUFriend 修法、BIOS 硬前提 |
