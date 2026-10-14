@@ -6,6 +6,9 @@
 
 每个子目录就是一个可直接使用的 skill：把整个目录复制到你的 skills 目录即可。
 
+> **不知道怎么用？** 见 **[`USAGE.md`](USAGE.md)** —— 怎么调用（自动 / 手动）、SKILL.md 里控制调用的字段、
+> 两个 skill 的「说这句话就触发」速查表、以及为什么没被调用的排查。
+
 **目录**
 
 - [包含的 Skill](#包含的-skill)
@@ -51,6 +54,7 @@ python3 <skill-creator>/scripts/quick_validate.py ~/.workbuddy-ai/skills/opencor
 ```
 hackintosh-skills/
 ├── README.md
+├── USAGE.md                     # ← 怎么调用 + 速查表（给人看）
 ├── opencore-config-audit/
 │   ├── SKILL.md                 # 主流程 + 17 条铁律 + 资源表
 │   ├── references/              # 20 份专题文档（见下表）
