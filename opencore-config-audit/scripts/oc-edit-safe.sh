@@ -21,7 +21,7 @@ WORK="${3:?缺少 workdir}"
 LABEL="${4:-edit}"
 TS=$(date +%Y%m%d-%H%M%S)
 
-[ -f "$CFG" ] || { echo "找不到 $CFG（ESP 挂载了吗？ls -d /Volumes/EFI）"; exit 2; }
+[ -f "$CFG" ] || { echo "找不到 ${CFG}（ESP 挂载了吗？ls -d /Volumes/EFI）"; exit 2; }
 mkdir -p "$WORK"
 
 # ESP 设备标识（用于卸载/重挂复验）
@@ -111,7 +111,7 @@ PY
       osascript -e "do shell script \"diskutil mount $ESP_DEV\" with administrator privileges" >/dev/null 2>&1 || true
     AFTER=$(shasum -a 256 "$CFG" 2>/dev/null | awk '{print $1}')
     if [ "$AFTER" = "$NEW" ]; then echo "   ✓ 重挂后 sha 一致：$NEW"
-    else echo "   ★ 重挂后 sha 不一致（期望 $NEW，得到 ${AFTER:-读不到}）—— 检查 ESP 是否挂上"; fi
+    else echo "   ★ 重挂后 sha 不一致（期望 ${NEW}，得到 ${AFTER:-读不到}）—— 检查 ESP 是否挂上"; fi
   else
     echo "   (无法确定 ESP 设备，跳过卸载/重挂；sha = $NEW)"
   fi

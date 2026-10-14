@@ -22,6 +22,8 @@ cp -R opencore-config-audit <项目目录>/.workbuddy-ai/skills/
 
 **能力**
 
+- **全流程生命周期**：Windows 上用 RapidEFI 生成基础 EFI → 安装 macOS → **换成 DEBUG OpenCore** →
+  收集引导期日志 → 按官方文档逐项修补 → **日常化（换回 RELEASE + 关掉 debug 日志，`-v` 询问客户）**
 - **逐键对照官方文档**：按机器上的 OpenCore 版本取官方发布包，用官方 `ocvalidate` 校验，
   并把 `Configuration.tex` 里**全部 420 个配置键**的 `Type / Failsafe / Description` 抽成键库，
   逐键判定「本机取值 vs 官方默认」，把偏离分成三类：有依据的正确偏离 / 与文档相反 / 冗余残留
@@ -52,6 +54,7 @@ cp -R opencore-config-audit <项目目录>/.workbuddy-ai/skills/
 |---|---|
 | `scripts/fetch-opencore-docs.sh` | 取同版官方包（`ocvalidate` + `Sample.plist` + `AcpiSamples`）并建 420 键键库 |
 | `scripts/oc-verify.sh` | 一键校验：`plutil` + `ocvalidate` + ACPI/Kexts 引用完整性 + 孤儿文件 + sha |
+| `scripts/oc-swap-build.sh` | RELEASE ↔ DEBUG 换构建（连官方同名 Drivers 一起换，保留第三方驱动，自动备份/校验/落盘） |
 | `scripts/oc-edit-safe.sh` | 安全改 config 的包装（`begin` 备份 / `finish` 校验存档落盘复验） |
 | `scripts/grab-logs.sh` | 抓 OC 引导日志与本次开机内核日志（提权，可 `--oc-only`） |
 | `scripts/mask-other-disks.sh` | 按 UUID 写 fstab 屏蔽非系统卷（默认 dry-run，`--apply` 才写，永不碰 EFI） |
@@ -67,6 +70,7 @@ cp -R opencore-config-audit <项目目录>/.workbuddy-ai/skills/
 | `references/nvidia-driver.md` | NullMoth NVIDIA 驱动：适用范围、安装、必需 OC 设置、恢复、故障对照 |
 | `references/intel-wifi.md` | Intel 无线网卡驱动（AirportItlwm / itlwm）：版本线、注入、蓝牙配套、排错 |
 | `references/rapidefi-first-efi.md` | 从零开始：Windows 上用 RapidEFI 生成基础 EFI，及之后的收尾清单 |
+| `references/lifecycle.md` | **六阶段全流程**：Win 生成 → 安装 → 换 DEBUG → 收日志 → 修补 → 日常化 |
 | `references/pitfalls.md` | 踩过的坑（症状 → 原因 → 正确做法） |
 | `references/machine-facts.md` | 一台实机（ASUS Z690 / i7-12700K / RTX 3080 / macOS 26）的实测事实 |
 

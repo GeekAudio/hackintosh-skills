@@ -46,6 +46,8 @@
 | GitHub API 报 `SSL_ERROR_SYSCALL` | API 路径拼接错误 | 路径**必须以 `/` 开头**（`/repos/...`，不是 `repos/...`） |
 | 以为"ID 重复 = 上传了两次" | 内容寻址：相同内容返回同一 ID | 先比对 sha256 再判断 |
 | 上报前不看本地回执 | 服务端/客户端可能只上报了一部分 | 先读本地的 receipt/清单文件（如 `upload-receipt.json`），核对条数与 sha |
+| 脚本报 `unbound variable`，变量名还是乱码 | **`$VAR` 后面紧跟全角字符**（`）` `，` `：` `★`）时，bash 会把多字节字节当成变量名的一部分 | 写成 **`${VAR}`**；写完扫一遍：`awk 'match($0, /\$[A-Za-z_][A-Za-z0-9_]*[^ -~]/)' *.sh` |
+| 换 OpenCore 构建后行为诡异/混搭 | 只换了 `OpenCore.efi`，没换 Drivers（同版本下 RELEASE/DEBUG 的**所有** Drivers 内容都不同） | 连**官方同名** Drivers 一起换，第三方驱动保留（`scripts/oc-swap-build.sh` 已按此实现） |
 
 ## E. 流程纪律
 
