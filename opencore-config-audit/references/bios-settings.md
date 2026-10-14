@@ -1,5 +1,8 @@
 # BIOS / UEFI 设置审查
 
+> ★ **更早一步**：**配机 / 换件之前**先看 `laobamac/SimpleBuyersGuide`《黑苹果硬件避坑指南》
+> —— 明确列出**不应购买**的 CPU / GPU / 主板芯片组 / SSD / 网卡 / 无线卡等。索引见 `laobamac-toolkit.md` §3。
+
 > **三个来源，优先级从高到低：**
 > 1. **OpenCore 官方文档**（`Docs/Configuration.pdf` 的 troubleshooting 检查清单）—— 权威，但只列「会拦住引导」的项
 > 2. **Dortania OpenCore Install Guide**（社区事实标准）—— 官方没写的它也写了，分 Intel / AMD

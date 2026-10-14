@@ -1,5 +1,9 @@
 # 从零开始：在 Windows 上生成一份基础 EFI（RapidEFI）
 
+> ★ **另一个从零生成 EFI 的选择**：`laobamac/SimpleKaruzi` —— *"一款专门用于简化 OpenCore EFI 创建过程的工具，
+> 通过自动化基本设置流程并提供标准化配置"*（**AGPL-3.0**）。
+> ⚠️ **2026-06-18 已存档**，不再更新。索引见 `laobamac-toolkit.md` §2。
+
 > 工具：**`JeoJay127/RapidEFI-Tool`** —— 「一个面向普通用户的 OpenCore EFI 配置、自动生成与后期维护工具」。
 > 官方自述：配置逻辑**遵循 OpenCore 官方文档与 Dortania OpenCore 安装指南**。
 > 下文带引号的是 README 原文，其余是把它接进本 skill 工作流的做法。

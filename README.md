@@ -92,7 +92,9 @@ hackintosh-skills/
 
 ### 能力
 
-**⓪ BIOS / UEFI 审查（装机前先做）**
+**⓪ 硬件避坑 + BIOS / UEFI 审查（装机前先做）**
+
+- ★ **更早一步**：`laobamac/SimpleBuyersGuide`《黑苹果硬件避坑指南》—— 明确列出**不应购买**的 CPU / GPU / 主板芯片组 / SSD / 网卡 / 无线卡等
 
 - **三份清单合起来看**：OpenCore 官方文档（9 条检查清单）+ Dortania（Intel / AMD 分开）+ 社区实战补充
 - ★ **官方与 Dortania 都没写、但踩到就装不上的两项**：**VMD 必须关**（否则装系统「找不到任何驱动器」）、
@@ -204,7 +206,7 @@ hackintosh-skills/
 | `broadcom-wifi.md` | 博通网卡：**按 Sequoia / Tahoe 分路线**、OCLP root patch、验证判据 |
 | `network-en0-order.md` | **`en0` 归属与网络接口顺序**：谁依赖 `en0`、**修补 Wi-Fi 后必须确认无线是 `en0`**、怎么钉住、连带影响 |
 | `ethernet-drivers.md` | **有线网卡第三方驱动**：Intel I225/I226 · I210/I211/I350 · Realtek RTL8125/8126 的方案对照与判据 |
-| `laobamac-toolkit.md` | **laobamac 工具与补丁索引**：驱动 / 工具（`SimpleLoader`）/ 参考（`OC-little-zh`）/ ★ **哪些项目已存档** |
+| `laobamac-toolkit.md` | **laobamac 工具与补丁索引（48 仓库全表）**：驱动 · 装机 · ★ **硬件避坑（`SimpleBuyersGuide`）** · 维护工具（`SimpleLoader`）· macOS 26 启动台 · 参考补丁（`OC-little-zh`）· AMD · fork 说明 · ★ **哪些已存档** |
 | `applealc-custom.md` | 板载声卡：★★★ **macOS 26 的 `AppleHDA` 恢复（`SimpleHDA`，无需补丁）**、先搜前人经验、按 codec 定制、本地构建、提 PR |
 | `hidpi.md` | 非 Retina 屏开 HiDPI：写入位置、两个模式、恢复路径、与 NVIDIA 驱动的风险 |
 | `intel-turbo.md` | Intel 睿频 / 限频：CPU-S 验证、根因定位、CPUFriend 修法、BIOS 硬前提 |
