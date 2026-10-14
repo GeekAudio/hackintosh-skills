@@ -243,7 +243,7 @@ Count / Skip / Limit = 0
 | AGDC 路径、ByHost 偏好 | 显示/服务行为漂移，排查面变大 |
 
 ⇒ **升级本身已经是高风险操作，不要在同一轮里叠加第二个耦合改动。**
-机型该不该换是**独立的决策**（见 `smbios-and-serials.md`），跟升级解耦。
+机型该不该换是**独立的决策**（换机型请用另一个技能 **`opencore-smbios-switch`**），跟升级解耦。
 
 ### 5.3 绕过用什么参数（两个都要，别只加一个）
 
@@ -296,7 +296,7 @@ iMac20,1   iMac20,2   MacPro7,1   MacBookPro16,1   MacBookPro16,2   MacBookPro16
 | 机型专属界面 | ❌ 拿不到 | ✅ |
 | 与升级是否解耦 | ✅ **解耦** | ❌ 耦合 |
 
-⇒ **默认走左边。** 真想要机型专属功能时，**单独一次**做机型切换（走 `smbios-and-serials.md` 的完整流程），
+⇒ **默认走左边。** 真想要机型专属功能时，**单独一次**做机型切换（走 **`opencore-smbios-switch`** 技能的完整流程），
 **不要**把它塞进升级那一次。
 
 ---
@@ -383,7 +383,7 @@ ls -lt /Volumes/EFI/opencore-*.txt | head
 | 打补丁时 NVIDIA kext 不见了 | 没跑 §3 的前置保护脚本。去 `/Library/Relocated Extensions` 找回来 |
 | **机型不被支持、开不了机** | 加 `-no_compat_check`（**别去换机型**，§5.3） |
 | **能开机但收不到系统更新** | 漏了 **`revpatch=sbvmm`**（§5.3）—— `-no_compat_check` 不解决这个问题 |
-| 开不了机（**如果**你换了机型） | 机型↔USB 图冲突（见 `smbios-and-serials.md`）；用 U 盘 EFI 启动并回退。**这也是「升级时不许改机型」这条约束的原因** |
+| 开不了机（**如果**你换了机型） | 机型↔USB 图冲突（见 **`opencore-smbios-switch`**）；用 U 盘 EFI 启动并回退。**这也是「升级时不许改机型」这条约束的原因** |
 | 发现机型被改了 | 大概率跑过 `nullmoth-setup.sh --update prepare --pkg`（§5.5）。用升级前的 EFI 备份还原 `PlatformInfo` |
 | EFI 挂不上 | 见 §7：要提权；或先 `diskutil repairVolume` |
 | 升级后开机很慢 | 见 `boot-timeline.md`（`nvrmsettle` / `-wegnoigpu` 两类已知固定延迟） |
@@ -393,7 +393,7 @@ ls -lt /Volumes/EFI/opencore-*.txt | head
 ## 11. 与其它 reference 的关系
 
 - **网卡细节** → `broadcom-wifi.md`（博通，按系统分路线）、`intel-wifi.md`（Intel，Sequoia/Tahoe 两套 ABI）、`mediatek-wifi.md`（MediaTek）
-- **机型与三码**（**独立决策，不跟升级混在一起做**）→ `smbios-and-serials.md`（机型↔USB 图冲突、CPUFriend 重做）
+- **机型与三码**（**独立决策，不跟升级混在一起做**）→ 另一个技能 **`opencore-smbios-switch`**（机型↔USB 图冲突、CPUFriend 重做、三码）
 - **安全改 ESP 的流程** → `SKILL.md` 铁律 1–16 + `scripts/oc-edit-safe.sh`
 - **日志判读** → `logs-and-debug.md`；**耗时分析** → `boot-timeline.md`
 - **装机六阶段** → `lifecycle.md`（本文是它的「大版本升级」补充）

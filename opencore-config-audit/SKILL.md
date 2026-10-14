@@ -60,7 +60,7 @@ agent_created: true
 13. **`-v` 要不要开，必须问客户** —— 它是**偏好项**（屏幕有全文 vs 苹果 logo、开机快慢），不是技术默认值；日志完整性两边一样。同理，任何**用户可见行为**的偏好（选择器超时秒数、主题、是否 verbose）先问再改。
 14. **换 OpenCore 构建（RELEASE ↔ DEBUG）必须连官方同名 Drivers 一起换** —— 同版本下两边**所有** Drivers 内容都不同（例 1.0.8：`OpenRuntime.efi` 24,576 → 36,864），只换 `OpenCore.efi` 会得到构建混搭的引导器；第三方驱动（如 `NullMothLogo.efi`）保持不动。
 15. **一份配置服务两个 macOS 大版本时，按版本分构建的 kext 必须用 `MinKernel`/`MaxKernel` 分流** —— 上限写 `24.99.99`（收口到 Darwin 24），新版写 `MinKernel 25.0.0`；**同一功能绝不能只留一条、也不能两条都不写限制**。升级系统前先按 `references/os-upgrade-15-to-26.md` 过一遍。
-16. **升级系统时不许改机型** —— `PlatformInfo` 里任何 `SystemProductName` / `BoardProduct` / 三码都不动。**机型不在新版白名单里就加 boot-arg 绕过**（`-no_compat_check` 解决「能启动」+ `revpatch=sbvmm` 解决「能更新」，两个都要），**不是换机型**。换机型是**耦合改动**（连带 USB 图冲突 / board-id 触发系统卷重建 / XCPM profile），要单独一次做，别塞进升级那一次。
+16. **本技能不动机型** —— `PlatformInfo` 里任何 `SystemProductName` / `BoardProduct` / 三码都不动（**升级系统时尤其**）。**机型不在新版白名单里就加 boot-arg 绕过**（`-no_compat_check` 解决「能启动」+ `revpatch=sbvmm` 解决「能更新」，两个都要），**不是换机型**。换机型是**耦合改动**（连带 USB 图冲突 / board-id 触发系统卷重建 / XCPM profile），要单独一次做，别塞进升级那一次。
 17. **BIOS 层能关的开关，不要在 OpenCore 里用 quirk 兜底** —— 优先级：**BIOS 设置 > OpenCore quirk**。典型：关不掉 CFG Lock 才用 `AppleXcpmCfgLock`（官方原话 *"should be avoided whenever possible"*）；VT-d 则可**开着 + `DisableIoMapper=true`**（官方说这是首选，因为不妨碍其它系统用 VT-d）。★ 官方与 Dortania **都没写**的两项必须自己查：**VMD 必须关**（否则装系统看不到盘）、**Intel Speed Shift 必须开**（否则 `wrmsr(0x770,1)` #GP）。详见 `references/bios-settings.md`。
 18. **不要顺手改主题** —— 用户没要求换外观时，`PickerMode` / `PickerVariant` / `PickerAttributes` / `Resources` **一律不动**。要动就先跑 `scripts/oc-theme-check.sh`（**必需图标缺一个 OpenCanopy 直接不启动**），并留一份**能用的**图标集 + 逃生口（`PickerMode=Builtin`）—— **主题换坏了会看不到选择器，最坏进不了系统**。
 
@@ -181,14 +181,13 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
   NVRAM 两条蓝牙 data、USB 端口设 Internal(255)、`built-in=<01>`；
   ★ **打 OCLP root patch 前必须先跑保护脚本**（否则 mtime=epoch 的 NVIDIA kext 会被搬到 `Relocated Extensions`）；
   ★ 判 Wi-Fi 死活**看 `ifconfig en1`，别只看 `system_profiler`**
-- **换机型 / 三码** ⇒ `references/smbios-and-serials.md`：
-  ★★ **换机型不是「改 4 个键」** —— 它会连带换掉 macOS 想附加的**内置 USB 图**（按「机型 + 控制器名」附加）
-  ⇒ 与 `UTBMap` 在 `AppleUSBHostMergeProperties` 合并冲突 ⇒ **本机实测卡在 `AppleUSBHost*` 开不了机**
-  ⇒ **「换机型」和「换 USB 图」是耦合的同一个改动**（先把 UTBMap 换成完整图 + 备 U 盘 EFI，再换机型）；
-  还会连带换 XCPM profile / AGDC 路径 / ByHost 偏好，且 **`MacPro7,1` 强制 `hwp=on` ⇒ 换机型必须重做 CPUFriend 数据**；
-  Tahoe 的 Intel 机型只剩 4 款（`iMacPro1,1` 被剔除）⇒ **把换机型绑死在升 Tahoe 那一次**；
-  三码：官方 `macserial` 生成、**序列号三类判据**（官网「无效」=可用 / 显示保修=必须换 / 「核实购买日期」=最理想）、
-  **ROM 必须是 en0 真实 MAC**、改 ROM 可用 **base64 等长替换**、★ **换码要克制（脏码+频繁换号触发风控）**、换完**先 FaceTime 再信息**
+- **★ 机型：本技能「不动机型」** —— 换机型属于**另一个技能** `opencore-smbios-switch` 占位（见下）
+  - 本技能只守一条约束：**升级系统时不改机型**（铁律 16）——机型不被新版支持就**加 boot-arg 绕过**
+    （`-no_compat_check` 解决「能启动」+ `revpatch=sbvmm` 解决「能收到更新」，**两个都要**），**不换机型**
+  - 换机型是**独立的一次操作**，**不要塞进升级那一次**：它连带换掉 macOS 想附加的**内置 USB 图**
+    （与 `UTBMap` 在 `AppleUSBHostMergeProperties` 合并冲突 ⇒ **实测卡 `AppleUSBHost*` 开不了机**）、
+    board-id 变化触发**系统卷重建**、且必须**重做 CPUFriend 数据**
+  - 真要换 ⇒ 用 **`opencore-smbios-switch`** 那个技能（它专门管换机型 + 三码，含正确顺序与救援路径）
 - **内存定制（`PlatformInfo > Memory`）** ⇒ `references/memory-injection.md`：
   ★★ **分两层别混** —— **A 层「系统信息 → 内存」= 全机型通用**（就是标准 SMBIOS Type 17 字段，
   `DeviceLocator` 决定显示的名字、`MaxCapacity` 单位是 **bytes**、键名是 **`SerialNumber`**）；
@@ -292,7 +291,6 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 - `references/hidpi.md` —— 非 Retina 屏开 HiDPI（one-key-hidpi）：写入位置、两个模式、恢复路径、**与 NVIDIA 驱动的风险**
 - `references/intel-turbo.md` —— Intel 睿频/CPU 限频：**CPU-S 验证**、根因定位（机型 profile + hwp）、CPUFriend 修法、BIOS 硬前提
 - `references/memory-injection.md` —— MacPro 机型内存定制：**12 槽映射表**、**摆位规则 f**、A 层通用字段、踩坑
-- `references/smbios-and-serials.md` —— SMBIOS 机型切换 + 三码：机型↔USB 图冲突、切换脚本三态、序列号判据、ROM、风控纪律
 - `references/rapidefi-first-efi.md` —— 从零开始：在 Windows 上用 RapidEFI 生成基础 EFI，及之后必须做的收尾
 - `references/lifecycle.md` —— **六阶段全流程**：Win 生成 → 安装 → 换 DEBUG → 收日志 → 修补 → 日常化
 - `references/os-upgrade-15-to-26.md` —— **系统大版本升级**（15 Sequoia → 26 Tahoe）：**`MinKernel`/`MaxKernel` 版本分流**、逐部件清单、升级时序、机型白名单、macOS 26 新坑、OCLP vs BCMC

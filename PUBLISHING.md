@@ -37,6 +37,7 @@ hackintosh-skills/
 
 # ② 安装插件（<插件名>@<市场名>）
 /plugin install opencore-config-audit@hackintosh-skills
+/plugin install opencore-smbios-switch@hackintosh-skills
 ```
 
 > 快捷方式：`/plugin market` = `/plugin marketplace`；`rm` = `remove`。
@@ -117,10 +118,12 @@ hackintosh-skills/
 ```bash
 # ① JSON 语法
 python3 -c "import json;[json.load(open(p)) for p in ['.codebuddy-plugin/marketplace.json',
-  'opencore-config-audit/.codebuddy-plugin/plugin.json']];print('JSON OK')"
+  'opencore-config-audit/.codebuddy-plugin/plugin.json',
+  'opencore-smbios-switch/.codebuddy-plugin/plugin.json']];print('JSON OK')"
 
 # ② 每个 skill 仍然合法
 python3 <skill-creator>/scripts/quick_validate.py opencore-config-audit
+python3 <skill-creator>/scripts/quick_validate.py opencore-smbios-switch
 
 # ③ source 指向的目录确实存在，且里面有 .codebuddy-plugin/plugin.json
 ```
@@ -166,6 +169,7 @@ python3 <skill-creator>/scripts/quick_validate.py opencore-config-audit
 
 ```bash
 python3 <skill-creator>/scripts/package_skill.py opencore-config-audit ./dist
+python3 <skill-creator>/scripts/package_skill.py opencore-smbios-switch  ./dist
 # → dist/opencore-config-audit.zip（内含 SKILL.md，带 YAML 的 name + description）
 ```
 

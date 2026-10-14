@@ -1,7 +1,7 @@
 {
   "name": "hackintosh-skills",
-  "description": "黑苹果（OpenCore）EFI 配置审查与维护技能：BIOS 审查、配置校验、日志取证、驱动安装、系统升级、选择器主题。",
-  "description_en": "Hackintosh (OpenCore) EFI configuration audit & maintenance skill: BIOS audit, config verification, log forensics, driver installs, OS upgrades and boot-picker theming.",
+  "description": "黑苹果（OpenCore）技能集：EFI 配置审查与维护（含 BIOS/驱动/系统升级/选择器主题）、机型切换与三码。",
+  "description_en": "Hackintosh (OpenCore) skill collection: EFI configuration audit & maintenance (BIOS, drivers, OS upgrades, boot-picker theming) plus SMBIOS model switching and board serials.",
   "owner": {
     "name": "GeekAudio"
   },
@@ -27,6 +27,27 @@
         "macos",
         "bios",
         "kext"
+      ],
+      "category": "development"
+    },
+    {
+      "name": "opencore-smbios-switch",
+      "source": "./opencore-smbios-switch",
+      "description": "黑苹果（OpenCore）机型切换与三码的完整流程：判断该不该换机型、换机型与内置 USB 图的耦合冲突、board-id 变化带来的系统卷重建、CPUFriendDataProvider 必须同步重做、序列号/MLB/UUID 生成与三类判据、ROM 必须是 en0 真实 MAC、换码风控纪律，以及正确顺序与救援路径。",
+      "description_en": "Full workflow for switching the SMBIOS model and regenerating board serials on a hackintosh OpenCore setup — deciding whether to switch, the coupling conflict between the SMBIOS model and Apple's built-in USB maps, the system-volume rebuild caused by a new board-id, why CPUFriendDataProvider must be rebuilt in the same change, serial/MLB/UUID generation with the three-class validity check, why ROM must be the real en0 MAC, account-flagging discipline, and the correct order with a rescue path.",
+      "version": "1.0.0",
+      "author": {
+        "name": "GeekAudio"
+      },
+      "repository": "https://github.com/GeekAudio/hackintosh-skills",
+      "license": "MIT",
+      "keywords": [
+        "hackintosh",
+        "opencore",
+        "smbios",
+        "serial",
+        "board-id",
+        "imessage"
       ],
       "category": "development"
     }

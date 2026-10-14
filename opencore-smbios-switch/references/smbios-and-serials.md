@@ -16,43 +16,114 @@
 | 功能收益（macOS 15 Sequoia 下） | **零** —— Dortania：`iMacPro1,1` 与 `MacPro7,1` 是**仅有**的两个「把全部负载交给 dGPU」的机型 ⇒ 两者等价 |
 | 成本 | 要新 serial / MLB / UUID；**board-id 变 ⇒ AGDP/AGDC 相关路径全变**；iMessage / FaceTime 需重新登录 |
 | 风险 | ★ **污染正在跑的 A/B 基线**（如 BAR1 / 重影实验）—— 违反「一次只改一项」与「挂着改动就无法区分新旧症状」 |
-| **升 macOS 26 Tahoe 时** | ★ **必须换** —— Apple 支持列表里 Tahoe 的 Intel 机型只剩 4 款：iMac 27″ 2020、MBP 16″ 2019、MBP 13″ 2020、**Mac Pro 2019 = `MacPro7,1`**；**`iMacPro1,1` 已被剔除** |
+| **升 macOS 26 Tahoe 时** | Apple 支持列表里 Tahoe 的 Intel 机型只剩 4 款：iMac 27″ 2020、MBP 16″ 2019、MBP 13″ 2020、**Mac Pro 2019 = `MacPro7,1`**；**`iMacPro1,1` 已被剔除**。**但这不构成「升级时顺便换机型」的理由** —— 见下 |
 
-⇒ **做法：把「换 `MacPro7,1`」绑死在「升级 Tahoe」这一个动作上，同一次做，不单独做。**
-（留在 `iMacPro1,1` 上跑 Tahoe 只能靠 `-no_compat_check` 硬顶 ⇒ 全局关掉兼容检查、安装器/更新器行为难预测；
-换 `MacPro7,1` 则原生受支持、OTA 正常，**而且与上游 macOS 26 测试者同机型** ⇒ 我们报的 issue 在作者环境可复现。）
+### 1.1 ★★ 两条路线，**默认走第一条**
 
-**备选（可行但不推荐）**：`iMacPro1,1` + `-no_compat_check` + RestrictEvents `revpatch=sbvmm`
-（官方说明：*"forces VMM SB model, allowing OTA updates for unsupported models on macOS 11.3 or newer"*）—— 等于在 hack 之上再叠一层 hack。
+| | **A. 保留原机型 + boot-arg 绕过**（**默认**） | B. 换到白名单机型 |
+|---|---|---|
+| 做法 | 加 `-no_compat_check`（能启动）+ `revpatch=sbvmm`（能收到 OTA 更新），机型一个字段都不动 | 换成 `MacPro7,1` |
+| 升级风险 | **低**（只动 boot-args） | 高（USB 图 + board-id + CPUFriend 一起动） |
+| 是否与升级耦合 | ✅ **解耦** —— 升级那一次只动 boot-args | ❌ 耦合 |
 
-## 2. ★★ 最容易翻车的点：机型 ↔ 内置 USB 图的冲突
+> ★★ **「升级系统时不许改机型」是硬约束**（`SKILL.md` 铁律 16）。
+> 理由：换机型**不是「改 4 个键」，而是一次耦合改动**（见 §2、§3）——
+> 连带换掉 macOS 想附加的**内置 USB 图**、board-id 触发**系统卷重建**、XCPM profile 变化。
+> **升级本身已经是高风险操作，不要在同一轮里叠加第二个耦合改动。**
+>
+> ⇒ **换机型是独立的一次决策，单独做**；**绝不要**把它塞进升级那一次。
 
-**本机实测：换 `MacPro7,1` 后开机卡在 `AppleUSBHost*`（内核早期 USB 栈），完全开不了机。**
+### 1.2 参考机器是怎么走的（说明清楚，避免误解）
 
-机制（两条官方依据）：
+参考机器**最终用的是 `MacPro7,1`**（在白名单内，因此不需要 `-no_compat_check` / `revpatch=sbvmm` 来绕过机型限制）。
 
-- **Dortania**：*"Certain SMBIOS will have their own USB map which may attach to your hardware causing USB issues."*
-- **USBToolBox README（决定性）**：*"Override any built-in Apple USB maps attaching based on SMBIOS and controller name"* ——
-  即 **macOS 内置了一批按「SMBIOS 机型 + 控制器名」附加的端口图**，USBToolBox 的存在意义就是**覆盖**它们
+但那是**独立做过的一次机型切换**（走 §2 的完整流程：先把 `UTBMap` 换成完整图 + 备 U 盘 EFI，再换 SMBIOS，并同步重做 `CPUFriendDataProvider`），
+**不是**「升级 Tahoe 时顺手改的」。两件事在时间上和风险上是分开的。
 
-⇒ 换机型 = 换了 macOS 想附加的那张图 ⇒ 与 `UTBMap` 在 **`AppleUSBHostMergeProperties`** 合并时冲突 ⇒ XHCI `start()` 走不完 ⇒ 卡死。
+⇒ 所以文档里同时出现「参考机器是 `MacPro7,1`」和「升级时不许改机型」**并不矛盾**：
+**前者是独立决策的结果，后者是升级时的纪律。**
 
-**加重因素**：当时本机的 `UTBMap` 是 `"Diagnostic map 1.1"`（**USB2-only 半成品**、连接器类型未映射）
-⇒ 抗机型图干扰的能力弱。
+## 2. ★★ 真正让本机「进不去系统」的是什么：主板特有的 BIOS SSDT
 
-> ★★★ **核心认识：「换机型」和「换 USB 图」是耦合的同一个改动，不是两个独立变量。**
-> 当时按「一次只改一项」只换 SMBIOS，**反而制造了不一致** —— 这是失败的直接原因。
+### 2.1 现象
 
-### 重试的正确顺序
+换成 `MacPro7,1` 后开机走到很后面、**然后循环重启**（**不是卡死** ⇒ 「多等一会儿」无效）。
 
-1. **先把 `UTBMap` 换成完整、明确的端口图**（USB2 + USB3、连接器类型都映射；用 USBToolBox 在**当前系统**下重新生成；
-   可选给每个个性加 `model` 键）
-2. **备一张 U 盘 EFI** —— 回退从「改文件」变成「改启动项」，秒级
-3. **再换 SMBIOS**
-4. `-v` 开机，**拍下卡住的那一行**。若仍停在 `AppleUSBHost*` ⇒ 合并冲突仍在（UTBMap 没压住自带图）
-5. 仍失败 ⇒ 走备选：`iMacPro1,1` + `-no_compat_check` + `revpatch=sbvmm`
-6. 最后手段：给 XHCI 控制器改 `IOName`（避开自带图的"控制器名"匹配）—— 属 ACPI/DeviceProperties 层，**风险最高，放最后**
+### 2.2 根因（实测锁定）
 
+**本机（ASUS Z690）的 BIOS 里有一张 OEM SSDT，`OEM Table ID = xh_adls3`。**
+换机型（board-id 变）会触发 macOS **重新解析/校验 ACPI 表**，
+而这张表在 `MacPro7,1` 下解析不过 —— 报 **`HS06 AE_NOT_FOUND`**（表里引用的对象解析不了）
+⇒ **电源管理 / ACPI 层面出问题 ⇒ 进不去系统。**
+
+> ★★ **这是「主板特有」现象，不是「换机型」的普遍规律。**
+> 所以**不要**把它当成通用结论背下来 —— 要当成一条**检查项**：
+> 换机型前先看本机有没有这类「厂商 OEM SSDT」。
+
+### 2.3 修法（实测有效，两步）
+
+| 步骤 | 位置 | 内容 |
+|---|---|---|
+| ① **删掉 BIOS 原表** | `ACPI > Delete` | `TableSignature = SSDT` · `OemTableId = xh_adls3` · `All = false` |
+| ② **加载打补丁的替换表** | `ACPI > Add` | `SSDT-XHADLS3.aml`（**Enabled**） |
+
+> 配置里那句注释把原因写得很清楚：
+> *"Remove BIOS INTEL `xh_adls3` table; load patched replacement to avoid **HS06 AE_NOT_FOUND** on ASUS Z690"*
+
+### 2.4 时间线证据（说明「是不是它」）
+
+| 时间 | 事件 |
+|---|---|
+| 10-12 | 换机型 **6 次全败**（循环重启）—— **当时还没有这张补丁表** |
+| 10-13 05:51 | 生成 `SSDT-XH_ADLS3.aml` |
+| 10-13 05:54 | 加 `ACPI>Delete`（原表）+ `ACPI>Add`（补丁表）⇒ **进得去了** |
+| 10-13 11:15 | 归档 `config.plist.GOOD-MacPro71-WORKING-20261013` ⇒ 确认可用 |
+
+### 2.5 已经排除的因素（别再往这些方向猜）
+
+| 因素 | 状态 |
+|---|---|
+| **USB 端口图** | ❌ **不是**（T3 图已验证可用；USB 驱动日志全程正常） |
+| **OCLP 根补丁** | ❌ 不是唯一原因（把补丁快照 `restore` 回滚掉后**仍然失败**） |
+| **机型本身不被支持** | ❌ 不是（`MacPro7,1` 是官方支持机型） |
+| **15 端口上限** | ❌ 与本次失败无关 |
+| **NVRAM 残留** | ❌ 不是（Reset NVRAM 后同样失败） |
+
+### 2.6 ★ 顺带说清一个「文档里的一般机制」（知道就好，别一上来就猜它）
+
+Dortania 与 USBToolBox README 确实说过：**macOS 会按「SMBIOS 机型 + 控制器名」附加内置 USB 端口图**，
+USBToolBox 的存在意义就是覆盖它们 ⇒ 理论上**换机型可能引起 USB 图合并冲突**
+（`AppleUSBHostMergeProperties`）。
+
+**但本机实测不是这个原因**（见 §2.5）。⇒ 结论：
+
+- **知道有这回事**，作为排查方向之一保留
+- **但不要**把它当成「换机型必翻车」的主因，更**不要**因此先去重做整张 USB 图（那是大工程，且不是这里的问题）
+
+### 2.7 ★★★ 顺序铁律：**先完善 SSDT，再换机型**
+
+**本机是特例** —— 不先处理掉 BIOS 那张 `xh_adls3`，**换机型必失败**。所以顺序不能反：
+
+```
+① 先完善 SSDT / ACPI（在【旧机型】下做完并验证）
+        ↓
+② 再换 SMBIOS / PlatformInfo（board-id）
+        ↓
+③ 再重做 CPUFriendDataProvider
+```
+
+★ **为什么必须在旧机型下先做完**：换机型会触发 ACPI 表的重新解析；
+若此时 ACPI 层本来就有问题（厂商 OEM SSDT 解析不过），**你分不清「是 ACPI 的问题」还是「是换机型的问题」** ——
+本机 10-12 连败 6 次就是这么耗掉的。**先把 ACPI 层验证干净，换机型这一步才只有一个变量。**
+
+### 2.8 换机型前的检查清单（按本机教训总结）
+
+- [ ] **看本机有没有厂商 OEM SSDT**：从 `SysReport/`（DEBUG 构建）或 ioreg 的 ACPI 表清单里，
+      找**非 Apple** 的 SSDT（`OEM Table ID` 带厂商特征，如 `xh_adls3`）
+- [ ] **看日志有没有 `AE_NOT_FOUND`**（ACPI 对象解析失败）
+- [ ] 若命中 ⇒ **准备「删原表 + 加补丁表」**这一对改动（**这往往才是能不能进系统的关键**）
+- [ ] 备好**可引导的 U 盘 EFI**（改 ACPI 表同样可能开不了机）
+- [ ] USB 图**只有在日志明确指向它时**才动（见 §2.6）
 ## 3. 机型会影响哪些东西（改之前先知道自己在动什么）
 
 Dortania 列出的清单：**CPU 电源管理**（XCPM profile）、**GPU 配置**（AGPM / AGDP / **AGDC**）、

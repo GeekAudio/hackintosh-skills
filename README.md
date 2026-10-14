@@ -16,6 +16,7 @@
 - [包含的 Skill](#包含的-skill)
 - [安装](#安装)
 - [目录结构](#目录结构)
+- [2. `opencore-smbios-switch` — 换机型 + 三码](#2-opencore-smbios-switch--换机型--三码)
 - [发布到 WorkBuddy](#发布到-workbuddy)
 - [1. `opencore-config-audit` — 配置审查与维护](#1-opencore-config-audit--opencore-配置审查与维护)
 - [适用性与边界](#适用性与边界)
@@ -26,7 +27,8 @@
 
 | Skill | 一句话 | 规模 |
 |---|---|---|
-| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置 —— 覆盖从装机到日常化、再到系统大版本升级的全生命周期，**并含启动选择器（OpenCanopy）主题** | 18 条铁律 · 21 份参考 · 14 个脚本 |
+| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置 —— 覆盖从装机到日常化、再到系统大版本升级的全生命周期，**并含启动选择器（OpenCanopy）主题**。★ **它不动机型**（这是它的约束） | 18 条铁律 · 20 份参考 · 14 个脚本 |
+| **`opencore-smbios-switch`** | **换机型 + 三码**（独立的一次高风险操作）：先完善 SSDT → 再换 SMBIOS → 再重做 CPU 电源数据 | 9 条铁律 · 1 份参考 |
 
 技能目录里有一份 `USAGE.md`（**随安装一起复制**），在对话里问「使用说明」即可拿到。
 
@@ -44,6 +46,7 @@
 
 # ② 安装插件（<插件名>@<市场名>）
 /plugin install opencore-config-audit@hackintosh-skills
+/plugin install opencore-smbios-switch@hackintosh-skills
 ```
 
 **方式二：手动复制（离线 / 只装一个）**
@@ -51,6 +54,7 @@
 ```bash
 # 用户级（所有项目都能用）
 cp -R opencore-config-audit ~/.workbuddy-ai/skills/
+cp -R opencore-smbios-switch ~/.workbuddy-ai/skills/
 
 # 或项目级（只在该项目里可用）
 cp -R <skill> <项目目录>/.workbuddy-ai/skills/
@@ -77,8 +81,13 @@ hackintosh-skills/
 │   │   └── plugin.json          # ← 插件元数据
 │   ├── SKILL.md                 # 主流程 + 18 条铁律 + 资源表
 │   ├── USAGE.md                 # ← 使用说明（随安装一起复制）
-│   ├── references/              # 21 份专题文档（见下表）
+│   ├── references/              # 20 份专题文档（见下表）
 │   └── scripts/                 # 14 个脚本（见下表）
+└── opencore-smbios-switch/
+    ├── .codebuddy-plugin/plugin.json
+    ├── SKILL.md                 # 换机型 + 三码
+    ├── USAGE.md
+    └── references/              # 1 份
 ```
 
 ---
@@ -209,6 +218,36 @@ hackintosh-skills/
 | `theme-opencanopy.md` | **选择器主题（OpenCanopy）**：开关总表、资源目录、**图标清单（必需/可选/官方不提供）**、Flavour 规则、标签/字体/音频/背景、排错 |
 | `pitfalls.md` | 全部踩过的坑 |
 | `machine-facts.md` | 参考机器（Z690 / Alder Lake / macOS 26）的具体事实 |
+
+---
+
+## 2. `opencore-smbios-switch` — 换机型 + 三码
+
+**换机型**是一件**独立的高风险耦合操作**，所以单独成一个技能。
+`opencore-config-audit` 那边只保留一条约束（**它不动机型**），真要换就换到这里做。
+
+### 它解决什么
+
+换机型不是「改几个键」：它会触发 ACPI 表重新解析、换掉 macOS 想附加的东西、并要求 CPU 电源数据同步重做。
+顺序错了直接进不去系统 —— 这个技能把**顺序**和**排查方向**定死。
+
+### 能力
+
+- ★★★ **顺序铁律**：**先完善 SSDT / ACPI（在旧机型下做完并验证）→ 再换 SMBIOS → 再重做 CPUFriend 数据**
+- ★★ **真正让本机进不去系统的是什么**：本机（ASUS Z690）BIOS 里有一张 `OEM Table ID = xh_adls3` 的 SSDT，
+  换机型触发 ACPI 重新解析 ⇒ `HS06 AE_NOT_FOUND` ⇒ **循环重启**。
+  **修法 = `ACPI>Delete` 删原表 + `ACPI>Add` 加载打补丁的替换表**（实测有效）
+- **已排除的方向**（别白试）：USB 端口图 · OCLP 根补丁 · 机型本身 · 15 端口上限 · NVRAM 残留
+- **决策依据**：功能收益 / 成本 / 风险三条摆清楚 —— **能不换就不换**；被新版系统逼的优先走 boot-arg 绕过
+- **三码**：序列号三类判据、`ROM` 必须是 `en0` 真实 MAC、换码风控纪律、换完先 FaceTime 再信息
+- **救援路径**：U 盘 EFI + 备选方案（保留原机型 + `-no_compat_check` + `revpatch=sbvmm`）
+
+### 参考文档
+
+| 文档 | 内容 |
+|---|---|
+| `smbios-and-serials.md` | 决策依据 · **厂商 OEM SSDT 与 ACPI 根因** · 顺序铁律 · 检查清单 · 三码生成与判据 · 操作教训 |
+
 
 ---
 
