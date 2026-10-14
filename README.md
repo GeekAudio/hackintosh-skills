@@ -16,6 +16,7 @@
 - [包含的 Skill](#包含的-skill)
 - [安装](#安装)
 - [目录结构](#目录结构)
+- [发布到 WorkBuddy](#发布到-workbuddy)
 - [1. `opencore-config-audit` — 配置审查与维护](#1-opencore-config-audit--opencore-配置审查与维护)
 - [2. `opencore-picker-theme` — 选择器主题](#2-opencore-picker-theme--选择器主题opencanopy)
 - [适用性与边界](#适用性与边界)
@@ -35,6 +36,21 @@
 
 ## 安装
 
+**方式一：作为插件市场安装（推荐）**
+
+本仓库已配好市场清单，直接添加即可：
+
+```bash
+# ① 添加市场
+/plugin marketplace add GeekAudio/hackintosh-skills
+
+# ② 安装插件（<插件名>@<市场名>）
+/plugin install opencore-config-audit@hackintosh-skills
+/plugin install opencore-picker-theme@hackintosh-skills
+```
+
+**方式二：手动复制（离线 / 只装一个）**
+
 ```bash
 # 用户级（所有项目都能用）
 cp -R opencore-config-audit ~/.workbuddy-ai/skills/
@@ -47,6 +63,8 @@ cp -R <skill> <项目目录>/.workbuddy-ai/skills/
 装好后，新建一个对话，用自然语言说一句需求（例如「审一下我的 OpenCore 配置」）验证是否生效。
 不知道怎么用、或没被触发，见 **[`USAGE.md`](USAGE.md)**。
 
+> **想发布自己的 skill？** 见 **[`PUBLISHING.md`](PUBLISHING.md)** —— 自有市场仓库（本仓库的做法）与官方 SkillHub 上架两条路线的完整流程。
+
 ---
 
 ## 目录结构
@@ -55,12 +73,18 @@ cp -R <skill> <项目目录>/.workbuddy-ai/skills/
 hackintosh-skills/
 ├── README.md
 ├── USAGE.md                     # 怎么调用 + 索引（给人看）
+├── PUBLISHING.md                # 怎么发布（市场仓库 / 官方上架）
+├── .codebuddy-plugin/
+│   └── marketplace.json         # ← 插件市场清单（加市场时读它）
 ├── opencore-config-audit/
+│   ├── .codebuddy-plugin/
+│   │   └── plugin.json          # ← 插件元数据
 │   ├── SKILL.md                 # 主流程 + 17 条铁律 + 资源表
 │   ├── USAGE.md                 # ← 本技能的使用说明（随安装一起复制）
 │   ├── references/              # 20 份专题文档（见下表）
 │   └── scripts/                 # 11 个脚本（见下表）
 └── opencore-picker-theme/
+    ├── .codebuddy-plugin/plugin.json
     ├── SKILL.md
     ├── USAGE.md                 # ← 本技能的使用说明（随安装一起复制）
     ├── references/              # 4 份
@@ -230,6 +254,17 @@ hackintosh-skills/
   （Z690 / Alder Lake / RTX 3080 / macOS 26）。换机器时按 `SKILL.md` 的**阶段 0**重新核实即可，
   不要把那份事实当成通用配置。
 - **第三方工具不是权威**：RapidEFI 等工具生成的结果适合作为**起点**，仍需回到官方文档 + `ocvalidate` 复核。
+
+## 发布到 WorkBuddy
+
+本仓库**本身就是一个可添加的插件市场**，两条路线任选：
+
+| 路线 | 怎么用 | 要审核吗 |
+|---|---|---|
+| **自有市场仓库**（本仓库已配好） | `/plugin marketplace add GeekAudio/hackintosh-skills` → `/plugin install <插件名>@hackintosh-skills` | 不需要 |
+| **官方 SkillHub 上架** | 打包 zip → 上传 → 审核 → 发布 | 需要 |
+
+完整字段说明、新增技能的步骤、上线自检与常见问题：**[`PUBLISHING.md`](PUBLISHING.md)**。
 
 ## 说明
 

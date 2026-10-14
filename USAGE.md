@@ -51,13 +51,24 @@
 
 ## 二、安装
 
+**方式一：作为插件市场安装（推荐）**
+
 ```bash
-# 用户级（所有项目都能用）
+/plugin marketplace add GeekAudio/hackintosh-skills
+/plugin install opencore-config-audit@hackintosh-skills
+/plugin install opencore-picker-theme@hackintosh-skills
+```
+
+**方式二：手动复制（离线 / 只装一个）**
+
+```bash
 cp -R opencore-config-audit ~/.workbuddy-ai/skills/
 cp -R opencore-picker-theme  ~/.workbuddy-ai/skills/
 ```
 
 装完后，新建一个对话，随便说一句上面的示例话术验证是否生效。
+
+> 发布 / 分发自己的技能见 [`PUBLISHING.md`](PUBLISHING.md)。
 
 ---
 
