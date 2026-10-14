@@ -10,6 +10,9 @@
 - 独显 RTX 3080 10GB（`10de:2206`，PEG1 0:1:0）；核显 UHD 770（`8086:4680`，0:2:0）
 - 网卡 I225-V（`AppleIGC.kext` 驱动）+ Broadcom BCM943602CDP（无线/BT）
 - 机型 `MacPro7,1`；macOS 26.7.1（25G241）
+  ★★ **但 10-15 01:54 起硬盘那份 config 的 `SystemProductName` 实测 = `iMac20,1`**（A/B 测试，见工作区
+  `_oc-backup-before-imac201-b1-20261015-015413.plist` / `_CPUFriendDataProvider-iMac20,1/` / `_freq-probe-after-imac201`）
+  ⇒ **引用「本机机型」前先读 live config，别照抄本文件**；A/B 结论出来后再回来定稿。
 - 磁盘（**按容量认，盘号会漂**）：
   | 卷 | 容量 | 物理盘 | 接口 |
   |---|---|---|---|
