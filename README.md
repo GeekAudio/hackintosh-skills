@@ -40,12 +40,8 @@ cp -R opencore-picker-theme  ~/.workbuddy-ai/skills/
 cp -R <skill> <项目目录>/.workbuddy-ai/skills/
 ```
 
-装好后可用官方校验器确认：
-
-```bash
-python3 <skill-creator>/scripts/quick_validate.py ~/.workbuddy-ai/skills/opencore-config-audit
-# → Skill is valid!
-```
+装好后，新建一个对话，用自然语言说一句需求（例如「审一下我的 OpenCore 配置」）验证是否生效。
+不知道怎么用、或没被触发，见 **[`USAGE.md`](USAGE.md)**。
 
 ---
 
@@ -101,8 +97,8 @@ hackintosh-skills/
 
 - **逐键对照官方文档**：按机器上的 OpenCore 版本取官方发布包，用官方 `ocvalidate` 校验，并把
   `Configuration.tex` 里**全部 420 个配置键**的 `Type / Failsafe / Description` 抽成键库，
-  逐键判定「本机取值 vs 官方默认」，分成三类：**有依据的正确偏离 / 与文档相反 / 冗余残留**
-- **ACPI / SSDT 巡检**：用官方 `Docs/AcpiSamples/`（18 个样例）逐条对照本机实际设备
+  逐键判定「你的取值 vs 官方默认」，分成三类：**有依据的正确偏离 / 与文档相反 / 冗余残留**
+- **ACPI / SSDT 巡检**：用官方 `Docs/AcpiSamples/`（18 个样例）逐条对照你的实际设备
 - **kext 精简**：找禁用项与孤儿文件，含「不能删」清单
 - **磁盘屏蔽**：`/etc/fstab` + `noauto`（按卷 UUID），**显式排除 EFI 分区**并做挂载验证
 
@@ -134,7 +130,7 @@ hackintosh-skills/
 | **MediaTek 无线**（MT7921 / MT7922 / RZ608） | ★★ **分两条线**：**蓝牙（USB）可用**（`SimpleMtkBtFw` 有 release）；**Wi-Fi（PCIe）是实验性**（`SimpleMtkWlan` 无 release、能扫描但关联/连接仍在修）⇒ **要稳定就换卡**；含蓝牙两个致命坑（别改 USB 产品名 + NVRAM 两条 data） |
 | **博通网卡**（BCM943602CDP / BCM43602） | ★ **按系统分路线**：Sequoia 用 `IO80211FamilyLegacy`，Tahoe 用独立 `AirPortBrcmNIC-Tahoe.kext`；OCLP root patch 前置保护；★ 判死活看 `ifconfig en1` |
 | **板载声卡**（AppleALC） | 先搜同型号前人 layout-id（推荐路线）→ 搜不到再按 codec 定制 → 本地构建 → 提 PR；自定义 layout 只能用 11–99 |
-| **HiDPI**（one-key-hidpi） | 非 Retina 屏清晰度；★ 本机 NVIDIA 驱动未完善，含风险与恢复路径；★ 别和引导期 `UIScale` 混 |
+| **HiDPI**（one-key-hidpi） | 非 Retina 屏清晰度；★ NVIDIA 驱动未完善，含风险与恢复路径；★ 别和引导期 `UIScale` 混 |
 | **Intel 睿频** | CPU 被压低频 → **CPU-S 验证** → CPUFriend 修法；★ BIOS `Speed Shift` 必须 Enabled |
 | **MacPro 机型内存定制** | ★ **分两层**：「系统信息」= 全机型通用（SMBIOS Type 17）；「关于本机」内存图 = MacPro 专有（**摆位规则 + 12 槽映射表**） |
 | **SMBIOS 机型切换 + 三码** | ★ 换机型会连带换掉内置 USB 图 ⇒ 与 UTBMap 冲突；序列号三类判据；ROM 用真实 en0 MAC；换码风控纪律 |
@@ -184,7 +180,7 @@ hackintosh-skills/
 | `memory-injection.md` | MacPro 内存定制：**12 槽映射表**、**摆位规则 f**、A 层通用字段 |
 | `smbios-and-serials.md` | 机型切换 + 三码：机型↔USB 图冲突、序列号判据、ROM、风控纪律 |
 | `pitfalls.md` | 全部踩过的坑 |
-| `machine-facts.md` | 本机（Z690 / Alder Lake / macOS 26）的具体事实 |
+| `machine-facts.md` | 参考机器（Z690 / Alder Lake / macOS 26）的具体事实 |
 
 ---
 
