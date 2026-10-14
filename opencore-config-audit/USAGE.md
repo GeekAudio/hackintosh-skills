@@ -46,6 +46,7 @@
 | `mask-other-disks.sh` | 按 UUID 屏蔽非系统卷 |
 | `cpu-freq-probe.sh` | CPU 实际频率探针 |
 | `mem-check.sh` | 校验内存注入摆位 |
+| `redact-check.sh` | **发布前脱敏自检**（扫三码 / MAC / 密钥等） |
 
 ## 参考文档（20 份）
 

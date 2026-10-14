@@ -172,6 +172,7 @@ dist/opencore-picker-theme.zip     ~23 KB
 自己再核一遍：
 
 ```bash
+# ① 内容自检（SKILL.md + YAML frontmatter + 文件数）
 python3 - <<'EOF'
 import zipfile
 for z in ('dist/opencore-config-audit.zip','dist/opencore-picker-theme.zip'):
@@ -181,10 +182,19 @@ for z in ('dist/opencore-config-audit.zip','dist/opencore-picker-theme.zip'):
     print(z, '| SKILL.md ✅' if ('name:' in fm and 'description:' in fm) else '❌',
           '| 文件数', len(n))
 EOF
+
+# ② ★ 脱敏自检（技能里带了脚本，直接跑）
+bash opencore-config-audit/scripts/redact-check.sh opencore-config-audit
+bash opencore-config-audit/scripts/redact-check.sh opencore-picker-theme
+# 退出码 0 = 干净；1 = 有命中，先处理再打包
 ```
 
-> ★ 打包前**务必扫一遍敏感信息**：三码（serial/MLB/UUID）、ROM 用的 MAC、内存条序列号、
-> 主机名、任何 token / 密钥。**这些一旦上传就公开了。**
+> ★★ **打包前务必扫敏感信息**：三码（serial/MLB/UUID）、ROM 用的 MAC、内存条序列号、
+> 主机名、任何 token / 密钥。**这些一旦上传就公开了** —— 三码 + ROM MAC 等同于这台机器的
+> Apple 身份凭证（iMessage / FaceTime 认的就是它们）。
+>
+> `scripts/redact-check.sh` 就是干这个的（只读）。**注意：自动扫描只是兜底**，
+> 它按模式匹配，判不了「这个值是不是本机专有的」—— 仍要人工扫一眼。
 
 ### B.3 上传（在应用里操作）
 

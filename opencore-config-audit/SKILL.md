@@ -266,6 +266,7 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 - `scripts/mask-other-disks.sh` —— 按 UUID 写 fstab 屏蔽非 macOS 卷（显式排除 EFI）
 - `scripts/cpu-freq-probe.sh` —— CPU 实际频率探针（内联汇编，防编译器折叠）—— 验证睿频 / 对比机型
 - `scripts/mem-check.sh` —— 校验内存注入摆位（数组序号 → 预测图位，判定是否与「系统信息」错位）
+- `scripts/redact-check.sh` —— **发布前脱敏自检（只读）**：扫三码 / MAC / 密钥 / 卷 UUID / 邮箱 / 内网 IP
 - `scripts/bios-audit.ps1` —— **Windows 侧 BIOS 审查（只读）**：判定固件类型/Secure Boot/TPM/VT-x/HT/XMP/**VMD·RST**/串口/内存槽位，判不了的明确标注
 - `references/official-docs-method.md` —— 文档取用方法、逐键判定法、成对关系表
 - `references/logs-and-debug.md` —— `Target`/`DisplayLevel` 位定义、日志判据、刷屏归因
