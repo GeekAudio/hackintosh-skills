@@ -149,6 +149,7 @@
 | **CSM** | 只有「NVIDIA 6xx / AMD 2xx 及更老、且 GOP ROM 未刷」时才临时需要 | **其它一切情况都关**（默认答案就是关） |
 | **Global C-state Control**（AMD） | 一般开着 | 出现待机不稳定时试关 |
 | **Power Supply Idle Control**（AMD） | 一般 `Auto` | 某些 Ryzen 待机重启 ⇒ 试 `Typical Current Idle` |
+| **★ E 核（Efficient Core）数量**（Intel 12 代+） | **想让 macOS 用上 4 个小核** ⇒ `All`（**必须**同时 `ProvideCurrentCpuInfo=true` + `CpuTopologyRebuild.kext`） | **求稳** ⇒ 设 **`0`**（关小核，macOS 只见 P 核）⇒ 详见 `e-cores.md`。★ 无论开还是关，**`Active Performance Cores` 都留 `All`、HT 留 `Enabled`** |
 | **Multi-Monitor / Primary Display** | 取决于用哪块 GPU 输出 | — |
 | **DMA Protection / Kernel DMA Protection** | Win11 需要 | 与 macOS 无关，但**可能干扰**第三方驱动，出问题先试关 |
 
@@ -296,6 +297,7 @@ powershell -ExecutionPolicy Bypass -File .\bios-audit.ps1 -OutFile C:\bios-audit
 [ ] Legacy USB Support  → 装系统期开，之后可关
 [ ] Thunderbolt         → 装好后按需
 [ ] ErP / EuP           → 只在关心关机/唤醒时动
+[ ] E 核数量（12 代+）  → 开=All / 关=0（见 e-cores.md）
 ```
 
 ---
@@ -313,10 +315,11 @@ powershell -ExecutionPolicy Bypass -File .\bios-audit.ps1 -OutFile C:\bios-audit
 | VT-d / IOMMU | `Advanced → System Agent → VT-d` | `OC → CPU Features → VT-d` | `Settings → Miscellaneous → VT-d` | `Advanced → Chipset → VT-d` |
 | VMD | `Advanced → VMD Setup Menu → Enable VMD controller = Disabled` | `Settings → Advanced → VMD Setup Menu` | `Settings → IO Ports → VMD Configuration` | `Advanced → VMD Configuration` |
 | Speed Shift | `Advanced → CPU Configuration → Intel Speed Shift Technology` | `OC → CPU Features → Intel Speed Shift` | `Settings → Advanced CPU Settings` | `Advanced → CPU Configuration` |
+| **E 核数量**（12 代+） | `Advanced → CPU Configuration → Active Efficient Cores` | `OC → Advanced CPU Configuration → E-Core Count` | `Settings → Advanced CPU Settings → E-Core Count` | `Advanced → CPU Configuration → Active E Cores` |
 | SATA Mode | `Advanced → SATA Configuration → SATA Mode = AHCI` | `Settings → Advanced → SATA Mode = AHCI` | `Settings → SATA Mode = AHCI` | `Advanced → Storage Configuration → SATA Mode = AHCI` |
 
 > 各家菜单名会随版本变，**用「搜设置」功能最快**（现代 BIOS 基本都有搜索框）：
-> 直接搜 `VMD` / `CFG` / `CSM` / `Above 4G` / `Speed Shift`。
+> 直接搜 `VMD` / `CFG` / `CSM` / `Above 4G` / `Speed Shift` / `Efficient Core`。
 
 ---
 

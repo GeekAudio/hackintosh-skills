@@ -25,7 +25,7 @@
 
 | Skill | 一句话 | 规模 |
 |---|---|---|
-| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置 —— 覆盖从装机到日常化、再到系统大版本升级的全生命周期，并含**启动选择器（OpenCanopy）主题**与**换机型 / 三码** | 20 条铁律 · 26 份参考 · 15 个脚本 |
+| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置 —— 覆盖从装机到日常化、再到系统大版本升级的全生命周期，并含**启动选择器（OpenCanopy）主题**与**换机型 / 三码** | 20 条铁律 · 27 份参考 · 16 个脚本 |
 
 技能目录里有一份 `USAGE.md`（**随安装一起复制**），在对话里问「使用说明」即可拿到。
 
@@ -73,8 +73,8 @@ hackintosh-skills/
 │   │   └── plugin.json          # ← 插件元数据
 │   ├── SKILL.md                 # 主流程 + 20 条铁律 + 资源表
 │   ├── USAGE.md                 # ← 使用说明（随安装一起复制）
-│   ├── references/              # 26 份专题文档（见下表）
-│   └── scripts/                 # 15 个脚本（见下表）
+│   ├── references/              # 27 份专题文档（见下表）
+│   └── scripts/                 # 16 个脚本（见下表）
 ```
 
 ---
@@ -97,7 +97,7 @@ hackintosh-skills/
   **Intel Speed Shift 必须开**（否则 `wrmsr(0x770,1)` #GP）
 - ★ **区分三类**：**必须关**（Fast Boot / Secure Boot / CSM / CFG Lock / VMD / RST / SGX / PTT / 串口）·
   **必须开**（VT-x·SVM / Above 4G / HT / XD / XHCI Hand-off / OS Type=Windows UEFI / AHCI / DVMT≥64MB）·
-  **看情况**（Re-BAR / XMP / iGPU / Thunderbolt / ErP）—— **不是一律关或一律开**
+  **看情况**（Re-BAR / XMP / iGPU / Thunderbolt / ErP / **E 核数量**）—— **不是一律关或一律开**
 - **厂商命名对照表**（ASUS / MSI / Gigabyte / ASRock 同一设置不同叫法）+ **CFG Lock 专题**（三种查法 + 隐藏选项路线）
 - **Windows 只读审查脚本**：直接判定固件类型 / Secure Boot / TPM / VT-x / HT / XMP / VMD·RST / 串口 / 内存槽位，
   判不了的明确标成「需人工核」
@@ -163,6 +163,7 @@ hackintosh-skills/
 | **板载声卡**（AppleALC） | ★★★ **macOS 26 前置：先用 `SimpleHDA` 恢复原版 `AppleHDA`**（OpenCore 注入，**不打补丁 / 不关 SIP / 不用 KDK**，音质无损耗）；然后先搜同型号前人 layout-id（推荐路线）→ 搜不到再按 codec 定制 → 本地构建 → 提 PR；自定义 layout 只能用 11–99 |
 | **HiDPI**（one-key-hidpi） | 非 Retina 屏清晰度；★ NVIDIA 驱动未完善，含风险与恢复路径；★ 别和引导期 `UIScale` 混 |
 | **Intel 睿频** | CPU 被压低频 → **CPU-S 验证** → CPUFriend 修法；★ BIOS `Speed Shift` 必须 Enabled |
+| **开小核 / 关小核**（E 核） | Intel 12 代+ 混合架构的两种取舍：**关 = 稳**（BIOS `Active Efficient Cores = 0`，**配置一行不用改**）· **开 = 快**（`= All` + `ProvideCurrentCpuInfo=true` + `CpuTopologyRebuild.kext`）；★ 判据 `hw.nperflevels`（**1 = E 核没暴露 / 2 = P+E 都识别**）；★★ 「只看到 8 核 16 线程」**不是缺核**；★ `ctrsmt=off` / `ctrsmt=full` 的 **v2 语法与 v1 的 `-ctrsmt` 不通用**；★ 官方已知**开小核 + `-v` 可能随机启动失败** |
 | **内存定制** | ★★ **槽位数随机型变**（`MacPro7,1`=**12 槽** / `iMac20,1`=**4 槽**）⇒ 换机型要同步重做；★ **分两层**：「系统信息」= 全机型通用（SMBIOS Type 17）；「关于本机」内存图 = **MacPro 专有**（**摆位规则 + 12 槽映射表**） |
 | **SMBIOS 机型切换 + 三码** | ★★★ **换机型必须连三码一起换** —— 「关于本机」的机型名是**序列号产品码**的函数，不换码就永远显示旧机型（`macserial -i` 可先解码核对）；**连带项一次做全**：三码 · ACPI/SSDT 前置 · `CPUFriend` · **内存注入槽位数**（MacPro7,1=12 / iMac20,1=4）· `ROM` · **电脑名/主机名/SMB 名**；★★★ **顺序：先完善 SSDT/ACPI（旧机型下验证）→ 再换 SMBIOS → 再重做 CPUFriend**；★ 真正让本机进不去系统的是**主板 OEM SSDT**（ASUS Z690 的 `xh_adls3` ⇒ `HS06 AE_NOT_FOUND`），修法 = `ACPI>Delete` 删原表 + 加 `SSDT-XHADLS3.aml`；已排除 USB 图/OCLP/机型本身/15 口/NVRAM；序列号三类判据、ROM 用真实 en0 MAC、换码风控纪律。★ **与系统升级解耦**（升级时不动机型） |
 | **首次生成 EFI**（RapidEFI） | Windows 上生成基础 EFI，及之后必须做的收尾 |
@@ -186,6 +187,7 @@ hackintosh-skills/
 | `find-boot-gap.sh` | 启动停顿窗口精查（从 `launchd.log` 找最大空档 → **流式过滤** `log show`，不落大文件） |
 | `mask-other-disks.sh` | 按 UUID 写 fstab 屏蔽非系统卷（默认 dry-run，永不碰 EFI） |
 | `cpu-freq-probe.sh` | CPU 实际频率探针（内联汇编，防编译器折叠）—— 验证睿频 / 对比机型 |
+| `e-cores-check.sh` | **小核（E 核）体检**：拓扑（`hw.nperflevels` / `perflevel1` / `CPUID`）+ 频率 + `CpuTopologyRebuild` 加载状态 + 判读 |
 | `mem-check.sh` | 校验内存注入摆位（数组序号 → 预测图位，判定是否与「系统信息」错位） |
 | `bios-audit.ps1` | **Windows 侧 BIOS 审查（只读）**：判定固件类型/Secure Boot/TPM/VT-x/HT/XMP/**VMD·RST**/串口/内存槽位 |
 | `oc-nvram-bootentry.sh` | **从系统里读/写固件启动项**（官方方法 D 的辅助）：`dump`（解析名字/设备路径）· `backup` / `restore` · `add`（含 `--dry-run`）· `del`。★ 写操作要提权；★★ **且只在 `RequestBootVarRouting=false` 时才有意义** |
@@ -218,6 +220,7 @@ hackintosh-skills/
 | `applealc-custom.md` | 板载声卡：★★★ **macOS 26 的 `AppleHDA` 恢复（`SimpleHDA`，无需补丁）**、先搜前人经验、按 codec 定制、本地构建、提 PR |
 | `hidpi.md` | 非 Retina 屏开 HiDPI：写入位置、两个模式、恢复路径、与 NVIDIA 驱动的风险 |
 | `intel-turbo.md` | Intel 睿频 / 限频：CPU-S 验证、根因定位、CPUFriend 修法、BIOS 硬前提 |
+| `e-cores.md` | **开小核 / 关小核（Intel 混合架构 P/E 核）**：★ 两种取舍 · BIOS `Active Efficient Cores`（四家厂商命名）· `ProvideCurrentCpuInfo` · **`CpuTopologyRebuild` 四取值**（`ctrsmt=off` / `ctrsmt=full` / `-ctrfixcnt`）· 判据 `hw.nperflevels` · **官方已知 `-v` 冲突** · 回滚 |
 | `memory-injection.md` | 内存定制：★★ **槽位数随机型**（`MacPro7,1`=12 / `iMac20,1`=4）、**MacPro 12 槽映射表**、**摆位规则 f**、A 层通用字段 |
 | `smbios-and-serials.md` | **换机型 + 三码**：★★★ **换机型必须连三码一起换**（机型名 = 序列号产品码的函数）、**连带项清单 7 项**（三码 · SSDT 前置 · CPUFriend · 内存槽位数 · ROM · **电脑名/主机名/SMB 名** · 显示名缓存）、★★★ 主板 OEM SSDT（`xh_adls3`）与 ACPI 根因、**顺序铁律（先完善 SSDT）**、检查清单、序列号判据、ROM、切换脚本三态、操作教训 |
 | `theme-opencanopy.md` | **选择器主题（OpenCanopy）**：开关总表、资源目录、**图标清单（必需/可选/官方不提供）**、Flavour 规则、标签/字体/音频/背景、排错 |

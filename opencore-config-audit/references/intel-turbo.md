@@ -109,5 +109,6 @@ HWP 不可用 ⇒ wrmsr(0x770,1) 触发 #GP ⇒ xcpm_hwp_enable 崩（panic type
   （`CPUFriend.kext` / `CPUFriendDataProvider.kext` / `src-iMacPro11.plist`）
 - **探针脚本**：`cpu-freq-probe.sh`（本机 3.5–4.3 GHz 属正常）
 - **回退** = 回到 `config.plist.v14-MacPro71-pci-slots-cpuname`，并把两条 CPUFriend 条目设 `Enabled=false`
-- 另注：系统只认 **8 核 / 16 线程**（12700K 满配 12C/20T）⇒ **E-core 未暴露**（疑 BIOS 里关着）；
-  `CpuTopologyRebuild.kext` 在 `Kernel>Add` 里但 `Enabled=false`
+- 另注：系统只认 **8 核 / 16 线程**（12700K 满配 12C/20T）⇒ **E-core 未暴露**（BIOS 里关着）。
+  ★ **这属于「开小核 / 关小核」的取舍，不是限频问题** ⇒ 详见 **`e-cores.md`**（含 `CpuTopologyRebuild` 用法与 `-v` 冲突）。
+  历史上 `CpuTopologyRebuild.kext` 在 `Kernel>Add` 里但 `Enabled=false`（10-15 已改为启用，待 BIOS 配合）。
