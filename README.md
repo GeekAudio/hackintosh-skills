@@ -30,6 +30,9 @@ cp -R <skill> <项目目录>/.workbuddy-ai/skills/
   逐键判定「本机取值 vs 官方默认」，分成三类：有依据的正确偏离 / 与文档相反 / 冗余残留
 - **引导期取证**：读 OpenCore 自己的 `opencore-*.txt`（`Target` 位定义、`OCABC:` 判据、
   ACPI 表清单、启动项注册、APFS 驱动门槛）与 macOS 内核日志（ACPI 报错、平台设备挂载）
+- **启动耗时 / 时间线分析**：把启动拆成 **OC 段 / 内核驱动段 / 用户态段**三段分开量，
+  用「停顿窗口」定位卡顿（`launchd.log` 找最大空档 → **流式过滤** `log show`，绕过其时间过滤失效），
+  并给出耗时来源处置表（含驱动侧 `nvrmsettle` / `-wegnoigpu` 两类已知固定延迟）
 - **ACPI / SSDT 巡检**：用官方 `Docs/AcpiSamples/`（18 个样例）逐条对照本机实际设备
 - **磁盘屏蔽**：`/etc/fstab` + `noauto`（按卷 UUID），**显式排除 EFI 分区**并做挂载验证
 - **kext 精简**：找禁用项与孤儿文件，含「不能删」清单
@@ -53,11 +56,13 @@ cp -R <skill> <项目目录>/.workbuddy-ai/skills/
 | `scripts/oc-swap-build.sh` | RELEASE ↔ DEBUG 换构建（连官方同名 Drivers 一起换，保留第三方驱动） |
 | `scripts/oc-edit-safe.sh` | 安全改 config 的包装（`begin` 备份 / `finish` 校验存档落盘复验） |
 | `scripts/grab-logs.sh` | 抓 OC 引导日志与本次开机内核日志（提权，可 `--oc-only`） |
+| `scripts/boot-timeline.sh` | 启动耗时总览（NVRM 属性 + `dmesg` + launchd 时间线 + 内核日志，带超时保护） |
+| `scripts/find-boot-gap.sh` | 启动停顿窗口精查（从 `launchd.log` 找最大空档 → **流式过滤** `log show`，不落大文件） |
 | `scripts/mask-other-disks.sh` | 按 UUID 写 fstab 屏蔽非系统卷（默认 dry-run，永不碰 EFI） |
 | `scripts/cpu-freq-probe.sh` | CPU 实际频率探针（内联汇编，防编译器折叠）—— 验证睿频 / 对比机型 |
 | `scripts/mem-check.sh` | 校验内存注入摆位（数组序号 → 预测图位，判定是否与「系统信息」错位） |
 
-参考文档：`official-docs-method.md`（含**成对关系表**）、`logs-and-debug.md`、`acpi-ssdt.md`、
+参考文档：`official-docs-method.md`（含**成对关系表**）、`logs-and-debug.md`、`boot-timeline.md`（**启动耗时/时间线**）、`acpi-ssdt.md`、
 `disks-and-kexts.md`、`lifecycle.md`（**六阶段全流程**）、`nvidia-driver.md`、`intel-wifi.md`、
 `rapidefi-first-efi.md`、`applealc-custom.md`、`broadcom-wifi.md`、`hidpi.md`、`intel-turbo.md`、`memory-injection.md`、`smbios-and-serials.md`、`pitfalls.md`、`machine-facts.md`
 
