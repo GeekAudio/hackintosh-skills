@@ -380,8 +380,11 @@ PC 固件不消费这个变量 ⇒ **别指望它能在 BIOS 里建出条目**�
 
 ## 8. ★ 从「U 盘启动」改成「硬盘启动」
 
-> **本机现状**：`nvram 4D1FDA02-…:boot-path` = `…/USB(0x18,0x0)/USB(0x0,0x0)/USB(0x2,0x0)/HD(1,GPT,…)/EFI\OC\OpenCore.efi`
-> ⇒ **当前确实是从 U 盘引导**（跑的是 U 盘那份 `REL-108`）。
+> **本机现状**（`nvram 4D1FDA02-…:boot-path`）：
+> 10-15 02:55 = `…/USB(0x18,0x0)/…/\EFI\OC\OpenCore.efi` ⇒ 当时**从 U 盘**引导（`REL-108`）；
+> **10-15 03:40 = `PciRoot(0x0)/Pci(0x6,0x0)/Pci(0x0,0x0)/NVMe(0x1,…)/HD(1,GPT,…)/\EFI\OC\OPENCORE.EFI`**
+> ⇒ ★★ **已经改成从内置硬盘引导**（OC = `DBG-108`）—— 也就是说**下面这套步骤本机已经走通了**，
+> 留作流程参考。
 
 ### 8.1 为什么要换
 

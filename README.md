@@ -26,7 +26,7 @@
 
 | Skill | 一句话 | 规模 |
 |---|---|---|
-| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置 —— 覆盖从装机到日常化、再到系统大版本升级的全生命周期，并含**启动选择器（OpenCanopy）主题**与**换机型 / 三码** | 19 条铁律 · 26 份参考 · 15 个脚本 |
+| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置 —— 覆盖从装机到日常化、再到系统大版本升级的全生命周期，并含**启动选择器（OpenCanopy）主题**与**换机型 / 三码** | 20 条铁律 · 26 份参考 · 15 个脚本 |
 
 技能目录里有一份 `USAGE.md`（**随安装一起复制**），在对话里问「使用说明」即可拿到。
 
@@ -75,7 +75,7 @@ hackintosh-skills/
 ├── opencore-config-audit/
 │   ├── .codebuddy-plugin/
 │   │   └── plugin.json          # ← 插件元数据
-│   ├── SKILL.md                 # 主流程 + 19 条铁律 + 资源表
+│   ├── SKILL.md                 # 主流程 + 20 条铁律 + 资源表
 │   ├── USAGE.md                 # ← 使用说明（随安装一起复制）
 │   ├── references/              # 26 份专题文档（见下表）
 │   └── scripts/                 # 15 个脚本（见下表）
@@ -166,7 +166,7 @@ hackintosh-skills/
 | **HiDPI**（one-key-hidpi） | 非 Retina 屏清晰度；★ NVIDIA 驱动未完善，含风险与恢复路径；★ 别和引导期 `UIScale` 混 |
 | **Intel 睿频** | CPU 被压低频 → **CPU-S 验证** → CPUFriend 修法；★ BIOS `Speed Shift` 必须 Enabled |
 | **MacPro 机型内存定制** | ★ **分两层**：「系统信息」= 全机型通用（SMBIOS Type 17）；「关于本机」内存图 = MacPro 专有（**摆位规则 + 12 槽映射表**） |
-| **SMBIOS 机型切换 + 三码** | ★★★ **顺序：先完善 SSDT/ACPI（旧机型下验证）→ 再换 SMBIOS → 再重做 CPUFriend**；★ 真正让本机进不去系统的是**主板 OEM SSDT**（ASUS Z690 的 `xh_adls3` ⇒ `HS06 AE_NOT_FOUND`），修法 = `ACPI>Delete` 删原表 + 加 `SSDT-XHADLS3.aml`；已排除 USB 图/OCLP/机型本身/15 口/NVRAM；序列号三类判据、ROM 用真实 en0 MAC、换码风控纪律。★ **与系统升级解耦**（升级时不动机型） |
+| **SMBIOS 机型切换 + 三码** | ★★★ **换机型必须连三码一起换** —— 「关于本机」的机型名是**序列号产品码**的函数，不换码就永远显示旧机型（`macserial -i` 可先解码核对）；**连带项一次做全**：三码 · ACPI/SSDT 前置 · `CPUFriend` · **内存注入槽位数**（MacPro7,1=12 / iMac20,1=4）· `ROM` · **电脑名/主机名/SMB 名**；★★★ **顺序：先完善 SSDT/ACPI（旧机型下验证）→ 再换 SMBIOS → 再重做 CPUFriend**；★ 真正让本机进不去系统的是**主板 OEM SSDT**（ASUS Z690 的 `xh_adls3` ⇒ `HS06 AE_NOT_FOUND`），修法 = `ACPI>Delete` 删原表 + 加 `SSDT-XHADLS3.aml`；已排除 USB 图/OCLP/机型本身/15 口/NVRAM；序列号三类判据、ROM 用真实 en0 MAC、换码风控纪律。★ **与系统升级解耦**（升级时不动机型） |
 | **首次生成 EFI**（RapidEFI） | Windows 上生成基础 EFI，及之后必须做的收尾 |
 | **选择器主题**（OpenCanopy） | 图标集、`PickerAttributes` 位表、Flavour 规则、标签/字体/音频/背景、HiDPI；★ **必需图标缺一个就不启动**、**官方图标集不提供哪些可选图标**（解释日志里的 `Not Found` 为什么正常） |
 

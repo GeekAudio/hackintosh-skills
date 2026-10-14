@@ -2,7 +2,7 @@
 name: opencore-config-audit
 description: 审查、修改与维护黑苹果的 OpenCore（OpenCorePkg）EFI 配置与驱动安装：**BIOS/UEFI 设置审查（官方 9 条清单 + Dortania Intel/AMD + 社区补充的 VMD / Speed Shift；区分「必须关 / 必须开 / 看情况」；含 Windows 只读审查脚本）**、逐键对照官方文档并用官方 ocvalidate 校验 config.plist、巡检 ACPI/SSDT（对照官方 AcpiSamples）、精简注入的 kext、读取 OpenCore 引导日志与内核日志取证、**启动耗时/时间线分析（OC 段 / 内核驱动段 / 用户态段三段拆解，定位卡顿与停顿窗口）**、**系统大版本升级（macOS 15 Sequoia → 26 Tahoe：按 Darwin 版本用 MinKernel/MaxKernel 给网卡等 kext 做版本分流、OCLP root patch、机型白名单、升级时序）**、用 /etc/fstab 屏蔽磁盘、调整 boot-args 与调试开关；并含从零生成基础 EFI（Windows 上用 RapidEFI）、NVIDIA 驱动（NullMoth nvidia-macos-driver）、Intel 无线网卡驱动（AirportItlwm / itlwm）、**MediaTek 无线网卡（MT7921 / MT7922 / RZ608 —— 蓝牙可用、Wi-Fi 实验性）**、博通网卡（BCM943602CDP / BCM43602，按 Sequoia/Tahoe 分路线）、板载声卡 AppleALC、HiDPI（非 Retina 屏清晰度）、Intel 睿频/CPU 限频（CPU-S 验证 + CPUFriend 修法）、MacPro 机型内存定制（摆位规则 + 映射表）与 **SMBIOS 机型切换/三码**（★ **先完善 SSDT → 再换机型 → 再重做 CPUFriend**；主板 OEM SSDT `xh_adls3` 与 `AE_NOT_FOUND` 根因、序列号三类判据、ROM、风控纪律）（先搜前人 layout-id、搜不到再按 codec 定制并提 PR）的完整方法；**并含启动界面外观（OpenCanopy 主题）：图标集、PickerAttributes、Flavour 系统、标签/字体/音频/背景、HiDPI，以及「官方图标集不提供哪些可选图标」的权威对照**。当任务涉及 OpenCore、config.plist、EFI/OC、ocvalidate、SSDT/ACPI、boot-args、kext 注入、启动选择器、开机刷屏或日志、**开机慢/启动耗时/启动卡顿/时间线分析**、**BIOS 设置/UEFI 设置/BIOS 审查/CFG Lock/VMD/Intel RST/Above 4G/Re-Size BAR/CSM/Secure Boot/VT-d/Speed Shift/装系统找不到硬盘**、**OpenCore 主题/启动界面外观/选择器/OpenCanopy/图标集 icon pack/PickerAttributes/PickerVariant/Flavour/.icns/启动声音/开机提示音/选择器字体或背景**、**升级系统/升到 macOS 26/Sequoia 升 Tahoe/升级后 Wi-Fi 没了/kext 版本限制 MinKernel MaxKernel/Darwin 版本分流/机型不被新系统支持/-no_compat_check/收不到系统更新**、**启动项消失/BIOS 里看不到 OpenCore/只剩 Windows/LauncherOption**、**从 macOS 加/改固件启动项、U 盘启动改硬盘启动、nvram 写 Boot####、bless、bcfg**、屏蔽磁盘/隐藏磁盘、首次生成 EFI、装 NVIDIA 驱动、装 Intel 无线驱动、**装 MediaTek 无线网卡/MT7922/MT7921/RZ608 驱动或蓝牙**、板载声卡/AppleALC/layout-id、博通网卡/BCM943602CDP/OCLP root patch、HiDPI/显示不清晰/缩放、CPU 睿频/限频/卡顿（CPU-S）、内存定制/关于本机内存图/插槽映射、换机型/SMBIOS/三码/序列号/ROM/iMessage 登录时使用。内置「改 ESP 的安全流程」（备份 → 语义 diff → lint → sha 校验 → 镜像/存档 → 卸载重挂复验）。另外，**用户问「这个技能怎么用 / 使用说明 / 有哪些能力 / 能干什么」时也适用**（此时输出技能目录下的 `USAGE.md`，不要输出内部流程）。
 description_en: Audit, edit and maintain a hackintosh OpenCore (OpenCorePkg) EFI configuration and its driver installs — audit BIOS/UEFI firmware settings (OpenCore's official checklist plus Dortania's Intel/AMD lists plus community-only items such as VMD and Intel Speed Shift, split into must-disable / must-enable / conditional, with a read-only Windows audit script), verify every config.plist switch against the official documentation and ocvalidate, review ACPI/SSDT tables against the official AcpiSamples, trim injected kexts, read OpenCore boot logs and kernel logs for evidence, analyse boot time / startup timeline in three independent phases (OpenCore, kernel/driver, userspace) to locate stalls and gaps, plan a major macOS upgrade (15 Sequoia to 26 Tahoe: per-Darwin-version kext gating with MinKernel/MaxKernel for WiFi cards, OCLP root patching, supported SMBIOS whitelist, upgrade ordering), recover a vanished firmware boot entry (Boot####/BootOrder, LauncherOption), add or fix a firmware boot entry from macOS (nvram Boot####, bless, bcfg), migrate from USB boot to internal-disk boot, mask disks with /etc/fstab, and follow the NullMoth NVIDIA driver, Intel WiFi (AirportItlwm), MediaTek WiFi (MT7921 / MT7922 / RZ608 — Bluetooth works, Wi-Fi experimental), Broadcom WiFi (BCM943602CDP, Sequoia vs Tahoe routes), onboard audio (AppleALC layout-id / codec customisation), HiDPI scaling on non-Retina displays, Intel Turbo Boost / CPU frequency capping (verified with CPU-S, fixed with CPUFriend), MacPro memory injection (slot layout mapping), SMBIOS model switching and serials/MLB/UUID/ROM (iMessage; board OEM SSDT / AE_NOT_FOUND root cause; order: finish SSDT first, then SMBIOS, then CPUFriend) and first-time base-EFI generation (RapidEFI on Windows) workflows, plus OpenCanopy boot-picker theming (icon sets, PickerAttributes, the flavour system, labels/fonts/audio/background, HiDPI, and the authoritative list of optional icons the official icon sets do NOT ship). Includes a mandatory safe-edit protocol for the EFI system partition. Also applies when the user asks how to use this skill, for its usage guide, or for a list of its capabilities — in that case output the skill's USAGE.md rather than the internal workflow.
-version: 0.15.0
+version: 0.16.0
 agent_created: true
 ---
 
@@ -67,6 +67,11 @@ agent_created: true
 `OEM Table ID = xh_adls3` 的 SSDT；**不先处理掉它，换机型必失败**（10-12 连败 6 次，循环重启）。
 ⇒ 顺序是「**先把 ACPI/SSDT 层做干净（在旧机型下验证通过）→ 再换 SMBIOS → 再重做 CPUFriend 数据**」，
 不是「换完再补」。★ **通用化**：换机型前先审一遍 ACPI（有没有厂商 OEM SSDT、有没有 `AE_NOT_FOUND`）。详见 `references/smbios-and-serials.md` §2。
+20. ★★★ **换机型必须连三码一起换** —— **「关于本机」的机型名不是 SMBIOS 决定的，是序列号产品码决定的**
+（本机实测：机型已改成 `iMac20,1`，序列号还是 `MacPro7,1` 的码 ⇒ 仍显示 `Mac Pro (2019)`；
+清 `com.apple.SystemProfiler.plist` 也没用，它会按同一个码推导回旧值）。**只换机型不换码 = 显示名永远停在旧机型。**
+⇒ 换码前先用 **`macserial -i <serial>`** 确认产品码对应目标机型。
+★ **连带项一次做全**（漏一个就不完整）：**三码 · ACPI/SSDT 前置 · `CPUFriendDataProvider` · 内存注入槽位数 · `ROM`（= 当前 `en0`）· 电脑名/主机名/SMB 名**。清单见 `references/smbios-and-serials.md` §3.1。
 
 ## 工作流
 
@@ -225,13 +230,17 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
   - ★ **USB 图那件事是「文档里的一般机制」**（Dortania/USBToolBox 说 macOS 会按「机型 + 控制器名」附加内置 USB 图），
     **但本机实测不是它** ⇒ 知道有这回事，别一上来就重做整张 USB 图
   - **决策**：功能收益 / 成本 / 风险三条摆清楚 —— **能不换就不换**；被新版系统逼的**优先走 boot-arg 绕过**
+  - ★★★ **必须连三码一起换**（否则「关于本机」显示旧机型；见铁律 20）
   - **必须同时重做 `CPUFriendDataProvider`**（`MacPro7,1` 强制 `hwp=on` ⇒ 不重做 = 白换）
+  - ★ **内存注入也要跟着改**（**槽位数随机型变**：`MacPro7,1`=12 槽、`iMac20,1`=4 槽）⇒ `memory-injection.md`
+  - ★ **电脑名 / 主机名 / SMB 名**是独立设置、**不会自动改**（藏在 `preferences.plist` + `com.apple.smb.server.plist` 两处）⇒ §3.2
   - **救援**：备份整个 EFI + **备一个能用的 U 盘 EFI**；进不去就退回「保留原机型 + `-no_compat_check` + `revpatch=sbvmm`」
   - **三码**：官方 `macserial` 生成、**序列号三类判据**（官网「无效」=可用 / 显示保修=必须换 / 「核实购买日期」=最理想）、
     **`ROM` 必须是 `en0` 真实 MAC**、改 ROM 可用 **base64 等长替换**、
     ★ **换码要克制（脏码 + 频繁换号触发风控）**、换完**先 FaceTime 再信息**、
     ★★ **三码 + ROM 不要写进任何会公开的地方**
 - **内存定制（`PlatformInfo > Memory`）** ⇒ `references/memory-injection.md`：
+  ★★ **先确认机型**：**槽位数随机型变**（`MacPro7,1`=12 槽 / `iMac20,1`=4 槽）—— 换机型要同步重做；
   ★★ **分两层别混** —— **A 层「系统信息 → 内存」= 全机型通用**（就是标准 SMBIOS Type 17 字段，
   `DeviceLocator` 决定显示的名字、`MaxCapacity` 单位是 **bytes**、键名是 **`SerialNumber`**）；
   **B 层「关于本机」的内存图 = MacPro 机型专有**：那张 12 槽图的摆位由 **`Devices` 数组顺序**决定，

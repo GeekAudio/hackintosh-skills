@@ -1,4 +1,10 @@
-# MacPro 机型内存定制（`PlatformInfo > Memory`）
+# MacPro 机型内存定制
+
+> ★★ **先确认机型再动手 —— 槽位数随机型变**：
+> **`MacPro7,1` = 12 槽**（本文的「12 槽映射表」只适用于它）；
+> **`iMac20,1` 这类消费级机型 = 4 槽**，按普通 SMBIOS Type 17 摆即可（Slot 1–4）。
+> 换机型时必须**同步重做 `PlatformInfo>Memory>Devices`**，否则「关于本机」的内存图会错位
+> ⇒ 见 `smbios-and-serials.md` §3.1 连带项 ④。（`PlatformInfo > Memory`）
 
 > 依据：**本机 10-13 的完整破案链（v19 → v38）** + 真机取证
 > （`khronokernel/DarwinDumped` 的 MacPro7,1 dmidecode Type 17 / system_profiler 输出 + Apple 官方槽位图与配置图，

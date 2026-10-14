@@ -9,10 +9,13 @@
 - 主板 ASUS TUF GAMING Z690-PLUS WIFI D4；CPU i7-12700K（Alder Lake-S，`0x90672`）
 - 独显 RTX 3080 10GB（`10de:2206`，PEG1 0:1:0）；核显 UHD 770（`8086:4680`，0:2:0）
 - 网卡 I225-V（`AppleIGC.kext` 驱动）+ Broadcom BCM943602CDP（无线/BT）
-- 机型 `MacPro7,1`；macOS 26.7.1（25G241）
-  ★★ **但 10-15 01:54 起硬盘那份 config 的 `SystemProductName` 实测 = `iMac20,1`**（A/B 测试，见工作区
-  `_oc-backup-before-imac201-b1-20261015-015413.plist` / `_CPUFriendDataProvider-iMac20,1/` / `_freq-probe-after-imac201`）
-  ⇒ **引用「本机机型」前先读 live config，别照抄本文件**；A/B 结论出来后再回来定稿。
+- 机型 **`iMac20,1`**（10-15 01:54 起；此前 10-13–10-15 是 `MacPro7,1`，更早 `iMacPro1,1`）；board-id `Mac-CFF7D910A743CAAF`
+  - ★★ **10-15 03:33 已连同三码一起换**（`serial` / `MLB` / `UUID` 三处；`ROM` 未动）
+    ⇒ 依据：**「关于本机」的机型名 = 序列号产品码的函数**，只换机型不换码会一直显示旧机型
+    （`smbios-and-serials.md` §1.3）
+  - ★ **三码真值不进仓库**：本机台账在工作区 `SMBIOS-iMac201-三码-20261015.md`（含身份凭证，勿外发）；
+    本文只记结构：`serial` 产品码须对应 `iMac20,1`、`MLB` 校验位通过、`UUID` 为随机 v4
+  - 电脑名 `Geek’s iMac` / `LocalHostName` `Geeks-iMac`（10-15 03:37 改；**SMB 的 `NetBIOSName`/`ServerDescription` 同步改过**）
 - 磁盘（**按容量认，盘号会漂**）：
   | 卷 | 容量 | 物理盘 | 接口 |
   |---|---|---|---|
@@ -27,19 +30,26 @@
 - **ESP 在 512 G 盘上**（ZHITAI）：`disk1s1`，卷名 `EFI`，卷 UUID **⟨你的 ESP 卷 UUID，用 `diskutil info diskXs1 | grep UUID` 取⟩**，FAT16，119.5 MB
 - OpenCore = **`DBG-108-2026-09-27`**（= **1.0.8 DEBUG 构建**，`OpenCore.efi` 868,352 B，sha `11ba0b76…`；官方 RELEASE 是 626,688 B / `9ef21f9d…`）
 - config 版本存档：`xh_adls3修复-20261013/config.plist.vNN-<说明>`；工作区镜像 `_oc-current.plist`
-- **现行（10-15 02:41 起）**：硬盘 ESP 的 config sha **`a08dfed350b5c9263cce35eab252cc88b0bae9e9d7f7f6287e0d3b9d83e4c5c7`**，`LauncherOption=Full`；
+- **现行（10-15 03:33 起）**：内置 ESP 的 config sha **`d1f6990295f5b49b0e62509bdbfba7b44e4f1d6bd56772a2153717208b309d44`**，
+  `SystemProductName=iMac20,1` + 新三码 + `LauncherOption=Full`；存档 **`config.plist.v52-imac201-serials`**。
+  备份：`_oc-backup-before-imac201-serials-20261015-033352.plist`（工作区）+ ESP 上 `config.plist.BASELINE-20261015-033349`。
   U 盘 ESP 的 config sha **`d01b859a…`**，`LauncherOption=Disabled`。
-  存档：`_oc-v-LauncherOption-Full-restored-20261015-024154.plist`；备份 `_oc-backup-before-launcheropt-back-to-full-20261015-024132.plist`。
-  （中间版本：`b06951b2…` = 两边都 Disabled 那一版，已回退；更早 v45–v51 在 `xh_adls3修复-20261013/`）
+  （更早：`a08dfed3…` = iMac20,1 但**旧三码**那一版；`b06951b2…` = 两边都 Disabled 那一版；v45–v51 在 `xh_adls3修复-20261013/`）
 - **两个 ESP（★ 盘号会漂，按容量/角色认）**：
   | ESP | 盘 | 容量 | config | 角色 |
   |---|---|---|---|---|
-  | 硬盘 ESP `disk2s1` | ZHITAI PC005 NVMe 512 GB | 119.5 MB | `DBG-108`（DEBUG，868,352 B） | **目标引导盘** |
+  | 内置 ESP（**见过 `disk1s1` / `disk2s1`，盘号会漂**） | ZHITAI PC005 NVMe 512 GB | 119.5 MB | `DBG-108`（DEBUG，868,352 B） | **目标引导盘** |
   | U 盘 ESP `disk9s1` | 32 GB 外接盘 | 1.1 GB | `REL-108`（RELEASE，626,688 B），机型 `iMacPro1,1` 的 FALLBACK 配置 | 救援盘 |
-- **★ 当前从哪引导**：`nvram 4D1FDA02-…:boot-path` 实测 = `…/USB(0x18,0x0)/USB(0x0,0x0)/USB(0x2,0x0)/HD(1,GPT,…)/EFI\OC\OpenCore.efi`
-  ⇒ **10-15 02:55 时仍从 U 盘引导**（跑的是 U 盘那份 `REL-108`）
+- **★ 当前从哪引导**（`nvram 4D1FDA02-…:boot-path`）：
+  - 10-15 02:55 实测 = `…/USB(0x18,0x0)/…/HD(1,GPT,…)/EFI\OC\OpenCore.efi` ⇒ 当时**从 U 盘**引导（`REL-108`）
+  - **10-15 03:40 实测 = `PciRoot(0x0)/Pci(0x6,0x0)/Pci(0x0,0x0)/NVMe(0x1,…)/HD(1,GPT,⟨内置 ESP⟩)/\EFI\OC\OPENCORE.EFI`**
+    ⇒ ★★ **已改成从内置硬盘引导**（OC = `DBG-108`，即硬盘那份）⇒ `boot-entries.md` §8 的迁移**已完成**
+- ★★ **新三码尚未生效**（10-15 03:40 实测）：config 里已是新码，但**运行时的 `IOPlatformSerialNumber` 仍是旧码**
+  ⇒ **说明自 03:33 写入后还没重启过**。重启后才会切到新码，并触发 iCloud / 信息 / FaceTime 重新认证。
+  「关于本机」显示名缓存（`~/Library/Preferences/com.apple.SystemProfiler.plist`）**此刻也还是旧值**
+  （`cachedSerial` = 旧码、`P7QM-…` = `Mac Pro (2019)`）—— 重启后才会按新码重新推导。
 
-## 关键开关现状（v45）
+## 关键开关现状（v52）
 
 | 键 | 值 | 备注 |
 |---|---|---|
@@ -60,7 +70,7 @@
 | `Kernel>Quirks>ProvideCurrentCpuInfo` | `true` | Alder Lake 非对称 SMP |
 | `Kernel>Emulate>Cpuid1Data/Mask` | `55 06 0A 00…` / `FF FF FF FF…` | 文档给出的 ADL→Comet Lake 推荐值 |
 | `PlatformInfo>UpdateSMBIOSMode` + `CustomSMBIOSGuid` | `Custom` + `true` | 成对 |
-| `PlatformInfo>CustomMemory` + `Memory>Devices[12]` | `true` | `Devices` 必须含全部槽位（含空槽） |
+| `PlatformInfo>CustomMemory` + `Memory>Devices` | `true` / **4 项** | ★ **槽位数随机型变**：`MacPro7,1`=12 槽、**`iMac20,1`=4 槽**；`Devices` 必须含全部槽位（含空槽）。`MaxCapacity` = 68719476736（64 GB） |
 
 **boot-args**：
 ```

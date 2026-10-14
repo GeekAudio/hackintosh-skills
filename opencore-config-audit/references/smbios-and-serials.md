@@ -4,8 +4,10 @@
 > `SMBIOS-三码更换-20261013/`、`SMBIOS-Tahoe-切换-20261013/`、`try-smbios-macpro71.sh`）+ Dortania
 > 《Choosing the right SMBIOS》与 USBToolBox 官方 README。
 >
-> ★★ 一句话：**换机型不是「改 4 个键」，它会连带换掉 macOS 想附加的内置 USB 图、CPU 电源 profile、AGDC 路径……
-> 而三码（尤其 ROM）直接决定 iMessage/FaceTime 能不能用。** 两个都要按下面的顺序做。
+> ★★ 一句话：**换机型不是「改 4 个键」，它是一次耦合改动** —— 连带 ACPI/SSDT 前置、`CPUFriend` 数据、
+> **内存注入的槽位数**、以及「关于本机」的显示名。
+> ★★★ **而且换机型必须同时换三码**：机型名与 SMBIOS **解耦**，它是**序列号产品码**的函数（见 §1.3）。
+> 三码（尤其 ROM）还直接决定 iMessage/FaceTime 能不能用。**按下面的顺序，一次做完整套。**
 
 ---
 
@@ -35,13 +37,42 @@
 
 ### 1.2 参考机器是怎么走的（说明清楚，避免误解）
 
-参考机器**最终用的是 `MacPro7,1`**（在白名单内，因此不需要 `-no_compat_check` / `revpatch=sbvmm` 来绕过机型限制）。
+参考机器**经历过两次独立的机型切换**，都不是「升级时顺手改的」：
 
-但那是**独立做过的一次机型切换**（走 §2 的完整流程：先把 `UTBMap` 换成完整图 + 备 U 盘 EFI，再换 SMBIOS，并同步重做 `CPUFriendDataProvider`），
-**不是**「升级 Tahoe 时顺手改的」。两件事在时间上和风险上是分开的。
+| 时间 | 机型 | 做了什么 |
+|---|---|---|
+| 10-13 | `iMacPro1,1` → **`MacPro7,1`** | 走 §2 完整流程：先处理 `xh_adls3` SSDT → 换 SMBIOS → 重做 `CPUFriendDataProvider` |
+| 10-15 | `MacPro7,1` → **`iMac20,1`** | ★ **同时换了三码**（这次才补上；见 §1.3 的教训）+ 重做 CPUFriend + 内存注入改 4 槽 + 改电脑名 |
 
-⇒ 所以文档里同时出现「参考机器是 `MacPro7,1`」和「升级时不许改机型」**并不矛盾**：
+⇒ 所以文档里同时出现「参考机器换过机型」和「升级时不许改机型」**并不矛盾**：
 **前者是独立决策的结果，后者是升级时的纪律。**
+
+> ★ 这两次切换的顺序都是：**先把 ACPI/SSDT 层做干净 → 再换机型 → 再补连带项**（§2.7）。
+> 10-15 那次还多了一条：**换机型必须连三码一起换**（见下）。
+
+### 1.3 ★★★ 换机型**必须**换码 —— 「关于本机」的机型名是**序列号的函数**
+
+**本机实测（10-15）**：机型已经改成 `iMac20,1`，但「关于本机」**仍然显示 `Mac Pro (2019)`**。
+排查一圈才找到真身 —— 它跟 `SystemProductName` **没有关系**：
+
+| 证据 | 结论 |
+|---|---|
+| 清空 `~/Library/Preferences/com.apple.SystemProfiler.plist` 后重开「关于本机」，用**同一个序列号**重新推导，**仍**写回 `P7QM-… = "Mac Pro (2019)"` | 名字由**序列号**决定，与机型解耦 |
+| `macserial -i <serial>` 直接给出 `SystemModel`（营销名） | 产品码 → 营销名是**一一映射** |
+| 缓存键是 `ModelNames["<序列号后 4 位>-<locale>"]`，校验字段是 `cachedSerial` | **改机型不会让缓存失效** |
+
+**产品码对照（本机实测）**：
+
+| 序列号产品码 | 对应机型 | 「关于本机」显示 |
+|---|---|---|
+| `P7QM` | MacPro7,1 | Mac Pro (2019) |
+| `PN5T` | iMac20,1 | iMac (Retina 5K, 27-inch, 2020) |
+
+⇒ **只换机型不换码，「关于本机」永远停在旧机型名。** 换机型与换三码是**同一个动作的两半**，一起做。
+
+- ★ **换码前先用 `macserial -i <serial>` 确认产品码对不对**（比事后开「关于本机」快得多）
+- ★ 那个 plist 只是**缓存**：**清掉它不会「修好」显示名** —— 名字仍会按同一个序列号推导回旧值
+- ★ 排查顺序：**显示名不对 ⇒ 先看序列号产品码，再看缓存，最后才怀疑 config**
 
 ## 2. ★★ 真正让本机「进不去系统」的是什么：主板特有的 BIOS SSDT
 
@@ -133,6 +164,42 @@ Dortania 列出的清单：**CPU 电源管理**（XCPM profile）、**GPU 配置
 `MacPro7,1` 强制 `hwp=on` ⇒ CPU 被压在 2.3 GHz；`iMacPro1,1` 不用 HWP ⇒ 流畅
 ⇒ **换机型必须同时重做 `CPUFriendDataProvider` 的数据**（详见 `intel-turbo.md`）。
 
+### 3.1 ★★ 换机型 / 换码的「连带项」清单（漏一个就不完整）
+
+| # | 连带项 | 为什么 | 本机实证 |
+|---|---|---|---|
+| ① | **三码（serial / MLB / UUID）** | 「关于本机」的名字、iMessage 身份都绑在**码**上 | §1.3 —— `MacPro7,1` 的码配 `iMac20,1` ⇒ 显示 `Mac Pro (2019)` |
+| ② | **`ACPI` / SSDT 前置** | board-id 变 ⇒ ACPI 重新解析 | §2（本机 `xh_adls3` ⇒ `HS06 AE_NOT_FOUND`） |
+| ③ | **`CPUFriendDataProvider`** | 机型 profile 决定 HWP / `FrequencyVectors` | `MacPro7,1` 强制 `hwp=on` ⇒ 卡 2.3 GHz（`intel-turbo.md`） |
+| ④ | **内存注入（`PlatformInfo>Memory>Devices`）** | ★ **槽位数随机型变** | `MacPro7,1` = **12 槽**；`iMac20,1` = **4 槽** ⇒ `memory-injection.md` |
+| ⑤ | **`ROM`** | 必须 = **当前 `en0`** 的真实 MAC；而 `en0` 归属会漂 | §5.3 + `network-en0-order.md` |
+| ⑥ | **电脑名 / 主机名 / SMB 名** | 与 SMBIOS **无关**、**不会自动改** | §3.2 |
+| ⑦ | 「关于本机」显示名缓存 | `com.apple.SystemProfiler.plist` | §1.3 |
+
+★ 顺序仍是 §2.7 那条：**先把 ACPI 层做干净 → 再换机型/换码 → 再逐个补 ③④⑤⑥**。
+
+### 3.2 ★ 换机型后还要改「电脑名」—— 它藏在**两处**，不只一处
+
+`ComputerName` / `LocalHostName` 与 SMBIOS **完全无关**，是独立的系统设置；换机型**不会动它**，
+于是会出现「机型是 iMac，电脑名还叫 xxx 的 iMac Pro」。
+
+| 位置 | 键 |
+|---|---|
+| `/Library/Preferences/SystemConfiguration/preferences.plist` | `System.System.ComputerName`、`System.Network.HostNames.LocalHostName` |
+| `/Library/Preferences/SystemConfiguration/com.apple.smb.server.plist` | **`NetBIOSName`**、**`ServerDescription`** ← Windows / SMB 文件共享里显示的名字，**最容易漏** |
+
+```bash
+sudo scutil --set ComputerName  "Geek's iMac"
+sudo scutil --set LocalHostName "Geeks-iMac"
+# ★ 只跑 scutil 会漏掉 SMB 那两处 —— 在 Windows 的「网络」里还会看到旧名字
+sudo defaults write /Library/Preferences/SystemConfiguration/com.apple.smb.server NetBIOSName       -string "Geeks-iMac"
+sudo defaults write /Library/Preferences/SystemConfiguration/com.apple.smb.server ServerDescription -string "Geek's iMac"
+```
+
+- **不要**写死 `HostName`（保持未设置，交给 DHCP / 路由器）
+- 运行中的 `hostname` 要**重启**才刷新；**iCloud 设备名**在服务端，要**重新登录**才刷新
+- macOS 会留下 `preferences-<旧机型>.plist` 这类**惰性备份**（不参与启动），要清得用 `sudo rm`
+
 ## 4. 切换脚本的正确形态（三态 + 救援路径）
 
 `try-smbios-macpro71.sh` 的设计值得照抄：
@@ -165,6 +232,12 @@ Dortania 列出的清单：**CPU 电源管理**（XCPM profile）、**GPU 配置
 - 用 **官方 `macserial`**（OpenCore 自带，如 `macserial -m MacPro7,1`）或 corpnewt/GenSMBIOS 的算法
 - 本机做法：`gen-smibios.py` = 官方 macserial 算法 + Apple OUI 表（`prefix.json`），**年/周/MLB 校验位自检通过**
 - 一次多生成几套备用（本机曾一次生成 **22 套**候选池）
+- ★★ **生成后先解码核对**（比事后开「关于本机」快）：
+  ```bash
+  macserial -i <serial>      # → Model: PN5T - iMac20,1 / SystemModel: iMac (Retina 5K, 27-inch, 2020)
+  macserial --verify <MLB>   # → Valid MLB checksum.
+  ```
+  ⇒ **产品码必须与目标机型一致**，否则「关于本机」显示旧机型（§1.3）
 
 ### 5.2 ★ 序列号「类别」判据（拿序列号去 Apple 官网查）
 
@@ -194,11 +267,13 @@ Dortania 列出的清单：**CPU 电源管理**（XCPM profile）、**GPU 配置
 ★ 三码（serial / MLB / UUID）与 ROM **等同于这台机器的身份凭证**（iMessage / FaceTime 认的就是它们）
 ⇒ **一律不要写进任何会公开的地方**（仓库、issue、截图、日志）。
 
-| | serial | MLB | UUID | ROM |
-|---|---|---|---|---|
-| ① 第一套（已被替换） | `⟨已替换⟩` | `⟨已替换⟩` | `⟨已替换⟩` | `⟨已替换⟩` |
-| ② 第二套（曾部署未生效） | `⟨已替换⟩` | `⟨已替换⟩` | `⟨已替换⟩` | `⟨已替换⟩` |
-| **③ 现行** | **`⟨现行 serial⟩`** | **`⟨现行 MLB⟩`** | **`⟨现行 UUID⟩`** | **`⟨en0 真实 MAC⟩`** |
+| | 机型 | serial | MLB | UUID | ROM |
+|---|---|---|---|---|---|
+| ① | `iMacPro1,1` | `⟨已替换⟩` | `⟨已替换⟩` | `⟨已替换⟩` | `⟨已替换⟩` |
+| ② | `MacPro7,1` | `⟨已替换⟩` | `⟨已替换⟩` | `⟨已替换⟩` | `⟨已替换⟩` |
+| **③ 现行（10-15 起）** | **`iMac20,1`** | **`⟨现行 serial，产品码须对应 iMac20,1⟩`** | **`⟨现行 MLB⟩`** | **`⟨现行 UUID⟩`** | **`⟨当前 en0 真实 MAC⟩`** |
+
+★ **机型列一定要记**：这样回退时才知道「这套码配的是哪个机型」（配错 ⇒ 「关于本机」显示旧机型，§1.3）。
 
 - ★ **台账纪律**：**每次换都记下旧值**（记在本地，不进仓库），否则回退时不知道退到哪一套
 - 建议连同**每套的生成时间与用途**一起记，回退时才能判断该退到哪一套
@@ -222,3 +297,5 @@ Dortania 的口径是「ROM = `en0` 的真实 MAC」。但 `en0` 的归属会**�
 |---|---|
 | **EFI 内容与预期不符时，先怀疑「有外部改动」，不要先怀疑「写入丢失」** | 本机曾看到 EFI 是旧值 ⇒ 判定写入丢了 ⇒ 又写一遍 ⇒ **其实那是用户刚还原后的内容**（证据：系统 03:31:37 确实以旧机型启动过）⇒ **覆盖了用户的还原** |
 | 判断持久化一律用 **「卸载 → 重挂 → 再读」** | 不要相信同一挂载点的缓存；`diskutil mount` 有时**先报失败后成功**，判断以 `diskutil info` 的 `Mounted` 为准 |
+| **换了机型但「关于本机」名字没变 ⇒ 先怀疑序列号，不是 config** | 机型名由**序列号产品码**决定（§1.3）。本机曾在「config 已确认改对、5 项证据都指向 iMac20,1」的情况下仍显示 `Mac Pro (2019)` —— 因为**码没换**。清 `com.apple.SystemProfiler.plist` 也没用（会按同一个码推导回旧值） |
+| 判断「这次引导用的是哪份 config」 | 比 sha 更直接：**比对 config 文件大小与引导日志的 `OC: Loaded configuration of N bytes`**（本机 `32449` 完全吻合） |
