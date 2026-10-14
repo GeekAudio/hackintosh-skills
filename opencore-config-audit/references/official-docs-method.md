@@ -78,6 +78,10 @@ shasum -a 256 /Volumes/EFI/EFI/OC/OpenCore.efi
 | `Kernel>Block` 的 `com.apple.iokit.IONDRVSupport` | 否则固件 framebuffer 会抢走 display index 0 |
 | `NVRAM>Add` 的每个键 ↔ 同名 `NVRAM>Delete` 条目 | 「Variables will only be set if not present or deleted」 |
 
+> ★ **注意**：`LauncherOption` 的**官方 Failsafe 是 `Disabled`**，不是 `Full` —— 也就是说 `Full` 属于「偏离默认」。
+> 它并非越多越好：`Full` 会让 OpenCore 每次开机改写固件启动项，**从 U 盘引导时会把硬盘那条重指过去**
+> ⇒ 详见 `boot-entries.md`。
+
 ## 6. 报告格式建议
 
 - 开头给「**ocvalidate 结论**」+「**与 Failsafe 的偏离总数/分类计数**」

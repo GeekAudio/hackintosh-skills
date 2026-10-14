@@ -26,7 +26,7 @@
 
 | Skill | 一句话 | 规模 |
 |---|---|---|
-| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置 —— 覆盖从装机到日常化、再到系统大版本升级的全生命周期，并含**启动选择器（OpenCanopy）主题**与**换机型 / 三码** | 19 条铁律 · 25 份参考 · 14 个脚本 |
+| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置 —— 覆盖从装机到日常化、再到系统大版本升级的全生命周期，并含**启动选择器（OpenCanopy）主题**与**换机型 / 三码** | 19 条铁律 · 26 份参考 · 14 个脚本 |
 
 技能目录里有一份 `USAGE.md`（**随安装一起复制**），在对话里问「使用说明」即可拿到。
 
@@ -77,7 +77,7 @@ hackintosh-skills/
 │   │   └── plugin.json          # ← 插件元数据
 │   ├── SKILL.md                 # 主流程 + 19 条铁律 + 资源表
 │   ├── USAGE.md                 # ← 使用说明（随安装一起复制）
-│   ├── references/              # 25 份专题文档（见下表）
+│   ├── references/              # 26 份专题文档（见下表）
 │   └── scripts/                 # 14 个脚本（见下表）
 ```
 
@@ -132,6 +132,9 @@ hackintosh-skills/
 - **启动耗时 / 时间线分析**：把启动拆成 **OC 段 / 内核驱动段 / 用户态段** 三段分开量，
   用「停顿窗口」定位卡顿（`launchd.log` 找最大空档 → **流式过滤** `log show`，绕过其时间过滤失效），
   并给出耗时来源处置表（含驱动侧 `nvrmsettle` / `-wegnoigpu` 两类已知固定延迟）
+- ★ **固件启动项（`Boot####`）**：**「用 U 盘引导一次后，硬盘的 OpenCore 启动项从 BIOS 里消失、只剩 Windows」**
+  的根因与修法 —— `LauncherOption=Full` 会**按文件路径后缀认自己的项（不看盘）**，从别的盘引导就把它重指过去；
+  ⇒ **两个 ESP 都改 `Disabled`** + 留 `\EFI\BOOT\BOOTx64.efi` 兜底（含取证命令与 **ASUS 的 `Boot0000` 坑**）
 
 **④ 系统大版本升级（如 macOS 15 → 26）**
 
@@ -196,6 +199,7 @@ hackintosh-skills/
 | `official-docs-method.md` | 官方文档取用方法、逐键判定法、**成对关系表** |
 | `logs-and-debug.md` | `Target` / `DisplayLevel` 位定义、日志判据、刷屏归因 |
 | `boot-timeline.md` | **启动耗时 / 时间线分析**：三段拆解、流式过滤、停顿窗口定位 |
+| `boot-entries.md` | **固件启动项（`Boot####` / `BootOrder`）与 `LauncherOption`**：★ **「用 U 盘引导后启动项消失」的根因与修法**、四档取值、取证命令、`Disabled` 的代价、**ASUS 的 `Boot0000` 坑** |
 | `acpi-ssdt.md` | 官方 AcpiSamples 逐条适用条件、设备存在性检查、命名规范 |
 | `bios-settings.md` | **BIOS/UEFI 审查**：官方 9 条 + Dortania + 社区补充（**VMD**/Speed Shift）、**必须关/必须开/看情况**三类、CFG Lock 专题、**厂商命名对照表** |
 | `disks-and-kexts.md` | 磁盘屏蔽与 kext 精简的判据与「不能删」清单 |
@@ -213,7 +217,6 @@ hackintosh-skills/
 | `intel-turbo.md` | Intel 睿频 / 限频：CPU-S 验证、根因定位、CPUFriend 修法、BIOS 硬前提 |
 | `memory-injection.md` | MacPro 内存定制：**12 槽映射表**、**摆位规则 f**、A 层通用字段 |
 | `smbios-and-serials.md` | **换机型 + 三码**：★★★ 主板 OEM SSDT（`xh_adls3`）与 ACPI 根因、**顺序铁律（先完善 SSDT）**、检查清单、决策依据、序列号判据、ROM、切换脚本三态、操作教训 |
-| `smbios-and-serials.md` | 机型切换 + 三码：机型↔USB 图冲突、序列号判据、ROM、风控纪律 |
 | `theme-opencanopy.md` | **选择器主题（OpenCanopy）**：开关总表、资源目录、**图标清单（必需/可选/官方不提供）**、Flavour 规则、标签/字体/音频/背景、排错 |
 | `pitfalls.md` | 全部踩过的坑 |
 | `machine-facts.md` | 参考机器（Z690 / Alder Lake / macOS 26）的具体事实 |

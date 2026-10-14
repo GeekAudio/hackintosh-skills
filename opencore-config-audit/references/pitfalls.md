@@ -49,6 +49,16 @@
 | 脚本报 `unbound variable`，变量名还是乱码 | **`$VAR` 后面紧跟全角字符**（`）` `，` `：` `★`）时，bash 会把多字节字节当成变量名的一部分 | 写成 **`${VAR}`**；写完扫一遍：`awk 'match($0, /\$[A-Za-z_][A-Za-z0-9_]*[^ -~]/)' *.sh` |
 | 换 OpenCore 构建后行为诡异/混搭 | 只换了 `OpenCore.efi`，没换 Drivers（同版本下 RELEASE/DEBUG 的**所有** Drivers 内容都不同） | 连**官方同名** Drivers 一起换，第三方驱动保留（`scripts/oc-swap-build.sh` 已按此实现） |
 
+## F. 固件启动项（NVRAM `Boot####` / `LauncherOption`）
+
+| 症状 | 原因 | 正确做法 |
+|---|---|---|
+| **用 U 盘引导一次后，硬盘上的 OpenCore 启动项从 BIOS 启动菜单消失，只剩 Windows** | `Misc>Boot>LauncherOption=Full` 让 OpenCore 每次开机维护「自己那条」启动项，而它**只按文件路径后缀（`OpenCore.efi`）认项、不看设备** ⇒ 从 U 盘启动时把硬盘那条**重指到 U 盘**；拔盘后设备不存在 ⇒ 固件清理 | **两个 ESP 都改 `LauncherOption=Disabled`** + 保留 `\EFI\BOOT\BOOTx64.efi` 兜底 ⇒ 详见 `boot-entries.md` |
+| 想手工 `bcfg boot add/rm` 但改不动 | `UEFI>Quirks>RequestBootVarRouting=true` 会**保护 NVRAM** | 先跑 `OpenControl.efi disable`，之后再 reboot 或 `OpenControl restore` |
+| 在 **ASUS** 板上手工建 `Boot0000` | 源码注释：ASUS 把 `Boot0000` 当「已删除」处理 | **别用 `Boot0000`** —— 会导致条目重复、甚至 BIOS 变砖 |
+| `nvram -p` 里看不到 `Boot####`，以为没有启动项 | `nvram -p` **不列出** `Boot####` | 按 `GUID:名字` 单独读：`nvram 8BE4DF61-93CA-11D2-AA0D-00E098032B8C:BootOrder` |
+| 把「BIOS 启动菜单里的项」和「OpenCore 选择器里的项」当成一回事 | 前者是**固件 NVRAM**（`Boot####`），后者是 OpenCore 扫出来的 | 少显示系统用 `ScanPolicy`/`HideAuxiliary`；启动项丢失看 `boot-entries.md` |
+
 ## E. 流程纪律
 
 - **一次只改一项**；批量改动要在报告里逐条列出「改了什么 / 依据 / 怎么回滚」

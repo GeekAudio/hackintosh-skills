@@ -23,8 +23,8 @@ fi
 
 DIRS=("$@")
 
-# 白名单：这些 UUID 是 Apple / OpenCore 的标准 GUID，不是本机数据
-ALLOW='4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102|4D1EDE05-38C7-4A6A-9CC6-4BCCA8B38C14|7C436110-AB2A-4BBB-A880-FE41995C9F82|E6B92AC5-B7DB-4B0D-B1B5-8A0E0A0E0A0E'
+# 白名单：这些 UUID 是 Apple / OpenCore / UEFI 规范里的标准 GUID（公开常量），不是本机数据
+ALLOW='4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102|4D1EDE05-38C7-4A6A-9CC6-4BCCA8B38C14|7C436110-AB2A-4BBB-A880-FE41995C9F82|E6B92AC5-B7DB-4B0D-B1B5-8A0E0A0E0A0E|8BE4DF61-93CA-11D2-AA0D-00E098032B8C'
 
 TOTAL=0
 
@@ -65,7 +65,7 @@ for DIR in "${DIRS[@]}"; do
         '(\.ssh/id_|id_rsa|\.pem\b|\.p12\b|\.netrc|credentials\.json)' "高"
 
   # ── 中：可识别到具体机器 / 人的信息 ──
-  check "卷 UUID（已排除 Apple 标准 GUID）" \
+  check "卷 UUID（已排除 Apple / UEFI 标准 GUID）" \
         '[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}' "中"
 
   check "邮箱地址" \

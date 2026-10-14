@@ -24,7 +24,8 @@
 - **ESP 在 512 G 盘上**（ZHITAI）：`disk1s1`，卷名 `EFI`，卷 UUID **⟨你的 ESP 卷 UUID，用 `diskutil info diskXs1 | grep UUID` 取⟩**，FAT16，119.5 MB
 - OpenCore = **`DBG-108-2026-09-27`**（= **1.0.8 DEBUG 构建**，`OpenCore.efi` 868,352 B，sha `11ba0b76…`；官方 RELEASE 是 626,688 B / `9ef21f9d…`）
 - config 版本存档：`xh_adls3修复-20261013/config.plist.vNN-<说明>`；工作区镜像 `_oc-current.plist`
-- **现行 = v45**，sha `6804f5701c0fcebe0e5db847d7fd8d594f7314ac09489a5ecd685d149189eb16`
+- **现行（10-15 02:20 起）**：`LauncherOption=Disabled`，sha `b06951b2ce3b4a57afaefbe5613c748f320d0f0700f9cc3ac589bc859f2f3a86`；
+  存档 `_oc-v-LauncherOption-Disabled-20261015-022110.plist`（此前版本 v45–v51 在 `xh_adls3修复-20261013/`）
 
 ## 关键开关现状（v45）
 
@@ -36,7 +37,7 @@
 | `Misc>Security>SecureBootModel` | `Disabled` | 与 `FixupAppleEfiImages=true` 成对 |
 | `Misc>Security>Vault` | `Optional` | 无 vault.plist |
 | `Misc>Security>ExposeSensitiveData` | `7` | `0x01` 是 1401 App 找 OpenCore 用的 `boot-path`，**别降成 6** |
-| `Misc>Boot>LauncherOption` / `RequestBootVarRouting` | `Full` / `true` | 成对 |
+| `Misc>Boot>LauncherOption` / `RequestBootVarRouting` | **`Disabled`** / `true` | 10-15 02:20 由 `Full` 改 `Disabled`（**修「用 U 盘引导后启动项消失」**，见 `boot-entries.md`）；`RequestBootVarRouting` 保持 `true` |
 | `Misc>Boot>PickerMode/Variant/Attributes` | `External` / `Acidanthera\GoldenGate` / `144` | 主题，保留 |
 | `Misc>Boot>HideAuxiliary` | `true` | 隐藏 recovery / 工具项（按空格展开） |
 | `Booter>Quirks>EnableWriteUnprotector` | `false` | 依据 `OCABC: MAT support is 1` |
