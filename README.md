@@ -37,6 +37,7 @@ cp -R <skill> <项目目录>/.workbuddy-ai/skills/
   **博通网卡**（BCM943602CDP / BCM43602 —— ★ 按 Sequoia / Tahoe 分路线，含 OCLP root patch 与前置保护）、
   从零生成基础 EFI（RapidEFI）、**HiDPI**（非 Retina 屏清晰度；★ 本机 NVIDIA 驱动未完善，含风险与恢复路径）、
   **Intel 睿频**（CPU 被压低频 → 用 CPU-S 验证 → CPUFriend 修法，含 BIOS 硬前提）、
+  **MacPro 机型内存定制**（★ 分两层：「系统信息」全机型通用 /「关于本机」内存图是 MacPro 专有的**摆位规则 + 12 槽映射表**）、
   **板载声卡 AppleALC**（先搜同型号前人 layout-id → 搜不到再按 codec 定制 → 本地构建 → 提 PR）
 
 **内置的安全流程（最重要的一部分）**
@@ -53,10 +54,11 @@ cp -R <skill> <项目目录>/.workbuddy-ai/skills/
 | `scripts/grab-logs.sh` | 抓 OC 引导日志与本次开机内核日志（提权，可 `--oc-only`） |
 | `scripts/mask-other-disks.sh` | 按 UUID 写 fstab 屏蔽非系统卷（默认 dry-run，永不碰 EFI） |
 | `scripts/cpu-freq-probe.sh` | CPU 实际频率探针（内联汇编，防编译器折叠）—— 验证睿频 / 对比机型 |
+| `scripts/mem-check.sh` | 校验内存注入摆位（数组序号 → 预测图位，判定是否与「系统信息」错位） |
 
 参考文档：`official-docs-method.md`（含**成对关系表**）、`logs-and-debug.md`、`acpi-ssdt.md`、
 `disks-and-kexts.md`、`lifecycle.md`（**六阶段全流程**）、`nvidia-driver.md`、`intel-wifi.md`、
-`rapidefi-first-efi.md`、`applealc-custom.md`、`broadcom-wifi.md`、`hidpi.md`、`intel-turbo.md`、`pitfalls.md`、`machine-facts.md`
+`rapidefi-first-efi.md`、`applealc-custom.md`、`broadcom-wifi.md`、`hidpi.md`、`intel-turbo.md`、`memory-injection.md`、`pitfalls.md`、`machine-facts.md`
 
 ---
 
