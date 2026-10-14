@@ -21,7 +21,7 @@
 
 ## EFI / OpenCore
 
-- **ESP 在 512 G 盘上**（ZHITAI）：`disk1s1`，卷名 `EFI`，UUID **`789C9E23-653F-3DDC-8993-3D2A270D10E7`**，FAT16，119.5 MB
+- **ESP 在 512 G 盘上**（ZHITAI）：`disk1s1`，卷名 `EFI`，卷 UUID **⟨你的 ESP 卷 UUID，用 `diskutil info diskXs1 | grep UUID` 取⟩**，FAT16，119.5 MB
 - OpenCore = **`DBG-108-2026-09-27`**（= **1.0.8 DEBUG 构建**，`OpenCore.efi` 868,352 B，sha `11ba0b76…`；官方 RELEASE 是 626,688 B / `9ef21f9d…`）
 - config 版本存档：`xh_adls3修复-20261013/config.plist.vNN-<说明>`；工作区镜像 `_oc-current.plist`
 - **现行 = v45**，sha `6804f5701c0fcebe0e5db847d7fd8d594f7314ac09489a5ecd685d149189eb16`
@@ -81,7 +81,8 @@ IOSkywalkFamily、IO80211FamilyLegacy、AirPortBrcmNIC-Tahoe（+ 禁用的 `IO80
 
 ## 工具
 
-- GitHub API：工作区 `ghapi.sh <GET|POST|PATCH> <path> [json文件]`，PAT 在 `~/.nullmoth-pr-token`，身份 `GeekAudio`
+- GitHub API：用脚本包装 `curl` 调 `https://api.github.com`（`<GET|POST|PATCH> <path> [json文件]`），
+  凭证从**本地文件**读取（自行准备，勿写进仓库）
   - 路径**必须以 `/` 开头**
 - 提权：`osascript -e 'do shell script "…" with administrator privileges'`（可跑 `log show`、`diskutil mount`）
 - 本机没有 `/opt/homebrew`；managed Python = `~/.workbuddy-ai/binaries/python/versions/3.13.12/bin/python3`

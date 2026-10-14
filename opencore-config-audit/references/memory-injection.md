@@ -85,7 +85,7 @@ f = [8, 7, 10, 9, 12, 11, 5, 6, 3, 4, 1, 2]      ← 与真机 SMBIOS Type 17 �
   （通道 A 第 2 槽、通道 B 第 2 槽）
 - **物理最忠实的映射** = **Slot 7 (Channel A / DIMM 2) + Slot 9 (Channel B / DIMM 2)**（即 A2 + B2）
 - **用户最终选** = **Slot 8 + Slot 2**（上组第 2 根 + 下组第 2 根，两个内存仓各一条、视觉对称）
-- **现行 = v38**：12 条 `Devices`，**数组按 f 序**；实装 `Slot 8`（序列号 `09A50600`）+ `Slot 2`（`3634532B`），
+- **现行 = v38**：12 条 `Devices`，**数组按 f 序**；实装 `Slot 8` + `Slot 2`（各自填**该内存条的真实序列号**），
   其余 10 槽 `NO DIMM`；`MaxCapacity = 68719476736`（64 GB，单位 bytes）
 - **回退** = `config.plist.v16-MacPro71-CPUFriend`（**无** `PlatformInfo/Memory` 段）
 
