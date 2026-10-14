@@ -6,8 +6,10 @@
 
 每个子目录就是一个可直接使用的 skill：把整个目录复制到你的 skills 目录即可。
 
-> **不知道怎么用？** 见 **[`USAGE.md`](USAGE.md)** —— 怎么调用（自动 / 手动）、两个 skill 的「说这句话就触发」速查表；
-> 要改 skill 本身（加触发词、调调用方式）的人，另见其中的「调用控制字段 / 覆盖设置 / 排查」。
+> **不知道怎么用？**
+> ① 在对话里直接问 **「opencore-config-audit 怎么用」** —— 技能会输出它自己的使用说明；
+> ② 或看 [`opencore-config-audit/USAGE.md`](opencore-config-audit/USAGE.md) / [`opencore-picker-theme/USAGE.md`](opencore-picker-theme/USAGE.md)；
+> ③ 调用机制与「怎么改技能」见 [`USAGE.md`](USAGE.md)。
 
 **目录**
 
@@ -25,6 +27,8 @@
 | Skill | 一句话 | 规模 |
 |---|---|---|
 | **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置，并覆盖从装机到日常化、再到系统大版本升级的全生命周期 | 17 条铁律 · 20 份参考 · 11 个脚本 |
+
+每个技能目录里都有一份 `USAGE.md`（**随安装一起复制**），在对话里问「使用说明」即可拿到。
 | **`opencore-picker-theme`** | 配置、制作与排错图形启动选择器（OpenCanopy）主题 | 4 份参考 · 2 个脚本 |
 
 ---
@@ -50,13 +54,15 @@ cp -R <skill> <项目目录>/.workbuddy-ai/skills/
 ```
 hackintosh-skills/
 ├── README.md
-├── USAGE.md                     # ← 怎么调用 + 速查表（给人看）
+├── USAGE.md                     # 怎么调用 + 索引（给人看）
 ├── opencore-config-audit/
 │   ├── SKILL.md                 # 主流程 + 17 条铁律 + 资源表
+│   ├── USAGE.md                 # ← 本技能的使用说明（随安装一起复制）
 │   ├── references/              # 20 份专题文档（见下表）
 │   └── scripts/                 # 11 个脚本（见下表）
 └── opencore-picker-theme/
     ├── SKILL.md
+    ├── USAGE.md                 # ← 本技能的使用说明（随安装一起复制）
     ├── references/              # 4 份
     └── scripts/                 # 2 个
 ```

@@ -1,7 +1,7 @@
 ---
 name: opencore-picker-theme
-description: 配置、制作与排错 OpenCore 的图形启动选择器（OpenCanopy）主题：图标集（Resources/Image 下的图标集目录）、PickerMode/PickerVariant/PickerAttributes、图标 Flavour 系统（Flavour.icns 命名 / Ext 前缀 / .contentFlavour / .VolumeIcon.icns / .disk_label）、标签（Resources/Label）、位图字体（Resources/Font）、音频辅助（Resources/Audio + UEFI Audio）、背景图与 DefaultBackgroundColor、HiDPI（UIScale）与文本渲染。当任务涉及 OpenCore 主题、启动界面/选择器外观、图标集/icon pack、OpenCanopy、PickerAttributes、PickerVariant、Flavour、.icns、启动声音/开机提示音、选择器字体或背景时使用。含「必需图标清单与尺寸」「官方图标集缺哪些可选图标」的权威对照，以及图标集合规检查脚本。
-description_en: Configure, build and troubleshoot the OpenCore graphical boot picker (OpenCanopy) theme — icon sets under Resources/Image, PickerMode/PickerVariant/PickerAttributes, the icon flavour system, labels, bitmap fonts, audio assist, background image, HiDPI and text rendering. Includes the authoritative mandatory-icon list with dimensions, which optional icons OcBinaryData does NOT ship, and a compliance checker for the Resources tree.
+description: 配置、制作与排错 OpenCore 的图形启动选择器（OpenCanopy）主题：图标集（Resources/Image 下的图标集目录）、PickerMode/PickerVariant/PickerAttributes、图标 Flavour 系统（Flavour.icns 命名 / Ext 前缀 / .contentFlavour / .VolumeIcon.icns / .disk_label）、标签（Resources/Label）、位图字体（Resources/Font）、音频辅助（Resources/Audio + UEFI Audio）、背景图与 DefaultBackgroundColor、HiDPI（UIScale）与文本渲染。当任务涉及 OpenCore 主题、启动界面/选择器外观、图标集/icon pack、OpenCanopy、PickerAttributes、PickerVariant、Flavour、.icns、启动声音/开机提示音、选择器字体或背景时使用。含「必需图标清单与尺寸」「官方图标集缺哪些可选图标」的权威对照，以及图标集合规检查脚本。另外，**用户问「这个技能怎么用 / 使用说明 / 有哪些能力 / 能干什么」时也适用**（此时输出技能目录下的 `USAGE.md`，不要输出内部流程）。
+description_en: Configure, build and troubleshoot the OpenCore graphical boot picker (OpenCanopy) theme — icon sets under Resources/Image, PickerMode/PickerVariant/PickerAttributes, the icon flavour system, labels, bitmap fonts, audio assist, background image, HiDPI and text rendering. Includes the authoritative mandatory-icon list with dimensions, which optional icons OcBinaryData does NOT ship, and a compliance checker for the Resources tree. Also applies when the user asks how to use this skill, for its usage guide, or for a list of its capabilities — in that case output the skill's USAGE.md rather than the internal workflow.
 version: 0.1.0
 agent_created: true
 ---
@@ -15,6 +15,11 @@ agent_created: true
 
 **官方依据**：`OpenCorePkg` 文档的 **OpenCanopy 章节**（资源目录、图标清单与尺寸、标签、字体格式）
 与仓库里的 **`Docs/Flavours.md`**（推荐的 flavour 命名规范）。两者都随官方发布包提供，**必须按机器上的 OpenCore 版本取**。
+
+> ★★ **用户问「这个技能怎么用 / 使用说明 / 有哪些能力 / 能干什么」时**：
+> **直接输出同目录下的 `USAGE.md`**（那是写给使用者的速查），
+> **不要**把本文件的内部流程（铁律、阶段编号、脚本清单）原样倒给用户。
+> 同理，用户只是问「能做什么」而没给具体任务时，也走 `USAGE.md`。
 
 ## ★ 铁律
 
@@ -95,3 +100,4 @@ scripts/oc-fetch-iconset.sh GoldenGate /Volumes/EFI/EFI/OC/Resources   # 官方�
 - `references/picker-attributes.md` —— `PickerAttributes` 全位表、依赖关系、与 `PickerMode`/`UIScale`/背景色的配合
 - `references/flavours.md` —— Flavour 解析顺序、`Ext` 回退规则、`.contentFlavour`、推荐命名（基于官方 `Docs/Flavours.md`）
 - `references/theme-troubleshooting.md` —— 图标/界面/声音/字体的排错顺序
+- `USAGE.md` —— **给使用者看的速查**（用户问「怎么用/使用说明/能干什么」时输出这个）
