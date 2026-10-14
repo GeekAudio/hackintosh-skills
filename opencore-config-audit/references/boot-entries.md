@@ -218,165 +218,128 @@ grep -E "OCB: (Have existing option|Creating boot option|Moving boot option)" \
 - **多系统机器**：`Full` 与 `Disabled` 各有代价，**没有免费选项** —— 选完写进报告，并留好 §3.2 的兜底。
 - ★★ **从 macOS 写的启动项，验收只看 BIOS，不看回读**（原因见 §7.0）。
 
-## 7. ★★ 在 macOS 里添加 / 修改启动项
+## 7. ★★ 官方方法：启动项丢了怎么加回来
 
-### 7.0 三条前提，先搞清楚再动手
+> **官方依据**：`Docs/Configuration.pdf`（按机器上的 OpenCore 版本取）——
+> `Misc>Boot>LauncherOption`（含 **Note 3**）、`UEFI>Quirks>RequestBootVarRouting`、
+> `Misc>Tools`（`FullNvramAccess` / `OpenControl` / `OpenShell` / `BootKicker`）、
+> `Misc>Boot>PickerMode` Note 3、Troubleshooting → Tips and Tricks。
+> 下文引号内均为**官方原文**。
 
-**前提 1：写 NVRAM 需要提权。**
-本机实测：**普通用户/沙箱里写任何 NVRAM 变量都会直接报
-`Error setting variable … (iokit/common) general error`**（连一个普通变量都写不进去）。
-⇒ 必须走 **Terminal + `sudo`**，或提权 AppleScript
-（`osascript -e 'do shell script "…" with administrator privileges'`）。
-★ `dump` / `backup` **不需要**提权，只有 `add` / `del` / `restore` 需要。
+### 7.0 先搞清两个键（决定「能不能从系统里写」）
 
-**前提 2：`RequestBootVarRouting=true` 会把 `Boot*` 重定向走。**
-官方定义（`UEFI>Quirks>RequestBootVarRouting`，Failsafe `false`）：
+| 键 | 官方定义 | 意味着什么 |
+|---|---|---|
+| `Misc>Boot>LauncherOption=Full` | *"create or update the top priority boot option in UEFI variable storage at bootloader startup"* | OpenCore 每次开机**自己维护**入口（自愈） |
+| `UEFI>Quirks>RequestBootVarRouting=true` | *"Request redirect of all `Boot` prefixed variables from `EFI_GLOBAL_VARIABLE_GUID` to `OC_VENDOR_VARIABLE_GUID`."* | ★ **OS 对 `Boot*` 的读写被劫持进 OpenCore 自己的命名空间** |
 
-> *Request redirect of all `Boot` prefixed variables from `EFI_GLOBAL_VARIABLE_GUID` to
-> `OC_VENDOR_VARIABLE_GUID`. … This quirk requires `OC_FIRMWARE_RUNTIME` protocol implemented in
-> `OpenRuntime.efi`. … Operating systems are jailed and only controlled by OpenCore boot environment.*
+★★ **最重要的一条推论**：`RequestBootVarRouting=true` 时，**在 macOS / Linux 里写启动项
+「看起来成功、读回也一致」，但没落到固件**。官方讲 Linux `efibootmgr` 时说得非常直白：
 
-源码（`Platform/OpenRuntime/UefiRuntimeServices.c` · `IsEfiBootVar()`）：
+> *"Linux must be started either **not via OpenCore**, or **via OpenCore with
+> `RequestBootVarRouting` disabled** for this to work."*
 
-```c
-if (!CompareGuid (VendorGuid, &gEfiGlobalVariableGuid)) return FALSE;
-if (StrnCmp (L"Boot", VariableName, L_STR_LEN (L"Boot")) != 0) return FALSE;
-…
-// Boot0001 → OCBt0001,  BootOrder → OCBtOrder
-CopyMem (&NewVariableName[0], OC_VENDOR_BOOT_VARIABLE_PREFIX, …);
-```
+⇒ **想从操作系统里写启动项，就必须把你「启动时用的那份」config 的 `RequestBootVarRouting` 设成 `false`。**
 
-⇒ **在 macOS 里写 `8BE4DF61-…:Boot####`，很可能被改名成 `OC_VENDOR:OCBt####`**，
-**回读也走同一条重定向**（所以「回读一致」**证明不了**它落到了固件）。
+### 7.1 四种方法（官方给的，按可靠性排）
 
-**反过来也有一条重要事实**：OpenCore **自己**写启动项时会**临时关掉这层保护** ——
-`OcRegisterBootstrapBootOption()` 用 `OcDisableNvramProtection()` / `OcRestoreNvramProtection()` 包住整段写入。
-⇒ **「让 OpenCore 自己写」是唯一确定落到固件的那条路**（§7.1）。
+| 方法 | 在哪做 | 可靠性 | 前提 |
+|---|---|---|---|
+| **A** `LauncherOption=Full`，让 OpenCore 自己建 | 从该 ESP 启动一次 | ★★★ 直接写固件 | 需 `RequestBootVarRouting=true` |
+| **B** **OpenShell + `bcfg`（官方推荐）** | OpenCore 选择器 → Tools → OpenShell | ★★★ 固件级 | 纯 U 盘即可 |
+| **C** 先 `OpenControl.efi disable` 再 `bcfg` | 同上 | ★★★ | 方法 B 报「写不进去」时用 |
+| **D** 从操作系统里写 | macOS / Linux / Windows | ★ 必须 `RequestBootVarRouting=false` | 见 §7.0 |
 
-**前提 3：验收只看 BIOS。**
-⇒ 写完**重启进 BIOS 启动菜单**看有没有那条项、是不是第一；
-或看 OpenCore 引导日志里的 `OCB:` 行（§4.3）。**别拿 `nvram` 回读当成功证据。**
+> ★ **A 解决不了「鸡生蛋」**：固件里本来就没有 OpenCore 入口时，你**没法启动硬盘上的 OpenCore**，
+> 也就没法让它自己建。⇒ 这种情况先用 **B / C / D 建一次**，之后交给 A 自愈。
 
-### 7.1 六条路线对照
+### 7.2 方法 B（官方推荐）：OpenShell 里 `bcfg boot add`
 
-| # | 路线 | 在哪做 | 可靠性 | 要重启 | 要 Windows | 提权 |
-|---|---|---|---|---|---|---|
-| **A** | **`LauncherOption=Full`，让 OpenCore 自己建**（★ 推荐） | 改该 ESP 的 config | ★★★ 确定写固件 | 是 | 否 | 否 |
-| **B** | **OpenShell 的 `bcfg`** | OpenCore 选择器 → OpenShell | ★★★ 固件级 | 是 | 否 | — |
-| **C** | 带 `FullNvramAccess=true` 的工具 | OpenCore 选择器 → 工具 | ★★★ | 是 | 否 | — |
-| **D** | `nvram` 直写 `Boot####` | macOS 终端 | ★ 可能被重定向 | 是 | 否 | **要** |
-| **E** | `bless --setBoot` | macOS 终端 | ✗ 改的是 `efi-boot-device` | — | 否 | 要 |
-| **F** | EasyUEFI / `bcdedit` | Windows | ★★★ | 是 | **是** | — |
-
-### 7.2 路线 A（推荐）：让 OpenCore 自己写
-
-1. 确认该 ESP 的 config：`Misc>Boot>LauncherOption=Full`、`LauncherPath=Default`、
-   `UEFI>Quirks>RequestBootVarRouting=true`、`UEFI>Drivers` 里有 `OpenRuntime.efi`（启用）
-2. **从这块 ESP 启动一次**
-3. OpenCore 用 `OcDisableNvramProtection()` 绕过重定向 ⇒ 建/更新**真正的** `Boot####` 并置 `BootOrder` 首位
-4. 判据：引导日志里出现 `OCB: Creating boot option OpenCore of NNN bytes` /
-   `OCB: Moving boot option to the front from N position`
-5. ★ **前提**：同一台机器上**不能有第二块 ESP 也是 `Full` + 同一 `LauncherPath`**（§1 的坑）
-
-### 7.3 路线 B：OpenShell 的 `bcfg`
-
-1. `Misc>Tools` 里启用 `OpenShell.efi`（本机已启用），在 OpenCore 选择器里选它
-2. ★★ **先解除 NVRAM 保护**，二选一：
-   - 官方路线：跑 `\EFI\OC\Tools\OpenControl.efi disable`（之后必须 reboot 或 `OpenControl restore`）
-   - 或把该工具的 `Misc>Tools>FullNvramAccess` 设 `true`
-     （官方：*"Disable `OpenRuntime` NVRAM protection during usage of a tool … may be required … if a tool
-     needs to access NVRAM directly **without the redirections put in place by `RequestBootVarRouting`**"*）
-3. 在 OpenShell 里：
+**纯 U 盘操作，不需要 Windows，也不需要进任何操作系统。** 官方在 `LauncherOption` Note 3 里给的就是这套。
 
 ```text
-bcfg boot dump -v                              # 列出全部启动项
-map -r                                         # 刷新文件系统映射，找出 ESP 的 FS 号
-bcfg boot add 1 FS0:\EFI\OC\OpenCore.efi "OpenCore"
-bcfg boot mv 1 0                               # 挪到第一位
-bcfg boot rm <n>                               # 删除
+① 插 U 盘，开机按 F8（或进 BIOS）从 U 盘启动
+② OpenCore 选择器 → Tools → OpenShell
+③ 依次执行：
+
+   map -r                                  ← 列出所有文件系统
+   dir FS0:\EFI\OC\                        ← 逐个确认：能列出 OpenCore.efi 的那个就是目标 ESP
+   bcfg boot dump                          ← 先看现有启动项，心里有数
+   bcfg boot add 0 FS0:\EFI\OC\OpenCore.efi "OpenCore"
+                  ↑ 第一个参数 = 插入位置，0 = 排到第一位
+                    FS0 换成上一步确认的那个
+
+④ exit 退出 OpenShell → 重启
 ```
 
-4. ★★ **ASUS 上不要用 `Boot0000`**（源码注释：条目重复 + BIOS 变砖，见 §5）
+- **认目标 ESP 的诀窍**：它里面**同时**有 `\EFI\OC\OpenCore.efi`（OpenCore）和 `\EFI\Microsoft\Boot\bootmgfw.efi`（Windows）
+- **判据**：重启后 BIOS 启动菜单里出现「OpenCore」且**排在第一位**
 
-### 7.4 路线 C：带 `FullNvramAccess` 的工具
+### 7.3 方法 C：`bcfg` 报「写不进去」时，先解锁 NVRAM 保护
 
-官方 `Misc>Tools>FullNvramAccess`：*"Disable `OpenRuntime` NVRAM protection during usage of a tool."*
-⇒ 给需要**直写 NVRAM** 的工具开这个开关（EFI 版 EasyUEFI、`bcfg` 类工具）。
-★ **只对 `Tools` 有效**，`Entries` 恒为 `false`。
+官方原文：
 
-### 7.5 路线 D：`nvram` 直写（本机实测，含完整字节模板）
+> *"if OpenCore has `RequestBootVarRouting` enabled, it will be necessary to run
+> `\EFI\OC\Tools\OpenControl.efi disable` before using `bcfg`."*
+> *"(After `OpenControl disable`, it is necessary to either reboot or run `OpenControl restore`,
+> before booting an operating system.)"*
 
-**先决条件**：要么该次启动的 config 用 `RequestBootVarRouting=false`，要么接受「可能只写进 `OC_VENDOR`」并去 BIOS 验证。
+1. 把官方发布包里的 `X64/EFI/OC/Tools/OpenControl.efi` 放进 **U 盘**的 `EFI/OC/Tools/`
+2. `Misc>Tools` 里加一条指向它，并把 **`FullNvramAccess` 设成 `true`**
+   （官方：*"Disable `OpenRuntime` NVRAM protection during usage of a tool."*）
+3. 从选择器**跑一次这个工具**，再进 OpenShell 执行 §7.2 的 `bcfg boot add`
+4. ★★ **之后必须重启（或先在 OpenShell 里跑 `OpenControl restore`），否则不能引导系统**
 
-```bash
-G=8BE4DF61-93CA-11D2-AA0D-00E098032B8C
+### 7.4 方法 D：从操作系统里写（**前提 `RequestBootVarRouting=false`**）
 
-sudo nvram "$G:BootOrder"                       # 读
-sudo nvram "$G:Boot0001"                        # 读某条
-sudo nvram "$G:Boot0001=<%XX 载荷>"              # 写
-sudo nvram "$G:BootOrder=%01%00%80%00"           # 写顺序 = [Boot0001, Boot0080]
-sudo nvram -d "$G:Boot0001"                     # 删
-```
+| 系统 | 手段 | 备注 |
+|---|---|---|
+| Linux | `efibootmgr` | 官方原文点名的就是这个 |
+| macOS | `nvram <GUID>:<名字>` | 可读写固件启动项；**`nvram -p` 不会列出它们** |
+| Windows | EasyUEFI / Boot Camp 控制面板 | 最直观 |
 
-**`EFI_LOAD_OPTION` 载荷结构**（本机实测 **154 字节**，与 OpenCore 自报的字节数分毫不差）：
+官方 Troubleshooting 里也把「改默认启动项」的正规入口列全了：
 
-```text
-off  0 : Attributes            UINT32   01 00 00 00        (LOAD_OPTION_ACTIVE)
-off  4 : FilePathListLength    UINT16   0x0082  (=130)
-off  6 : Description           UTF-16LE + NUL   "OpenCore" = 18 B
-off 24 : DevicePath            130 B
-         ├ ACPI  PciRoot(0x0)                    12 B   ← HID 固定 0x0A0341D0 + UID
-         ├ Pci   (0x6,0x0)                        6 B   ← ★ 字节序是【Function 在前, Device 在后】
-         ├ Pci   (0x0,0x0)                        6 B
-         ├ NVMe  (0x1, ⟨EUI64 8 字节⟩)            16 B
-         ├ HD    (1, GPT, ⟨ESP 分区 GUID 16 字节⟩, 0x1000, 0x39000)  42 B
-         │        ★ 起始 LBA 单位是【512 字节块】，不是字节数
-         ├ FilePath  \EFI\OC\OpenCore.efi        44 B   ← UTF-16LE，【无结尾 NUL】
-         └ End   7f ff 04 00                      4 B
-合计 4 + 2 + 18 + 130 = 154 B
-```
+> *"This choice can be altered from UEFI Setup, with the macOS Startup Disk preference,
+> or the Windows Boot Camp Control Panel."*
 
-**编码**：`nvram` 的值用 `%XX` 表示不可打印字节。
-★★ **陷阱**：macOS 自己的输出会把 `0x20` 打成**字面空格**，而**值里的字面空格会被 `nvram` 当成参数分隔符**
-⇒ 「读出来什么样就写回去」**会失败**。**写之前必须统一重新编码**（本技能的脚本把每个字节都写成 `%XX`）。
+**辅助工具**：`scripts/oc-nvram-bootentry.sh`（`dump` / `backup` / `restore` / `add` / `del`）
+—— ★ **`add` / `del` / `restore` 要提权；而且只在 `RequestBootVarRouting=false` 时才有意义。**
 
-**★ 本机实测结论（重要）**：
-- 提权后写 `Boot0001`（154 B）→ **回读逐字节一致**；`BootOrder` 也能改写。
-- 但**提权写一个新的 `Boot0002` 后读不回来** ⇒ 与「被重定向到 `OC_VENDOR`」一致。
-- ⇒ **回读一致 ≠ 已落固件**。**验收只能看 BIOS。**
+### 7.5 附：`BootKicker` —— 官方为「从 U 盘切回硬盘」写的方法（黑苹果通常不可用）
 
-**用脚本**（`scripts/oc-nvram-bootentry.sh`，本机实测）：
+官方在 `PickerMode` Note 3 里描述的场景，与「U 盘里的 OpenCore → 硬盘上的 OpenCore」完全一致：
 
-```bash
-S=~/.workbuddy-ai/skills/opencore-config-audit/scripts/oc-nvram-bootentry.sh
-bash $S dump                                    # 只读：列出 BootOrder + 每条 Boot####（已解析设备路径）
-bash $S backup ~/nvram-bootentry-备份            # 只读：备份
-sudo bash $S add --esp disk2s1 --name OpenCore \
-     --dp-prefix 'PciRoot(0x0)/Pci(0x6,0x0)/Pci(0x0,0x0)/NVMe(0x1,⟨你的 NVMe EUI64⟩)' --first
-sudo bash $S add --esp disk2s1 --name OpenCore --from-entry Boot0001 --first   # 复用已有项的前缀
-bash $S add ... --dry-run                        # ★ 只生成载荷、不写入（用来核对）
-sudo bash $S del 2                               # 删除 Boot0002
-sudo bash $S restore ~/nvram-bootentry-备份       # 回滚
-```
+> *"…it can be used to switch which OpenCore installation is blessed, with `CTRL+Enter`,
+> e.g. from a recovery OpenCore installation on USB/CD back to the main installation of OpenCore
+> on the hard drive, if this is lost after an NVRAM reset."*
 
-★ 校验过：`--dp-prefix`（文本）、`--from-entry`、以及 OpenCore 当年写的那条，**三者生成的载荷逐字节相同**。
+但 Tools 表对它的定义是 *"Display Apple BootPicker menu (**for Macs with compatible firmware**)"*。
+⇒ **它依赖 Apple 的 BootPicker 协议，非 Apple 固件（黑苹果）上一般用不了。**
+列在这里只是让你知道官方有这条，**别在这上面耗时间**。
 
-### 7.6 路线 E：`bless` —— 能读，但**建不了 BIOS 条目**
+### 7.6 日常应该怎么配（建议）
 
-`man bless`（EFI 系统）：
+| | `LauncherOption` | `RequestBootVarRouting` | 作用 |
+|---|---|---|---|
+| **硬盘那份** | `Full` | `true` | 入口**自愈**；且不会被 Windows 抢走 |
+| **U 盘那份** | `Disabled` | `false`（想当救援盘）或 `true` | 永远不会抢硬盘的入口；`false` 时还能当「从系统里写启动项」的救援盘 |
 
-> `--setBoot` — Set the system to boot off the specified partition. … **On EFI-based systems, the
-> `efi-boot-device` variable is changed.**
+> ★ **为什么硬盘要保持 `Full` + `true`**：官方原话 *"When `LauncherOption` is not enabled,
+> other operating systems may overwrite OpenCore settings"* —— 关了它，
+> **Windows 大更新时可能把 OpenCore 的启动项覆盖掉**。`Full` 正是在防这个。
+> ★ 而**任何会从 U 盘启动的 OpenCore，`LauncherOption` 必须是 `Disabled`**（官方 Note 3）—— 见 §1 的根因。
 
-⇒ 它改的是 **Apple 自己的 `efi-boot-device`**，**不是固件启动菜单里的 `Boot####`**；
-PC 固件不消费这个变量 ⇒ **别指望它能在 BIOS 里建出条目**。
-它可靠能做的是**读**：`sudo bless --info --getBoot`。
-（★ 本条依据 man 页，**未在本机复现**。）
+### 7.7 官方出处（可自行核对）
 
-### 7.7 路线 F：Windows
+- `Misc > Boot > LauncherOption` —— 四个取值、`LauncherPath`、**Note 3**（USB 场景警告 + `bcfg` 抢救步骤）
+- `UEFI > Quirks > RequestBootVarRouting` —— 重定向的定义与目的
+- `Misc > Tools` —— `FullNvramAccess`、`OpenControl`、`OpenShell`、`BootKicker`
+- `Misc > Boot > PickerMode` —— Note 3（`BootKicker` / `CTRL+Enter`）
+- Troubleshooting → Tips and Tricks → *How do I choose the default boot entry?*
 
-`bcdedit /enum firmware` 列出固件项；EasyUEFI 图形界面增删/排序最直观。
-★ 用完记得**回 macOS 复查** `BootOrder`（Windows 会把**自己**标成最优先，官方 Note 3）。
+★ 以上全部出自 OpenCore 官方 `Configuration.pdf`（随每个发布包提供，在 `Docs/` 下）。
+**一切以你机器上那个 OpenCore 版本对应的文档为准** —— 不同版本键名与取值可能变。
 
 ## 8. ★ 从「U 盘启动」改成「硬盘启动」
 

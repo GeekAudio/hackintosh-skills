@@ -16,7 +16,7 @@
 | 审配置 | 「审一下我的 OpenCore 配置」「校验一下 config.plist」 |
 | 补 SSDT | 「看日志还有没有要补的 SSDT」 |
 | 查开机慢 | 「开机很慢，分析一下时间线」「卡在苹果 logo」 |
-| **启动项没了** | 「BIOS 里看不到 OpenCore 了」「只剩 Windows」「用 U 盘引导后启动项消失」 |
+| **启动项没了** | 「BIOS 里看不到 OpenCore 了」「只剩 Windows」「用 U 盘引导后启动项消失」「bcfg 怎么加启动项」 |
 | **换引导盘** | 「从 U 盘启动改成硬盘启动」「怎么在 macOS 里加启动项」「启动项排第一」 |
 | 精简 | 「kext 精简一下，不用的删掉」「屏蔽一下其它磁盘」 |
 | 装驱动 | 「装 NVIDIA 驱动」「Intel 无线网卡怎么配」「我这块 MT7922 能用吗」「博通网卡怎么配」「有线网卡/2.5G 网卡怎么驱动」 |
@@ -38,7 +38,7 @@
 
 | 脚本 | 作用 |
 |---|---|
-| `oc-nvram-bootentry.sh` | **固件启动项读写**（`dump` / `backup` / `restore` / `add` / `del`）★ 写操作要提权 |
+| `oc-nvram-bootentry.sh` | **从系统里读/写固件启动项**（`dump` / `backup` / `restore` / `add` / `del`）★ 写操作要提权，且需 `RequestBootVarRouting=false` |
 | `bios-audit.ps1` | **Windows 侧 BIOS 审查（只读）** —— 在 Windows 里先跑这个 |
 | `fetch-opencore-docs.sh` | 取同版官方包 + 建配置键库 |
 | `oc-verify.sh` | 一键校验（`plutil` + `ocvalidate` + 引用完整性 + sha） |

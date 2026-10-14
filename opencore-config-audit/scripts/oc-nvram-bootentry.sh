@@ -9,8 +9,9 @@
 #   **重定向**到 OC_VENDOR_VARIABLE_GUID（`Boot0001` → `OCBt0001`、`BootOrder` → `OCBtOrder`）。
 #   ⇒ 此时 `add` / `del` 看起来成功（回读也一致），但**很可能只落在 OpenCore 自己的命名空间**，
 #     **没有落到固件**。必须重启进 BIOS 才能确认。
-#   ⇒ 要让 `add` / `del` 直接生效：该次启动的 config 用 `RequestBootVarRouting=false`；
-#     或改用「让 OpenCore 自己写」（`LauncherOption=Full`）／OpenShell 的 `bcfg`（配 OpenControl.efi disable）。
+#   ⇒ 要让 `add` / `del` 直接生效：该次启动的 config 用 `RequestBootVarRouting=false`（官方对 Linux efibootmgr 的要求同此）。
+#   ★ 官方推荐的做法是 **OpenShell 里的 `bcfg boot add`**（纯 U 盘、不用进任何 OS）；
+#     `bcfg` 报「写不进去」时先跑 `\EFI\OC\Tools\OpenControl.efi disable`，之后再重试。
 #   ★ `dump` / `backup` / `restore` 不受此影响（读与回写同一个命名空间，自洽）。
 #
 # 用法：

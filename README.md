@@ -135,9 +135,11 @@ hackintosh-skills/
 - ★ **固件启动项（`Boot####`）**：**「用 U 盘引导一次后，硬盘的 OpenCore 启动项从 BIOS 里消失、只剩 Windows」**
   的根因与修法 —— `LauncherOption=Full` 会**按文件路径后缀认自己的项（不看盘）**，从别的盘引导就把它重指过去；
   ⇒ **定案组合 = 目标盘 `Full`（自建+自愈）/ 另一份 `Disabled`**（★ 两个都 `Disabled` 就没人建项了）
-- ★ **在 macOS 里加 / 改启动项**：六条路线对照（`LauncherOption=Full` 让 OpenCore 自己写 · OpenShell `bcfg` ·
-  `FullNvramAccess` 工具 · `nvram` 直写 · `bless` · Windows EasyUEFI）；★ **写 NVRAM 必须提权**；
-  ★ `RequestBootVarRouting=true` 会把 `Boot*` 重定向到 `OC_VENDOR:OCBt*` ⇒ **回读一致证明不了落固件** ⇒ 验收只看 BIOS
+- ★★ **加回来：官方方法**（`Configuration.pdf`）—— **B** OpenShell 里 `bcfg boot add 0 FSx:\EFI\OC\OpenCore.efi "OpenCore"`
+  （★ **官方推荐**，纯 U 盘、不要 Windows）· **C** `bcfg` 写不进去 ⇒ 先跑 `\EFI\OC\Tools\OpenControl.efi disable`（+ `FullNvramAccess=true`）再重试，**之后必须重启** ·
+  **A** `LauncherOption=Full` 让 OpenCore 自己建（**解决不了「鸡生蛋」**）·
+  **D** 从系统里写（macOS `nvram` / Linux `efibootmgr` / Windows EasyUEFI）—— ★★ **前提：该次启动的 `RequestBootVarRouting=false`**，
+  否则「写成功、读回一致」全是假阳性 ⇒ **判据只看重启后的 BIOS**；附 `BootKicker`（黑苹果通常不可用）
 - ★ **从 U 盘启动改成硬盘启动**：完整迁移步骤 + 三步验收（BIOS 有且第一 / `boot-path` 指向硬盘 / **拔掉 U 盘再重启**）
 
 **④ 系统大版本升级（如 macOS 15 → 26）**
@@ -190,7 +192,7 @@ hackintosh-skills/
 | `cpu-freq-probe.sh` | CPU 实际频率探针（内联汇编，防编译器折叠）—— 验证睿频 / 对比机型 |
 | `mem-check.sh` | 校验内存注入摆位（数组序号 → 预测图位，判定是否与「系统信息」错位） |
 | `bios-audit.ps1` | **Windows 侧 BIOS 审查（只读）**：判定固件类型/Secure Boot/TPM/VT-x/HT/XMP/**VMD·RST**/串口/内存槽位 |
-| `oc-nvram-bootentry.sh` | **固件启动项（`Boot####` / `BootOrder`）读写**：`dump`（解析名字/设备路径）· `backup` / `restore` · `add`（含 `--dry-run`）· `del`。★ 写操作要提权 |
+| `oc-nvram-bootentry.sh` | **从系统里读/写固件启动项**（官方方法 D 的辅助）：`dump`（解析名字/设备路径）· `backup` / `restore` · `add`（含 `--dry-run`）· `del`。★ 写操作要提权；★★ **且只在 `RequestBootVarRouting=false` 时才有意义** |
 | `redact-check.sh` | **发布前脱敏自检（只读）**：扫三码 / MAC / 密钥 / 卷 UUID / 邮箱 / 内网 IP |
 | `oc-theme-check.sh` | **Resources 树合规检查**（必需图标 / 真实像素尺寸 / 标签 / 字体 / 音频） |
 | `oc-fetch-iconset.sh` | 从官方 OcBinaryData 取图标集 / 字体 / 标签 / 音频 |
@@ -204,7 +206,7 @@ hackintosh-skills/
 | `official-docs-method.md` | 官方文档取用方法、逐键判定法、**成对关系表** |
 | `logs-and-debug.md` | `Target` / `DisplayLevel` 位定义、日志判据、刷屏归因 |
 | `boot-timeline.md` | **启动耗时 / 时间线分析**：三段拆解、流式过滤、停顿窗口定位 |
-| `boot-entries.md` | **固件启动项（`Boot####` / `BootOrder`）与 `LauncherOption`**：★ **「用 U 盘引导后启动项消失」的根因与修法**、四档取值、取证命令、`Disabled` 的代价、**ASUS 的 `Boot0000` 坑**；★ **§7 在 macOS 里加/改启动项（六条路线）**、**§8 从 U 盘启动改成硬盘启动（含三步验收）** |
+| `boot-entries.md` | **固件启动项（`Boot####` / `BootOrder`）与 `LauncherOption`**：★ **「用 U 盘引导后启动项消失」的根因**、四档取值、取证命令、**ASUS 的 `Boot0000` 坑**；★★ **§7 官方修法**（`bcfg` / `OpenControl` 解锁 NVRAM / `LauncherOption=Full` 自愈 / 从系统里写 / `BootKicker`）、**§8 从 U 盘启动改成硬盘启动（含三步验收）** |
 | `acpi-ssdt.md` | 官方 AcpiSamples 逐条适用条件、设备存在性检查、命名规范 |
 | `bios-settings.md` | **BIOS/UEFI 审查**：官方 9 条 + Dortania + 社区补充（**VMD**/Speed Shift）、**必须关/必须开/看情况**三类、CFG Lock 专题、**厂商命名对照表** |
 | `disks-and-kexts.md` | 磁盘屏蔽与 kext 精简的判据与「不能删」清单 |
