@@ -72,6 +72,11 @@ ls -1 /Volumes            # 屏蔽生效后应只剩 Macintosh HD（+ 需要时�
 | `BlueToolFixup` | 部分 Broadcom 蓝牙 |
 | `CPUFriend` + DataProvider | 定制 CPU 电源数据 |
 
+> ★ **Intel 无线/蓝牙三件套**（`itlwm` 或 `AirportItlwm` + `IntelBluetoothFirmware` / `IntelBTPatcher`，新版系统还要 `BlueToolFixup`）
+> 只在**机器上确实是 Intel 网卡**时才需要：
+> 换成 Broadcom 等原生卡之后，它们属于「已换硬件的驱动」，可以删（清理步骤见 `intel-wifi.md` §5）；
+> 反之，用 Intel 网卡的机器则**必须**有它们，别当成"用不到"删掉。
+
 ### 2.4 删除流程
 
 1. **先把原件备份**到工作区（`cp -pR <Kexts>/X.kext <备份目录>/`），并记录大小

@@ -32,6 +32,12 @@ cp -R opencore-config-audit <项目目录>/.workbuddy-ai/skills/
 - **磁盘屏蔽**：`/etc/fstab` + `noauto`（按卷 UUID），让 macOS 里只看到系统盘；
   **显式排除 EFI 分区**并做挂载验证
 - **kext 精简**：找禁用项与孤儿文件，含「不能删」清单（无线三件套等）
+- **驱动安装**：
+  - **NVIDIA**（NullMoth nvidia-macos-driver）：适用范围、两条安装路线、必需的 OpenCore 设置表、
+    恢复路径、官方故障对照、Send logs 上报纪律
+  - **Intel 无线网卡**（AirportItlwm / itlwm）：Sequoia 与 Tahoe 的 ABI 差异与 `MinKernel`/`MaxKernel` 用法、
+    macOS 26 的能力与限制、蓝牙配套 kext、排错
+  - **从零生成基础 EFI**（Windows 上用 RapidEFI）：六步流程、生成后必须补的四件事
 - **调试开关**：OC 段刷屏（`Target` 的 `0x02`）与 macOS 段刷屏（`-v`）的区分与取值建议
 
 **内置的安全流程（最重要的一部分）**
@@ -58,6 +64,9 @@ cp -R opencore-config-audit <项目目录>/.workbuddy-ai/skills/
 | `references/logs-and-debug.md` | `Target`/`DisplayLevel` 位定义、日志判据清单、刷屏归因 |
 | `references/acpi-ssdt.md` | 官方 AcpiSamples 逐条适用条件、设备存在性检查、命名规范 |
 | `references/disks-and-kexts.md` | 磁盘屏蔽与 kext 精简判据、「不能删」清单、主题保留 |
+| `references/nvidia-driver.md` | NullMoth NVIDIA 驱动：适用范围、安装、必需 OC 设置、恢复、故障对照 |
+| `references/intel-wifi.md` | Intel 无线网卡驱动（AirportItlwm / itlwm）：版本线、注入、蓝牙配套、排错 |
+| `references/rapidefi-first-efi.md` | 从零开始：Windows 上用 RapidEFI 生成基础 EFI，及之后的收尾清单 |
 | `references/pitfalls.md` | 踩过的坑（症状 → 原因 → 正确做法） |
 | `references/machine-facts.md` | 一台实机（ASUS Z690 / i7-12700K / RTX 3080 / macOS 26）的实测事实 |
 
