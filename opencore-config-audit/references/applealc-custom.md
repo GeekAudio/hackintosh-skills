@@ -3,6 +3,9 @@
 > 依据：`acidanthera/AppleALC` 的 **README** 与 **官方 wiki**
 > （`Installation-and-usage` / `Adding-codec-support` / `Supported-codecs`）+ 官方 CI 的 `.github/workflows/main.yml`。
 > 下文带引号的都是官方原文。
+>
+> ★★★ **macOS 26（Tahoe）请先读 §0.5** —— Apple 在 DP2 删了 `AppleHDA.kext`，
+> 现在有**不需要打补丁**的恢复方案（`SimpleHDA`），会改变整个流程。
 
 ## 0. 两条路线（先走 A，A 走不通再走 B）
 
@@ -15,6 +18,90 @@
 
 **为什么要先搜**：AppleALC 的机制是「codec 名 + layout-id」映射到一套 platform/layout 数据，
 **同 codec 的不同主板通常能共用同一批 layout**，逐个试过去往往就通了 —— 比从零做 layout 省几个数量级的时间。
+
+## 0.5 ★★★ macOS 26（Tahoe）的前置：先把 `AppleHDA` 弄回来 —— **SimpleHDA（无需补丁）**
+
+> 官方 README 写明 *"**macOS 26 dropped AppleHDA.kext in DP2.** AppleALC functioning on macOS 26 may
+> require additional actions if AppleHDA.kext is necessary."*
+> ⇒ **在 26 上，AppleALC 生效的前提是先把 `AppleHDA` 恢复回来。**
+
+### 恢复方案的几代演进（选最省事的）
+
+| 方案 | 做法 | 代价 |
+|---|---|---|
+| **VoodooHDA** | 完全替换音频栈 | ★ **音质有损** |
+| **OCLP root patch** | 打补丁把 `AppleHDA` 塞回系统卷 | **每次系统更新都要重打**；要放宽 SIP |
+| **KDK + MyKextInstaller** | 用 KDK 装 kext 并重建内核集合 | 依赖 KDK，步骤多 |
+| **★★ SimpleHDA（新）** | **OpenCore 注入原版 `AppleHDA`**（Lilu 插件） | **不打补丁、不关 SIP、不动系统卷、不重建内核集合、不用 KDK**；**音质无损耗** |
+
+### 它是什么
+
+`laobamac/SimpleHDA` —— 仓库自述 *"**Restore native AppleHDA on macOS Tahoe through OpenCore and Lilu**"*。
+
+- 是个 **Lilu 插件**，**自带原版 `AppleHDA.kext` 载荷**（`Resources/AppleHDA.kext`）
+- 通过 OpenCore 注入恢复**原版音频栈**；`SystemKC` 注册完成取得系统原有依赖，链接/重定位/虚函数表交给 XNU 注册
+- **`AppleALC` 照旧注入 `layout-id`** —— 因为注入的是**原版** AppleHDA，**音质没有损耗**
+- **不修改系统卷、不重建内核集合**
+
+### 要求
+
+| 项 | 要求 |
+|---|---|
+| 系统 | **macOS Tahoe 26 / Darwin 25.x** |
+| 架构 | Intel / AMD x86_64 |
+| 引导 | OpenCore |
+| 依赖 | **Lilu ≥ 1.7.1** + **AppleALC** |
+| 配置 | 有效的 `alcid` 或 `layout-id`，**启动参数 `keepsyms=1`** |
+
+### 安装（5 步）
+
+1. 从 **Releases** 取 **`RELEASE`** 包，把 `SimpleHDA.kext` 放进 `EFI/OC/Kexts/`
+2. `Kernel → Add` 加条目，**顺序必须是 `Lilu → AppleALC → SimpleHDA`**
+   （包内附 `OpenCore-Kernel-Add.plist` 条目示例）
+3. 加启动参数 **`keepsyms=1`**；**保留**这台机器原先有效的 AppleALC / layout / ACPI 配置
+4. 可选：安装 `SimpleHDA-HAL-1.0.0.pkg`
+5. 重启
+
+> ★★ **使用前先卸载其它 AppleHDA 恢复方案或根补丁**（避免重复加载）。
+> ★ **不要**同时留 `VoodooHDA` / 其它声卡驱动。
+
+### 启动参数
+
+| 参数 | 用途 |
+|---|---|
+| **`keepsyms=1`** | **必需** |
+| `-shdaoff` | 停用驱动 |
+| `-shdahaloff` | 手动停用 HAL，供故障对照 |
+| `shda-lang=en` | 名称语言，**默认 `zh_CN`**（支持 41 种；`-` 与 `_` 等价，不区分大小写） |
+| `-shdadbg` | 开启 Debug 版本日志 |
+
+> `alcid` 用自己声卡的有效值；**通过设备属性设置 layout 时，无需重复添加**。
+
+### HAL（可选组件）
+
+- 给 **CoreAudio** 提供 AppleHDA 专用属性与控制接口
+- ★ **自动检测**：已安装就启用，未安装就走普通 IOAudio 路径 —— **两种情况都不用设开关**
+- 安装位置：`/Library/Audio/Plug-Ins/SimpleHDA/AppleHDAHALPlugIn.bundle`
+- 卸载：`sudo zsh Tools/uninstall_hal.zsh`；**安装/卸载后重启即可，无需挂载 EFI**
+
+### 社区实测与已知问题（来自发布帖回帖）
+
+- ✅ **macOS 26.7.1 测试成功**
+- ✅ **不再依赖 KDK**（有人问「原来用 KDK + MyKextInstaller 的方式，是可以不依赖 KDK 了吗？」⇒ 作者确认「你说的没错」）
+- ⚠️ **已知问题：装了之后「图书」（Books）应用无法登录**
+- ⚠️ 有反馈「点击 Wi-Fi 和控制栏时，右上角状态栏会重复启动」
+
+### ★ 边界（作者声明，务必看清）
+
+- 仓库 **没有 license**；作者写明：**不遵循任何开源协议、不允许任何二次开发**，开放源码**仅供学习**
+- **暂时不发正式版** —— 只有 `v1.0.0-alpha` 预发布，附件名**带提交短哈希**
+  （如 `SimpleHDA-Tahoe-v1.0.0-RELEASE-alpha-abcdef0.zip`）⇒ **自行按提交号确定版本**
+- 作者自述「目前测试数量不多，有问题**带日志**反馈」
+- 标识 `cn.laobamac.SimpleHDA`；版本以仓库 `Info.plist` 为准
+
+> ★ **这是「用原版 kext 通过 OpenCore 注入」这一套路的又一例** ——
+> 同作者的 `SimpleMtkWlan` / `SimpleMtkBtFw`（见 `mediatek-wifi.md`）思路一致。
+> **好处都是：不打补丁、不动系统卷、系统更新后不用重打。**
 
 ## 1. 先确定 codec 型号、revision 与当前状态
 
@@ -128,8 +215,8 @@ xcodebuild -jobs 1 -configuration Release -arch x86_64
 8. 其它控制用 boot-arg：`-alcoff`（禁用）、`-alcbeta`（在未支持的系统上启用）、`alcverbs=1`（开 `alc-verb`，或 `alc-verbs` 设备属性）；
    `-x` / `-s` 也会禁用 AppleALC
 
-> ★ **macOS 26 特别注意**：官方 README 写明 *"macOS 26 dropped AppleHDA.kext in DP2. AppleALC functioning on macOS 26 may require additional actions if AppleHDA.kext is necessary."*
-> ⇒ 在 26 上折腾板载音频前，先确认 AppleHDA 这条链路是否存在（本机就是没有用板载音频）。
+> ★★ **macOS 26 特别注意**：官方 README 写明 *"macOS 26 dropped AppleHDA.kext in DP2."*
+> ⇒ **在 26 上折腾板载音频，先按 §0.5 把 `AppleHDA` 恢复回来**（推荐 `SimpleHDA`，无需补丁）。
 
 ## 6. 提交 PR
 
@@ -154,5 +241,6 @@ PR 里应当包含：
 - 本机音频设备 ACPI 名是 **`HDAS`**（ASUS 命名，不是 `HDEF`），PCI 位置 `PciRoot(0x0)/Pci(0x1f,0x3)`
   ⇒ 查路径用 `gfxutil -f HDAS`；**绝不要**把 HDAS 改名成 HDEF（官方禁止）
 - 本机**当前没有用板载音频**：`AppleALC.kext` 已从 `EFI/OC/Kexts` 移除（备份在工作区 `_kexts-removed-20261014/`），音频走外置声卡
-  ⇒ 要用板载音频就得把它加回来（Lilu 在前、注入 `layout-id`、`alcid=N` 试）
+  ⇒ 要用板载音频就得把它加回来（Lilu 在前、注入 `layout-id`、`alcid=N` 试）；
+  ★ 本机是 **macOS 26.7.1** ⇒ **先按 §0.5 处理 AppleHDA**（`SimpleHDA` 已有 26.7.1 成功案例），再谈 `layout-id`
 - 加/删这个 kext 属于改 ESP ⇒ 一样走安全流程（备份 → 改 → 校验 → `sync`/卸载重挂 → 复验 sha）
