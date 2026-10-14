@@ -1,5 +1,8 @@
 # 磁盘屏蔽与 kext 精简
 
+> ★ **装 kext 到系统目录 / 合并 KDK / 重建缓存** 时，可用 `laobamac/SimpleLoader`（SwiftUI 图形界面，
+> **自带 APFS 快照保护**，比手工 `kmutil` 安全）。索引见 `laobamac-toolkit.md`。
+
 ## 一、磁盘屏蔽：先分清是「选择器」还是「macOS 里」
 
 | 目标 | 正确做法 | 千万不要 |

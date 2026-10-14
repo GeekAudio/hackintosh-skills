@@ -1,5 +1,9 @@
 # ACPI / SSDT 巡检
 
+> ★ **中文参考**：`laobamac/OC-little-zh` —— **ACPI 热补丁中文指南**（ACPI 基础 · 添加设备 · 禁用设备 ·
+> 修显卡 · 修 USB · 修睡眠唤醒 · 笔记本补丁 · CMOS · **内核扩展加载顺序** · **MMIO 白名单** · 内存速度）。
+> **写 SSDT 之前先翻它**，再对照本文的官方 `AcpiSamples`。索引见 `laobamac-toolkit.md`。
+
 ## 1. 官方依据只有这些
 
 官方发布包里 `Docs/AcpiSamples/`（Source/*.dsl + Binaries/）**就是判定"该不该加 SSDT"的权威清单**。

@@ -17,7 +17,7 @@
 | 补 SSDT | 「看日志还有没有要补的 SSDT」 |
 | 查开机慢 | 「开机很慢，分析一下时间线」「卡在苹果 logo」 |
 | 精简 | 「kext 精简一下，不用的删掉」「屏蔽一下其它磁盘」 |
-| 装驱动 | 「装 NVIDIA 驱动」「Intel 无线网卡怎么配」「我这块 MT7922 能用吗」「博通网卡怎么配」 |
+| 装驱动 | 「装 NVIDIA 驱动」「Intel 无线网卡怎么配」「我这块 MT7922 能用吗」「博通网卡怎么配」「有线网卡/2.5G 网卡怎么驱动」 |
 | 调 CPU | 「CPU 频率被压住了」「睿频怎么开」 |
 | **换机型 / 三码** | 「换一下 SMBIOS 机型」「三码怎么配」「序列号怎么生成」「ROM 填什么」「换了机型开不了机」 |
 | 升系统 | 「从 15 升到 26 要改什么」「升级后 Wi-Fi 没了」 |
@@ -51,13 +51,13 @@
 | `oc-theme-check.sh` | **Resources 树合规检查**（必需图标 / 真实像素尺寸 / 标签 / 字体 / 音频） |
 | `oc-fetch-iconset.sh` | 从官方 OcBinaryData 取图标集 / 字体 / 标签 / 音频 |
 
-## 参考文档（22 份）
+## 参考文档（24 份）
 
 按主题挑：`bios-settings.md`（BIOS）· `lifecycle.md`（全流程）· `os-upgrade-15-to-26.md`（升系统）·
 `nvidia-driver.md` · `intel-wifi.md` · `mediatek-wifi.md` · `broadcom-wifi.md`（四类网卡/显卡）·
 `applealc-custom.md`（声卡）· `hidpi.md`（显示）· `intel-turbo.md`（CPU）· `memory-injection.md`（内存）· `boot-timeline.md` / `logs-and-debug.md`（日志）·
 `acpi-ssdt.md` · `disks-and-kexts.md` · `official-docs-method.md` · `rapidefi-first-efi.md` ·
-`smbios-and-serials.md`（换机型 + 三码）· `network-en0-order.md`（`en0` 归属）· `pitfalls.md`（踩过的坑）· `theme-opencanopy.md`（选择器主题）· `machine-facts.md`（参考机器事实）
+`smbios-and-serials.md`（换机型 + 三码）· `network-en0-order.md`（`en0` 归属）· `ethernet-drivers.md`（有线网卡）· `laobamac-toolkit.md`（工具索引）· `pitfalls.md`（踩过的坑）· `theme-opencanopy.md`（选择器主题）· `machine-facts.md`（参考机器事实）
 
 ## 注意
 

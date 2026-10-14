@@ -1,5 +1,9 @@
 # 系统升级：macOS 15 (Sequoia) → 26 (Tahoe) 的配置修改
 
+> ★ **OCLP 的另一选择**：`laobamac/OCLP-Mod`（OCLP 的 mod 版：中文界面、Sequoia 的 Intel 无线、
+> KDK/MetalLib 加速下载）。⚠️ **该项目 2026-06-13 已存档**，已存在的版本仍可用，但**API 节点会逐步关闭**
+> ⇒ ★ **在 OCLP-Mod 设置里关掉 `SimpleHacAPI`**。索引见 `laobamac-toolkit.md`。
+
 > 本文是**大版本升级**的专用流程（不是装机流程；装机见 `lifecycle.md`）。
 > 核心命题：**同一份 OpenCore 配置要同时服务两个 Darwin 大版本 ⇒ 必须用 `MinKernel` / `MaxKernel` 把按版本分构建的 kext 分流**。
 > 本机实测基线：macOS **26.7.1 (25G241)** / Darwin **25.6.0**，机型 `MacPro7,1`，网卡 BCM943602CDP。

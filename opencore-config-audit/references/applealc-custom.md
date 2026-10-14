@@ -33,6 +33,7 @@
 | **OCLP root patch** | 打补丁把 `AppleHDA` 塞回系统卷 | **每次系统更新都要重打**；要放宽 SIP |
 | **KDK + MyKextInstaller** | 用 KDK 装 kext 并重建内核集合 | 依赖 KDK，步骤多 |
 | **★★ SimpleHDA（新）** | **OpenCore 注入原版 `AppleHDA`**（Lilu 插件） | **不打补丁、不关 SIP、不动系统卷、不重建内核集合、不用 KDK**；**音质无损耗** |
+| `SimpleVoodooHDA` | **一键部署 VoodooHDA**（Monterey–Tahoe） | 需关 SIP（`03080000`/`850A0000`）；★ **强烈建议禁用/移除 `AppleALC.kext`**；**音质有损**（兼容面广） |
 
 ### 它是什么
 
@@ -90,6 +91,9 @@
 - ✅ **不再依赖 KDK**（有人问「原来用 KDK + MyKextInstaller 的方式，是可以不依赖 KDK 了吗？」⇒ 作者确认「你说的没错」）
 - ⚠️ **已知问题：装了之后「图书」（Books）应用无法登录**
 - ⚠️ 有反馈「点击 Wi-Fi 和控制栏时，右上角状态栏会重复启动」
+
+> ★ **替代路线**：`laobamac/SimpleVoodooHDA` —— 一键部署 VoodooHDA（**音质有损**，但兼容面广、步骤少）。
+> 与 `SimpleHDA` 二选一，**不要同时装**。工具索引见 `laobamac-toolkit.md`。
 
 ### ★ 边界（作者声明，务必看清）
 

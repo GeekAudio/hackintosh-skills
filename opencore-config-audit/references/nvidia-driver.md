@@ -1,5 +1,8 @@
 # NVIDIA 驱动安装方法（NullMoth nvidia-macos-driver）
 
+> ★ **相关补丁仓库**：`laobamac/non-metal-frameworks` —— **非 Metal 框架补丁**（基于 Moraea 已删除的仓库）
+> ⇒ 老显卡在 Metal 化系统上的补丁。索引见 `laobamac-toolkit.md`。
+
 > 依据：官方仓库 `nullmoth/nvidia-macos-driver` 的 `README.md` / `docs/HOW-IT-WORKS.md` /
 > `docs/TROUBLESHOOTING.md` / `docs/CARD-SUPPORT.md` / `gpu-port/README.md`（逐条摘录），
 > 外加本机（ASUS Z690 + RTX 3080 + macOS 26.7.1）的实测补充，实测部分已标注。
