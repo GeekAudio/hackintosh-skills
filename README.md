@@ -4,7 +4,7 @@
 
 把「改黑苹果配置」从**凭经验试**，变成**有文档依据、可回滚、可复验**的流程。
 
-每个子目录就是一个可直接使用的 skill：把整个目录复制到你的 skills 目录即可。
+目录 `opencore-config-audit/` 就是 skill 本体：把它整个复制到你的 skills 目录即可（或按下面用插件市场安装）。
 
 > **不知道怎么用？**
 > ① 在对话里直接问 **「opencore-config-audit 怎么用」** —— 技能会输出它自己的使用说明；
@@ -17,7 +17,7 @@
 - [安装](#安装)
 - [目录结构](#目录结构)
 - [发布到 WorkBuddy](#发布到-workbuddy)
-- [1. `opencore-config-audit` — 配置审查与维护](#1-opencore-config-audit--opencore-配置审查与维护)
+- [`opencore-config-audit` — 配置审查与维护](#opencore-config-audit--opencore-配置审查与维护)
 - [适用性与边界](#适用性与边界)
 
 ---
@@ -150,7 +150,7 @@ hackintosh-skills/
   白名单**只用来判断「需不需要绕过」**，不是「要不要换机型」的依据：
   Tahoe 的 Intel 只剩 `iMac20,1` `iMac20,2` `MacPro7,1` `MacBookPro16,x`（`iMacPro1,1` 被剔除）；
   **不在名单里 ⇒ 加 boot-arg 绕过**：`-no_compat_check`（能启动）+ `revpatch=sbvmm`（能收到更新），**两个都要**
-- **换机型是独立的一件事，不要塞进升级那一次** —— 它连带内置 USB 图冲突、board-id 触发系统卷重建、XCPM profile 变化（见 §⑤ 与 `smbios-and-serials.md`）
+- **换机型是独立的一件事，不要塞进升级那一次** —— 它连带 **board-id 变化触发 ACPI 重新解析**（本机真因是**主板 OEM SSDT**，见 §⑤）、系统卷重建、XCPM profile 变化（`smbios-and-serials.md` §2）
 - **macOS 26 新增环境坑**：EFI 挂载必须提权、FAT 改 FSKit、EFI 上删文件会留 `.Trashes`
 
 **⑤ 驱动与硬件特性**
@@ -165,7 +165,7 @@ hackintosh-skills/
 | **板载声卡**（AppleALC） | ★★★ **macOS 26 前置：先用 `SimpleHDA` 恢复原版 `AppleHDA`**（OpenCore 注入，**不打补丁 / 不关 SIP / 不用 KDK**，音质无损耗）；然后先搜同型号前人 layout-id（推荐路线）→ 搜不到再按 codec 定制 → 本地构建 → 提 PR；自定义 layout 只能用 11–99 |
 | **HiDPI**（one-key-hidpi） | 非 Retina 屏清晰度；★ NVIDIA 驱动未完善，含风险与恢复路径；★ 别和引导期 `UIScale` 混 |
 | **Intel 睿频** | CPU 被压低频 → **CPU-S 验证** → CPUFriend 修法；★ BIOS `Speed Shift` 必须 Enabled |
-| **MacPro 机型内存定制** | ★ **分两层**：「系统信息」= 全机型通用（SMBIOS Type 17）；「关于本机」内存图 = MacPro 专有（**摆位规则 + 12 槽映射表**） |
+| **内存定制** | ★★ **槽位数随机型变**（`MacPro7,1`=**12 槽** / `iMac20,1`=**4 槽**）⇒ 换机型要同步重做；★ **分两层**：「系统信息」= 全机型通用（SMBIOS Type 17）；「关于本机」内存图 = **MacPro 专有**（**摆位规则 + 12 槽映射表**） |
 | **SMBIOS 机型切换 + 三码** | ★★★ **换机型必须连三码一起换** —— 「关于本机」的机型名是**序列号产品码**的函数，不换码就永远显示旧机型（`macserial -i` 可先解码核对）；**连带项一次做全**：三码 · ACPI/SSDT 前置 · `CPUFriend` · **内存注入槽位数**（MacPro7,1=12 / iMac20,1=4）· `ROM` · **电脑名/主机名/SMB 名**；★★★ **顺序：先完善 SSDT/ACPI（旧机型下验证）→ 再换 SMBIOS → 再重做 CPUFriend**；★ 真正让本机进不去系统的是**主板 OEM SSDT**（ASUS Z690 的 `xh_adls3` ⇒ `HS06 AE_NOT_FOUND`），修法 = `ACPI>Delete` 删原表 + 加 `SSDT-XHADLS3.aml`；已排除 USB 图/OCLP/机型本身/15 口/NVRAM；序列号三类判据、ROM 用真实 en0 MAC、换码风控纪律。★ **与系统升级解耦**（升级时不动机型） |
 | **首次生成 EFI**（RapidEFI） | Windows 上生成基础 EFI，及之后必须做的收尾 |
 | **选择器主题**（OpenCanopy） | 图标集、`PickerAttributes` 位表、Flavour 规则、标签/字体/音频/背景、HiDPI；★ **必需图标缺一个就不启动**、**官方图标集不提供哪些可选图标**（解释日志里的 `Not Found` 为什么正常） |
@@ -204,7 +204,7 @@ hackintosh-skills/
 | `official-docs-method.md` | 官方文档取用方法、逐键判定法、**成对关系表** |
 | `logs-and-debug.md` | `Target` / `DisplayLevel` 位定义、日志判据、刷屏归因 |
 | `boot-timeline.md` | **启动耗时 / 时间线分析**：三段拆解、流式过滤、停顿窗口定位 |
-| `boot-entries.md` | **固件启动项（`Boot####` / `BootOrder`）与 `LauncherOption`**：★ **「用 U 盘引导后启动项消失」的根因与修法**、四档取值、取证命令、`Disabled` 的代价、**ASUS 的 `Boot0000` 坑** |
+| `boot-entries.md` | **固件启动项（`Boot####` / `BootOrder`）与 `LauncherOption`**：★ **「用 U 盘引导后启动项消失」的根因与修法**、四档取值、取证命令、`Disabled` 的代价、**ASUS 的 `Boot0000` 坑**；★ **§7 在 macOS 里加/改启动项（六条路线）**、**§8 从 U 盘启动改成硬盘启动（含三步验收）** |
 | `acpi-ssdt.md` | 官方 AcpiSamples 逐条适用条件、设备存在性检查、命名规范 |
 | `bios-settings.md` | **BIOS/UEFI 审查**：官方 9 条 + Dortania + 社区补充（**VMD**/Speed Shift）、**必须关/必须开/看情况**三类、CFG Lock 专题、**厂商命名对照表** |
 | `disks-and-kexts.md` | 磁盘屏蔽与 kext 精简的判据与「不能删」清单 |
@@ -220,8 +220,8 @@ hackintosh-skills/
 | `applealc-custom.md` | 板载声卡：★★★ **macOS 26 的 `AppleHDA` 恢复（`SimpleHDA`，无需补丁）**、先搜前人经验、按 codec 定制、本地构建、提 PR |
 | `hidpi.md` | 非 Retina 屏开 HiDPI：写入位置、两个模式、恢复路径、与 NVIDIA 驱动的风险 |
 | `intel-turbo.md` | Intel 睿频 / 限频：CPU-S 验证、根因定位、CPUFriend 修法、BIOS 硬前提 |
-| `memory-injection.md` | MacPro 内存定制：**12 槽映射表**、**摆位规则 f**、A 层通用字段 |
-| `smbios-and-serials.md` | **换机型 + 三码**：★★★ 主板 OEM SSDT（`xh_adls3`）与 ACPI 根因、**顺序铁律（先完善 SSDT）**、检查清单、决策依据、序列号判据、ROM、切换脚本三态、操作教训 |
+| `memory-injection.md` | 内存定制：★★ **槽位数随机型**（`MacPro7,1`=12 / `iMac20,1`=4）、**MacPro 12 槽映射表**、**摆位规则 f**、A 层通用字段 |
+| `smbios-and-serials.md` | **换机型 + 三码**：★★★ **换机型必须连三码一起换**（机型名 = 序列号产品码的函数）、**连带项清单 7 项**（三码 · SSDT 前置 · CPUFriend · 内存槽位数 · ROM · **电脑名/主机名/SMB 名** · 显示名缓存）、★★★ 主板 OEM SSDT（`xh_adls3`）与 ACPI 根因、**顺序铁律（先完善 SSDT）**、检查清单、序列号判据、ROM、切换脚本三态、操作教训 |
 | `theme-opencanopy.md` | **选择器主题（OpenCanopy）**：开关总表、资源目录、**图标清单（必需/可选/官方不提供）**、Flavour 规则、标签/字体/音频/背景、排错 |
 | `pitfalls.md` | 全部踩过的坑 |
 | `machine-facts.md` | 参考机器（Z690 / Alder Lake / macOS 26）的具体事实 |

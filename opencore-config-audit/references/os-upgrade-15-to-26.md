@@ -241,13 +241,13 @@ Count / Skip / Limit = 0
 
 | 连带影响 | 后果 |
 |---|---|
-| macOS 会按「机型 + 控制器名」附加**内置 USB 图** | 与 `UTBMap` 在 `AppleUSBHostMergeProperties` **合并冲突** ⇒ 本机实测**卡在 `AppleUSBHost*` 开不了机** |
+| **board-id 变 ⇒ ACPI 表重新解析** | ★ 本机真因：BIOS 里那张 **`OEM Table ID = xh_adls3`** 的 SSDT 解析不过（**`HS06 AE_NOT_FOUND`**）⇒ 循环重启。**不是 USB 图**（见 `smbios-and-serials.md` §2） |
 | **board-id 变了** | 触发**系统卷重建 / 校验** ⇒ 若 OCLP 已破封印，**可能卡住**（本机 10-12 就踩过） |
 | XCPM profile 跟着换 | CPU 频率行为变化（`MacPro7,1` 强制 `hwp=on` ⇒ 必须重做 CPUFriend 数据） |
 | AGDC 路径、ByHost 偏好 | 显示/服务行为漂移，排查面变大 |
 
 ⇒ **升级本身已经是高风险操作，不要在同一轮里叠加第二个耦合改动。**
-机型该不该换是**独立的决策**（换机型请用另一个技能 **`opencore-smbios-switch`**），跟升级解耦。
+机型该不该换是**独立的决策**（换机型见 **`smbios-and-serials.md`**），跟升级解耦。
 
 ### 5.3 绕过用什么参数（两个都要，别只加一个）
 
@@ -280,7 +280,7 @@ iMac20,1   iMac20,2   MacPro7,1   MacBookPro16,1   MacBookPro16,2   MacBookPro16
 
 | 不要做 | 为什么 |
 |---|---|
-| 改任何一处 `SystemProductName` | 违反约束；且会连带 USB 图/board-id 问题（§5.2） |
+| 改任何一处 `SystemProductName` | 违反约束；且 board-id 变会触发 **ACPI 重新解析**（本机 `xh_adls3` 会炸）+ 系统卷重建（§5.2） |
 | 改 `BoardProduct`（board-id） | 触发系统卷重建，与 OCLP 冲突 |
 | **跑 `nullmoth-setup.sh --update prepare --pkg <包>`** | ★ **最隐蔽的陷阱**：它会**自动**把机型改成 `MacPro7,1`、board-id 改成 `Mac-27AD2F918AE68F61`、补 `RestrictEvents.kext`。**这条路径与约束正面冲突，必须避开。**<br>（正常点按钮 / 正常更新驱动**不会**触发它 —— 该按钮在 1.0.15 起已从 App UI 移除，只剩脚本能力；本机实测 `PlatformInfo` 仍是原机型） |
 | 用 OCLP 的 "Build and Install OpenCore" | 会重写整个 EFI，冲掉调好的 boot-args / SMBIOS / DeviceProperties |
@@ -296,11 +296,11 @@ iMac20,1   iMac20,2   MacPro7,1   MacBookPro16,1   MacBookPro16,2   MacBookPro16
 | | 保留原机型 + 参数绕过（**约束默认**） | 换机型 |
 |---|---|---|
 | 能开机 / 能更新 | ✅（靠 `-no_compat_check` + `revpatch=sbvmm`） | ✅ |
-| 升级风险 | **低**（只动 boot-args） | 高（USB 图 + board-id + CPUFriend 一起动） |
+| 升级风险 | **低**（只动 boot-args） | 高（ACPI/SSDT + board-id + CPUFriend + 三码 一起动） |
 | 机型专属界面 | ❌ 拿不到 | ✅ |
 | 与升级是否解耦 | ✅ **解耦** | ❌ 耦合 |
 
-⇒ **默认走左边。** 真想要机型专属功能时，**单独一次**做机型切换（走 **`opencore-smbios-switch`** 技能的完整流程），
+⇒ **默认走左边。** 真想要机型专属功能时，**单独一次**做机型切换（走 **`smbios-and-serials.md`** 的完整流程），
 **不要**把它塞进升级那一次。
 
 ---
@@ -389,7 +389,7 @@ ls -lt /Volumes/EFI/opencore-*.txt | head
 | 打补丁时 NVIDIA kext 不见了 | 没跑 §3 的前置保护脚本。去 `/Library/Relocated Extensions` 找回来 |
 | **机型不被支持、开不了机** | 加 `-no_compat_check`（**别去换机型**，§5.3） |
 | **能开机但收不到系统更新** | 漏了 **`revpatch=sbvmm`**（§5.3）—— `-no_compat_check` 不解决这个问题 |
-| 开不了机（**如果**你换了机型） | 机型↔USB 图冲突（见 **`opencore-smbios-switch`**）；用 U 盘 EFI 启动并回退。**这也是「升级时不许改机型」这条约束的原因** |
+| 开不了机（**如果**你换了机型） | **主板 OEM SSDT 解析不过**（本机 `xh_adls3` ⇒ `HS06 AE_NOT_FOUND`，见 `smbios-and-serials.md` §2）；用 U 盘 EFI 启动并回退。**这也是「升级时不许改机型」这条约束的原因** |
 | 发现机型被改了 | 大概率跑过 `nullmoth-setup.sh --update prepare --pkg`（§5.5）。用升级前的 EFI 备份还原 `PlatformInfo` |
 | EFI 挂不上 | 见 §7：要提权；或先 `diskutil repairVolume` |
 | 升级后开机很慢 | 见 `boot-timeline.md`（`nvrmsettle` / `-wegnoigpu` 两类已知固定延迟） |
@@ -399,7 +399,7 @@ ls -lt /Volumes/EFI/opencore-*.txt | head
 ## 11. 与其它 reference 的关系
 
 - **网卡细节** → `broadcom-wifi.md`（博通，按系统分路线）、`intel-wifi.md`（Intel，Sequoia/Tahoe 两套 ABI）、`mediatek-wifi.md`（MediaTek）
-- **机型与三码**（**独立决策，不跟升级混在一起做**）→ 另一个技能 **`opencore-smbios-switch`**（机型↔USB 图冲突、CPUFriend 重做、三码）
+- **机型与三码**（**独立决策，不跟升级混在一起做**）→ **`smbios-and-serials.md`**（主板 OEM SSDT、顺序铁律、**换机型必须换码**、CPUFriend 重做、连带项清单）
 - **安全改 ESP 的流程** → `SKILL.md` 铁律 1–16 + `scripts/oc-edit-safe.sh`
 - **日志判读** → `logs-and-debug.md`；**耗时分析** → `boot-timeline.md`
 - **装机六阶段** → `lifecycle.md`（本文是它的「大版本升级」补充）
