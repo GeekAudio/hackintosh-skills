@@ -136,9 +136,6 @@ system_profiler SPDisplaysDataType | head -20     # 应显示你的 GeForce、Me
 且 `Lilu.kext` / `AMFIPass.kext` 必须启用。
 这是**有意降低系统安全性**换图形加速，只在明确需要时做；不装驱动时把这几项恢复原值。
 
-> ★★ **关 AMFI 有一个隐性代价：TCC 权限弹窗全部失效** ——
+> ★★ **关 AMFI 有一个隐性代价**：**TCC 权限弹窗会全部失效** ——
 > 语音 / 摄像头类 App 会「报没权限 + 不弹窗 + 隐私列表里也没有它」。
-> **别的驱动可改用 `AMFIPass.kext`（保留 AMFI）解决**；但**本驱动把 AMFI 参数与 `AMFIPass.kext` 一并列为必需**
-> （★ 两者**并存**，**不是替代关系**）⇒ 本机只能「保驱动 + 手工注入 TCC 条目」（**不持久**）。
-> ★ **别搞混**：被 `NDSecurityState.m` 归入「不安全覆盖」的是 **`-amfipass*` boot-arg**，**不是** `AMFIPass.kext`。
-> 详见 **`amfi-and-tcc.md`**（含字段格式、`csreq` 生成、排查判据、撤销）。
+> 这不是驱动 bug，而是「AMFI 关闭」本身的性质；**用之前先想清楚这台机器要不要用麦克风/摄像头**。
