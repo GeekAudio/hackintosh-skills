@@ -25,7 +25,7 @@
 
 | Skill | 一句话 | 规模 |
 |---|---|---|
-| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置 —— 覆盖从装机到日常化、再到系统大版本升级的全生命周期，并含**启动选择器（OpenCanopy）主题**与**换机型 / 三码** | 21 条铁律 · 30 份参考 · 18 个脚本 |
+| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置 —— 覆盖从装机到日常化、再到系统大版本升级的全生命周期，并含**启动选择器（OpenCanopy）主题**与**换机型 / 三码** | 21 条铁律 · 31 份参考 · 18 个脚本 |
 
 技能目录里有一份 `USAGE.md`（**随安装一起复制**），在对话里问「使用说明」即可拿到。
 
@@ -73,7 +73,7 @@ hackintosh-skills/
 │   │   └── plugin.json          # ← 插件元数据
 │   ├── SKILL.md                 # 主流程 + 21 条铁律 + 资源表
 │   ├── USAGE.md                 # ← 使用说明（随安装一起复制）
-│   ├── references/              # 30 份专题文档（见下表）
+│   ├── references/              # 31 份专题文档（见下表）
 │   └── scripts/                 # 18 个脚本（见下表）
 ```
 
@@ -125,6 +125,9 @@ hackintosh-skills/
 - **磁盘屏蔽**：`/etc/fstab` + `noauto`（按卷 UUID），**显式排除 EFI 分区**并做挂载验证
 
 **③ 日志与耗时取证**
+
+- ★★ **装不上 / 进不去系统 ⇒ 先走「分层 debug 流程」**：**别一上来就改配置**（改了就没法复盘）；把启动拆成 **① 固件/OpenCore 自身 ② OC 引导期 ③ 内核早期（< 1–2 s）④ 内核中后期/用户态** 四段，先判挂在哪段；★★ **先分清「卡死」还是「循环重启」** —— **循环重启 = 引导看门狗超时，「多等」无效**；含**本机已定性的失败族**（`no kext summary` = 极早期缓存层故障**与 GPU 无关** · `X86PlatformShim` ⇒ 查 BIOS `Speed Shift` · `decmpfs` 解压断言 · `element modified after free` ⇒ `NVMeFix`）· **救援顺序 6 步**（回到上一份能用的配置 → U 盘 EFI → Recovery 挂内置 EFI → 二分「一次只改一项」）· 取证清单
+
 
 - **引导期取证**：读 OpenCore 自己的 `opencore-*.txt`（`Target` 位定义、`OCABC:` 判据、ACPI 表清单、
   启动项注册、APFS 驱动门槛）与 macOS 内核日志（ACPI 报错、平台设备挂载）
@@ -211,6 +214,7 @@ hackintosh-skills/
 | `official-docs-method.md` | 官方文档取用方法、逐键判定法、**成对关系表** |
 | `logs-and-debug.md` | `Target` / `DisplayLevel` 位定义、日志判据、刷屏归因 |
 | `boot-timeline.md` | **启动耗时 / 时间线分析**：三段拆解、流式过滤、停顿窗口定位 |
+| `boot-failure-debug.md` | **装不上 / 进不去系统的分层 debug 流程**：★ **四段分层** · ★★ **卡死 vs 循环重启** · 各段速查表（含 `no kext summary` / `X86PlatformShim` / `decmpfs` / `element modified after free` 等本机已定性失败族）· 装机期专属（VMD 找不到盘）· **救援顺序 6 步** · ACPI（`xh_adls3`）· 取证清单 |
 | `boot-entries.md` | **固件启动项（`Boot####` / `BootOrder`）与 `LauncherOption`**：★ **「用 U 盘引导后启动项消失」的根因**、四档取值、取证命令、**ASUS 的 `Boot0000` 坑**；★★ **§7 官方修法**（`bcfg` / `OpenControl` 解锁 NVRAM / `LauncherOption=Full` 自愈 / 从系统里写 / `BootKicker`）、**§8 从 U 盘启动改成硬盘启动（含三步验收）** |
 | `acpi-ssdt.md` | 官方 AcpiSamples 逐条适用条件、设备存在性检查、命名规范 |
 | `bios-settings.md` | **BIOS/UEFI 审查**：官方 9 条 + Dortania + 社区补充（**VMD**/Speed Shift）、**必须关/必须开/看情况**三类、CFG Lock 专题、**厂商命名对照表** |

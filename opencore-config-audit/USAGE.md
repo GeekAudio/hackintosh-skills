@@ -15,6 +15,7 @@
 | **查 BIOS** | 「帮我审一下 BIOS 设置」「装系统找不到硬盘」「CFG Lock 要不要关」 |
 | 审配置 | 「审一下我的 OpenCore 配置」「校验一下 config.plist」 |
 | 补 SSDT | 「看日志还有没有要补的 SSDT」 |
+| **装不上 / 进不去系统** | 「装系统找不到硬盘」「卡在苹果 logo 进不去」「开机循环重启」「黑屏只剩鼠标」「装完第一次开机进不去」 |
 | 查开机慢 | 「开机很慢，分析一下时间线」「卡在苹果 logo」 |
 | **启动项没了** | 「BIOS 里看不到 OpenCore 了」「只剩 Windows」「用 U 盘引导后启动项消失」「bcfg 怎么加启动项」 |
 | **换引导盘** | 「从 U 盘启动改成硬盘启动」「怎么在 macOS 里加启动项」「启动项排第一」 |
@@ -62,11 +63,11 @@
 | `oc-theme-check.sh` | **Resources 树合规检查**（必需图标 / 真实像素尺寸 / 标签 / 字体 / 音频） |
 | `oc-fetch-iconset.sh` | 从官方 OcBinaryData 取图标集 / 字体 / 标签 / 音频 |
 
-## 参考文档（30 份）
+## 参考文档（31 份）
 
 按主题挑：`bios-settings.md`（BIOS）· `lifecycle.md`（全流程）· `os-upgrade-15-to-26.md`（升系统）·
 `nvidia-driver.md` · `amfi-and-tcc.md`（**App 拿不到权限 → tcc-helper**）· `intel-wifi.md` · `mediatek-wifi.md` · `broadcom-wifi.md`（四类网卡/显卡）·
-`applealc-custom.md`（**声卡 / macOS 26 恢复 AppleHDA**）· `hidpi.md`（显示）· `intel-turbo.md`（睿频）· `e-cores.md`（**开/关小核**）· `cpu-name.md`（**CPU 显示名**）· `memory-injection.md`（内存）· `boot-timeline.md` / `logs-and-debug.md`（日志）· `boot-entries.md`（启动项）·
+`applealc-custom.md`（**声卡 / macOS 26 恢复 AppleHDA**）· `hidpi.md`（显示）· `intel-turbo.md`（睿频）· `e-cores.md`（**开/关小核**）· `cpu-name.md`（**CPU 显示名**）· `memory-injection.md`（内存）· `boot-failure-debug.md`（**装不上/进不去系统**）· `boot-timeline.md` / `logs-and-debug.md`（日志）· `boot-entries.md`（启动项）·
 `acpi-ssdt.md` · `disks-and-kexts.md` · `kext-and-oc-update.md`（**更新 kext / OC**）· `official-docs-method.md` · `rapidefi-first-efi.md` ·
 `smbios-and-serials.md`（换机型 + 三码）· `network-en0-order.md`（`en0` 归属）· `ethernet-drivers.md`（有线网卡）· `ecosystem-sources.md`（**权威来源与工具索引**）· `laobamac-toolkit.md`（工具索引）· `pitfalls.md`（踩过的坑）· `theme-opencanopy.md`（选择器主题）· `machine-facts.md`（参考机器事实）
 
