@@ -28,7 +28,7 @@
 
 | 仓库 | 管什么 | 详见 |
 |---|---|---|
-| **`SimpleHDA`** | **macOS 26 恢复原版 `AppleHDA`**（不打补丁 / 不关 SIP / 不用 KDK） | `applealc-custom.md` §0.5 |
+| **`SimpleHDA`** | **macOS 26 恢复原版 `AppleHDA`**（OpenCore 注入，不打补丁 / 不关 SIP / 不用 KDK）；★ **现已降为备选**（作者不允许二次开发 + 只有 alpha + 有已知问题）⇒ 首选见 `applealc-custom.md` §0.5 | `applealc-custom.md` §0.5.6 |
 | `SimpleMtkWlan` / `SimpleMtkBtFw` / `SimpleMTKClient` | MediaTek Wi-Fi / 蓝牙 | `mediatek-wifi.md` |
 | `itlwm`（fork） | Intel Wi-Fi | `intel-wifi.md` |
 | **`SimpleVGBE`** | Intel **I225 / I226** 2.5G | `ethernet-drivers.md` |
@@ -129,7 +129,7 @@
 | **从零生成 EFI** | `SimpleKaruzi`（已存档）或 `rapidefi-first-efi.md` 的 RapidEFI |
 | **修 ACPI / 写 SSDT** | ★ `OC-little-zh` + `acpi-ssdt.md` |
 | **装 kext 到系统目录 / 合并 KDK / 重建缓存** | ★ `SimpleLoader`（有快照保护） |
-| **声卡** | `SimpleHDA`（无损、不打补丁）→ 走不通再 `SimpleVoodooHDA` |
+| **声卡** | 先 USB 声卡 / `MyKextInstaller`+KDK（`applealc-custom.md` §0.5）· 兜底 `SimpleVoodooHDA`（音质有损）；`SimpleHDA` 已降为备选 |
 | **有线网卡** | `ethernet-drivers.md` |
 | **老显卡** | `non-metal-frameworks` + `misc-patches` |
 | **macOS 26 想要回启动台** | `SimpleLaunchPadRestore` / `SimpleLaunchpad` |
