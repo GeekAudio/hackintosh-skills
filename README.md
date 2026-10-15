@@ -163,7 +163,7 @@ hackintosh-skills/
 | **博通网卡**（BCM943602CDP / BCM43602） | ★ **按系统分路线**：Sequoia 用 `IO80211FamilyLegacy`，Tahoe 用独立 `AirPortBrcmNIC-Tahoe.kext`；OCLP root patch 前置保护；★ 判死活看 `ifconfig en1` |
 | **板载声卡**（AppleALC） | ★★★ **macOS 26 前置：先用 `SimpleHDA` 恢复原版 `AppleHDA`**（OpenCore 注入，**不打补丁 / 不关 SIP / 不用 KDK**，音质无损耗）；然后先搜同型号前人 layout-id（推荐路线）→ 搜不到再按 codec 定制 → 本地构建 → 提 PR；自定义 layout 只能用 11–99 |
 | **HiDPI**（one-key-hidpi） | 非 Retina 屏清晰度；★ NVIDIA 驱动未完善，含风险与恢复路径；★ 别和引导期 `UIScale` 混 |
-| **Intel 睿频** | CPU 被压低频 → **CPU-S 验证** → CPUFriend 修法；★ BIOS `Speed Shift` 必须 Enabled |
+| **Intel 睿频** | ★★★ **最佳方法定案：注入「本机自己的 profile，只把 `hwp` 删掉」** —— 四点判据（**1 段** / 上限尽可能高 / **`hwp` 已删** / `CPUFloor` 匹配）；★ `hwp` **不在 plist 里**（在 7668 B 向量二进制偏移 ~7128 的变量名表内）⇒ 判「有没有作用」要**逐字节比**；★★ **反面结论：注入别的机型 profile 会压垮睿频**（实测 `iMac19,1` ⇒ 1.97 GHz、`MacPro7,1` ⇒ 2.3 GHz）；含 **76 份 profile 五族选型表**（分水岭 = 段数，**上限 5000 的全是 3–5 段** ⇒ 与结构兼容不可兼得）；★ CPU-S 验证 · **改完必须重启** · BIOS `Speed Shift` 必须 Enabled |
 | **开小核 / 关小核**（E 核） | Intel 12 代+ 混合架构的两种取舍：**关 = 稳**（BIOS `Active Efficient Cores = 0`，**配置一行不用改**）· **开 = 快**（`= All` + `ProvideCurrentCpuInfo=true` + `CpuTopologyRebuild.kext`）；★ 判据 `hw.nperflevels`（**1 = E 核没暴露 / 2 = P+E 都识别**）；★★ 「只看到 8 核 16 线程」**不是缺核**；★ `ctrsmt=off` / `ctrsmt=full` 的 **v2 语法与 v1 的 `-ctrsmt` 不通用**；★ 官方已知**开小核 + `-v` 可能随机启动失败** |
 | **内存定制** | ★★ **槽位数随机型变**（`MacPro7,1`=**12 槽** / `iMac20,1`=**4 槽**）⇒ 换机型要同步重做；★ **分两层**：「系统信息」= 全机型通用（SMBIOS Type 17）；「关于本机」内存图 = **MacPro 专有**（**摆位规则 + 12 槽映射表**） |
 | **SMBIOS 机型切换 + 三码** | ★★★ **换机型必须连三码一起换** —— 「关于本机」的机型名是**序列号产品码**的函数，不换码就永远显示旧机型（`macserial -i` 可先解码核对）；**连带项一次做全**：三码 · ACPI/SSDT 前置 · `CPUFriend` · **内存注入槽位数**（MacPro7,1=12 / iMac20,1=4）· `ROM` · **电脑名/主机名/SMB 名**；★★★ **顺序：先完善 SSDT/ACPI（旧机型下验证）→ 再换 SMBIOS → 再重做 CPUFriend**；★ 真正让本机进不去系统的是**主板 OEM SSDT**（ASUS Z690 的 `xh_adls3` ⇒ `HS06 AE_NOT_FOUND`），修法 = `ACPI>Delete` 删原表 + 加 `SSDT-XHADLS3.aml`；已排除 USB 图/OCLP/机型本身/15 口/NVRAM；序列号三类判据、ROM 用真实 en0 MAC、换码风控纪律。★ **与系统升级解耦**（升级时不动机型） |
@@ -222,7 +222,7 @@ hackintosh-skills/
 | `laobamac-toolkit.md` | **laobamac 工具与补丁索引（48 仓库全表）**：驱动 · 装机 · ★ **硬件避坑（`SimpleBuyersGuide`）** · 维护工具（`SimpleLoader`）· macOS 26 启动台 · 参考补丁（`OC-little-zh`）· AMD · fork 说明 · ★ **哪些已存档** |
 | `applealc-custom.md` | 板载声卡：★★★ **macOS 26 的 `AppleHDA` 恢复（`SimpleHDA`，无需补丁）**、先搜前人经验、按 codec 定制、本地构建、提 PR |
 | `hidpi.md` | 非 Retina 屏开 HiDPI：写入位置、两个模式、恢复路径、与 NVIDIA 驱动的风险 |
-| `intel-turbo.md` | Intel 睿频 / 限频：CPU-S 验证、根因定位、CPUFriend 修法、BIOS 硬前提 |
+| `intel-turbo.md` | Intel 睿频 / 限频：★★★ **最佳方法定案（注入「删掉 `hwp` 的本机 profile」四点判据）** · **`hwp` 的真实位置与删法** · **76 份 profile 五族选型表** · CPU-S 验证 · **改完必须重启** · CPUFriend 修法 · BIOS 硬前提 |
 | `e-cores.md` | **开小核 / 关小核（Intel 混合架构 P/E 核）**：★ 两种取舍 · BIOS `Active Efficient Cores`（四家厂商命名）· `ProvideCurrentCpuInfo` · **`CpuTopologyRebuild` 四取值**（`ctrsmt=off` / `ctrsmt=full` / `-ctrfixcnt`）· 判据 `hw.nperflevels` · **官方已知 `-v` 冲突** · 回滚 |
 | `memory-injection.md` | 内存定制：★★ **槽位数随机型**（`MacPro7,1`=12 / `iMac20,1`=4）、**MacPro 12 槽映射表**、**摆位规则 f**、A 层通用字段 |
 | `smbios-and-serials.md` | **换机型 + 三码**：★★★ **换机型必须连三码一起换**（机型名 = 序列号产品码的函数）、**连带项清单 7 项**（三码 · SSDT 前置 · CPUFriend · 内存槽位数 · ROM · **电脑名/主机名/SMB 名** · 显示名缓存）、★★★ 主板 OEM SSDT（`xh_adls3`）与 ACPI 根因、**顺序铁律（先完善 SSDT）**、检查清单、序列号判据、ROM、切换脚本三态、操作教训 |

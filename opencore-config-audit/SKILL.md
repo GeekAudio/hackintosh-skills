@@ -2,7 +2,7 @@
 name: opencore-config-audit
 description: 审查、修改与维护黑苹果的 OpenCore（OpenCorePkg）EFI 配置与驱动安装：**BIOS/UEFI 设置审查（官方 9 条清单 + Dortania Intel/AMD + 社区补充的 VMD / Speed Shift；区分「必须关 / 必须开 / 看情况」；含 Windows 只读审查脚本）**、逐键对照官方文档并用官方 ocvalidate 校验 config.plist、巡检 ACPI/SSDT（对照官方 AcpiSamples）、精简注入的 kext、读取 OpenCore 引导日志与内核日志取证、**启动耗时/时间线分析（OC 段 / 内核驱动段 / 用户态段三段拆解，定位卡顿与停顿窗口）**、**系统大版本升级（macOS 15 Sequoia → 26 Tahoe：按 Darwin 版本用 MinKernel/MaxKernel 给网卡等 kext 做版本分流、OCLP root patch、机型白名单、升级时序）**、用 /etc/fstab 屏蔽磁盘、调整 boot-args 与调试开关；并含从零生成基础 EFI（Windows 上用 RapidEFI）、NVIDIA 驱动（NullMoth nvidia-macos-driver）、**AMFI 关闭导致 App 拿不到权限（麦克风 / 摄像头 TCC：不弹窗、隐私列表无条目）的手工注入修法**、Intel 无线网卡驱动（AirportItlwm / itlwm）、**MediaTek 无线网卡（MT7921 / MT7922 / RZ608 —— 蓝牙可用、Wi-Fi 实验性）**、博通网卡（BCM943602CDP / BCM43602，按 Sequoia/Tahoe 分路线）、板载声卡 AppleALC、HiDPI（非 Retina 屏清晰度）、Intel 睿频/CPU 限频（CPU-S 验证 + CPUFriend 修法）、**Intel 混合架构开小核/关小核（E 核：BIOS `Active Efficient Cores` + `ProvideCurrentCpuInfo` + `CpuTopologyRebuild`）**、MacPro 机型内存定制（摆位规则 + 映射表）与 **SMBIOS 机型切换/三码**（★ **先完善 SSDT → 再换机型 → 再重做 CPUFriend**；主板 OEM SSDT `xh_adls3` 与 `AE_NOT_FOUND` 根因、序列号三类判据、ROM、风控纪律）（先搜前人 layout-id、搜不到再按 codec 定制并提 PR）的完整方法；**并含启动界面外观（OpenCanopy 主题）：图标集、PickerAttributes、Flavour 系统、标签/字体/音频/背景、HiDPI，以及「官方图标集不提供哪些可选图标」的权威对照**。当任务涉及 OpenCore、config.plist、EFI/OC、ocvalidate、SSDT/ACPI、boot-args、kext 注入、启动选择器、开机刷屏或日志、**开机慢/启动耗时/启动卡顿/时间线分析**、**BIOS 设置/UEFI 设置/BIOS 审查/CFG Lock/VMD/Intel RST/Above 4G/Re-Size BAR/CSM/Secure Boot/VT-d/Speed Shift/装系统找不到硬盘**、**OpenCore 主题/启动界面外观/选择器/OpenCanopy/图标集 icon pack/PickerAttributes/PickerVariant/Flavour/.icns/启动声音/开机提示音/选择器字体或背景**、**升级系统/升到 macOS 26/Sequoia 升 Tahoe/升级后 Wi-Fi 没了/kext 版本限制 MinKernel MaxKernel/Darwin 版本分流/机型不被新系统支持/-no_compat_check/收不到系统更新**、**启动项消失/BIOS 里看不到 OpenCore/只剩 Windows/LauncherOption**、**启动项丢失的官方修法（OpenShell `bcfg` / `OpenControl` 解锁 NVRAM / `LauncherOption=Full` 自愈 / 从系统里写）、U 盘启动改硬盘启动、`BootKicker`**、屏蔽磁盘/隐藏磁盘、首次生成 EFI、装 NVIDIA 驱动、装 Intel 无线驱动、**装 MediaTek 无线网卡/MT7922/MT7921/RZ608 驱动或蓝牙**、板载声卡/AppleALC/layout-id、博通网卡/BCM943602CDP/OCLP root patch、HiDPI/显示不清晰/缩放、CPU 睿频/限频/卡顿（CPU-S）、内存定制/关于本机内存图/插槽映射、换机型/SMBIOS/三码/序列号/ROM/iMessage 登录时使用。内置「改 ESP 的安全流程」（备份 → 语义 diff → lint → sha 校验 → 镜像/存档 → 卸载重挂复验）。另外，**用户问「这个技能怎么用 / 使用说明 / 有哪些能力 / 能干什么」时也适用**（此时输出技能目录下的 `USAGE.md`，不要输出内部流程）。
 description_en: Audit, edit and maintain a hackintosh OpenCore (OpenCorePkg) EFI configuration and its driver installs — audit BIOS/UEFI firmware settings (OpenCore's official checklist plus Dortania's Intel/AMD lists plus community-only items such as VMD and Intel Speed Shift, split into must-disable / must-enable / conditional, with a read-only Windows audit script), verify every config.plist switch against the official documentation and ocvalidate, review ACPI/SSDT tables against the official AcpiSamples, trim injected kexts, read OpenCore boot logs and kernel logs for evidence, analyse boot time / startup timeline in three independent phases (OpenCore, kernel/driver, userspace) to locate stalls and gaps, plan a major macOS upgrade (15 Sequoia to 26 Tahoe: per-Darwin-version kext gating with MinKernel/MaxKernel for WiFi cards, OCLP root patching, supported SMBIOS whitelist, upgrade ordering), recover a vanished firmware boot entry (Boot####/BootOrder, LauncherOption), recover a missing firmware boot entry the official way (OpenShell bcfg, OpenControl NVRAM unlock, LauncherOption=Full self-heal, or writing from the OS), migrate from USB boot to internal-disk boot, mask disks with /etc/fstab, and follow the NullMoth NVIDIA driver, recover TCC permissions (microphone / camera) that disabled AMFI suppresses, Intel WiFi (AirportItlwm), MediaTek WiFi (MT7921 / MT7922 / RZ608 — Bluetooth works, Wi-Fi experimental), Broadcom WiFi (BCM943602CDP, Sequoia vs Tahoe routes), onboard audio (AppleALC layout-id / codec customisation), HiDPI scaling on non-Retina displays, Intel Turbo Boost / CPU frequency capping (verified with CPU-S, fixed with CPUFriend), Intel hybrid-architecture E-core enable/disable (BIOS Active Efficient Cores, ProvideCurrentCpuInfo, CpuTopologyRebuild), MacPro memory injection (slot layout mapping), SMBIOS model switching and serials/MLB/UUID/ROM (iMessage; board OEM SSDT / AE_NOT_FOUND root cause; order: finish SSDT first, then SMBIOS, then CPUFriend) and first-time base-EFI generation (RapidEFI on Windows) workflows, plus OpenCanopy boot-picker theming (icon sets, PickerAttributes, the flavour system, labels/fonts/audio/background, HiDPI, and the authoritative list of optional icons the official icon sets do NOT ship). Includes a mandatory safe-edit protocol for the EFI system partition. Also applies when the user asks how to use this skill, for its usage guide, or for a list of its capabilities — in that case output the skill's USAGE.md rather than the internal workflow.
-version: 0.20.0
+version: 0.21.0
 agent_created: true
 ---
 
@@ -264,12 +264,18 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
   校验用 `scripts/mem-check.sh`（算出每条会被画到哪个图位并判定是否错位）；
   ★ 2 条内存的「至少四条」警告**去不掉**（真机也一样）；4 槽消费主板布局下左图**不画编号**
 - **CPU 被压在低频（卡顿/掉帧）⇒ Intel 睿频** ⇒ `references/intel-turbo.md`：
-  ★ **验证用 CPU-S**（看「当前睿频状态」是否「未睿频」+ 频率列表有没有覆盖高倍频），配合 Intel Power Gadget 与本机 `cpu-freq-probe.sh` 交叉印证；
+  ★★★ **最佳方法（已定案）**：**注入「本机自己那份 profile，只把 `hwp` 删掉」** —— 四点全中才算最佳：
+  **1 段**（`FrequencyVectors` 每段恒 7668 B，**多段必崩**）+ **上限尽可能高**（1 段族天花板 4500）+ **`hwp` 已删除**（最关键）+ **`CPUFloor` 匹配**（1300）；
+  ★★ **`hwp` 不在 plist 里** —— 它在**向量二进制内偏移 ~7128 的变量名表**里，`plutil`/`PlistBuddy` 搜不到；
+  **禁用 = 删除该项**（不是改名），判「有没有作用」必须**逐字节比向量二进制**（只比 plist 键会判错成 no-op）；
+  ★★★ **反面结论：注入任何别的机型的 profile 都会压垮睿频**（实测 `iMac19,1` ⇒ **1.97 GHz**、`MacPro7,1` ⇒ **2.3 GHz**）
+  ⇒ **别靠换 profile 抬上限，此路不通**；选型照 §5 五族表（**第一分水岭 = 段数**；**所有上限 5000 的 profile 都是 3–5 段** ⇒ 与「结构兼容」不可兼得）；
+  ★ **验证用 CPU-S**（看「当前睿频状态」是否「未睿频」+ 频率列表有没有覆盖高倍频），配合 Intel Power Gadget 与 `cpu-freq-probe.sh` 交叉印证（基线单线程 4.28 / 8 线程 4.29–4.35 GHz，**八核一致无振荡比数值更重要**）；
   先排除热降频（`xcpm.cpu_thermal_level=0`）与 XCPM 上限（`hard_plimit_max=49`）；
-  根因多为**机型 profile 的 `FrequencyVectors` + `hwp`**（本机 `MacPro7,1` 强制 `hwp=on` ⇒ 卡 2.3 GHz；`iMacPro1,1` 不用 HWP ⇒ 流畅）；
-  修法 = **CPUFriend + CPUFriendDataProvider**（顺序 Lilu → CPUFriend → DataProvider；`ExecutablePath` 必须空；`FrequencyVectors` 解回必须 7668 B）；
+  ★★ **改完必须重启**（`kern.boottime` 早于改动时间 = 没重启 ⇒ 内存里跑的仍是旧 profile）—— 这是「修了没好」的头号原因；
+  修法 = **CPUFriend + CPUFriendDataProvider**（顺序 Lilu → CPUFriend → DataProvider；`ExecutablePath` 必须空；解回必须 7668 B/段）；
   ★ 硬前提：**BIOS `Intel Speed Shift Technology` 必须 Enabled**（否则 `xcpm_hwp_enable` #GP panic）；
-  ★ 官方警告「不确定就别用 CPUFriend，能改 SMBIOS 解决更合理」
+  ★ **别混淆**：BIOS 的 HWP 要**开**、macOS 侧**刻意不走 HWP**（传统 XCPM）—— 这个组合是正确解，别去「修」
 - **小核（E 核）开 / 关 ⇒ Intel 混合架构** ⇒ `references/e-cores.md`：
   ★ **「关小核」与「开小核」是两种取舍** —— 关掉最稳（macOS 调度 E 核本就是雷区，且**关掉几乎零代价**）；
   开着多 4 核 4 线程，但**必须连 `CpuTopologyRebuild` 一起上**；
@@ -345,6 +351,8 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 | macOS 只看到 8 核 16 线程（`hw.nperflevels=1`），但 CPU 是 12 核 20 线程 | **不是缺核、也不是驱动没加载** ⇒ E 核没喂给 macOS（BIOS 关着，或 `ProvideCurrentCpuInfo=false`）⇒ 见 `e-cores.md`；**关小核是刻意选择时别去「修」** |
 | 抄来的 `-ctrsmt` boot-arg 加了没反应 | v1.x 的 `-ctrsmt` 在 **v2.x 上不生效** ⇒ 改写成 **`ctrsmt=full`**（先看 `CFBundleVersion`）⇒ `e-cores.md` §4.2 |
 | 开小核后开机偶发失败（尤其带 `-v`） | `CpuTopologyRebuild` 官方已知问题：**与 verbose 启动冲突** ⇒ 排查期先关小核或临时去掉 `-v`（`e-cores.md` §4.3） |
+| 想靠「换成 5000 上限的机型 profile」抬睿频 | **实测反而暴跌到 ~1.97 GHz** ⇒ 所有上限 5000 的 profile 都是 **3–5 段**，多段必崩 ⇒ **只注入本机自己的 profile（删 `hwp`）**（`intel-turbo.md` §0.1 / §5） |
+| 改完 CPUFriendDataProvider 没效果 / 更慢了 | 先看 **`kern.boottime`** 是否早于改动 ⇒ **没重启**（内存里还是旧 profile）⇒ `intel-turbo.md` §7 |
 | 语音/摄像头 App「没权限」，**不弹窗、隐私列表里也没这个 App** | 不是 App 坏了 ⇒ **boot-args 关了 AMFI**（`amfi=0x80` / `amfi_get_out_of_my_way=0x1`）导致 macOS **不弹窗也不生成条目** ⇒ 先试 `AMFIPass.kext`，驱动不接受才手工注入（`amfi-and-tcc.md`） |
 | 以为「黑苹果就该关 AMFI」 | **关 AMFI 是有代价的**（TCC 弹窗全失效 + 安全性下降）⇒ 先查驱动 README 是否**明确要求**；能用 `AMFIPass` 就别关（`amfi-and-tcc.md` §3） |
 | 手写 TCC 条目后 App 还是没权限 | 多半是 **`csreq` 错了**（magic 变 `fade0c01`）或**没重启 `tccd`** ⇒ 必须由 `designated =>` **之后**的 DR 文本生成，并 `killall tccd` 后回读验证（`amfi-and-tcc.md` §5.3） |
@@ -386,7 +394,7 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 - `references/laobamac-toolkit.md` —— **laobamac 工具与补丁索引（48 仓库全表）**：驱动 · 装机（`SimpleKaruzi`/`PVE-OpenCore`）· ★ **硬件避坑（`SimpleBuyersGuide`）** · 维护工具（`SimpleLoader`）· macOS 26 启动台 · 参考补丁（`OC-little-zh`/`non-metal-frameworks`）· AMD 平台 · fork 说明 · ★ **哪些已存档**
 - `references/network-en0-order.md` —— **`en0` 归属与网络接口顺序（通用）**：谁依赖 `en0`（ROM / iMessage / Continuity）、**修补 Wi-Fi 后必须确认无线是 `en0`**、怎么钉住、连带影响、判据纪律
 - `references/hidpi.md` —— 非 Retina 屏开 HiDPI（one-key-hidpi）：写入位置、两个模式、恢复路径、**与 NVIDIA 驱动的风险**
-- `references/intel-turbo.md` —— Intel 睿频/CPU 限频：**CPU-S 验证**、根因定位（机型 profile + hwp）、CPUFriend 修法、BIOS 硬前提
+- `references/intel-turbo.md` —— Intel 睿频/CPU 限频：★★★ **最佳方法定案（注入「删掉 `hwp` 的本机 profile」四点判据）** · **`hwp` 的真实位置与删法** · **76 份 profile 五族选型表** · CPU-S 验证 · **改完必须重启** · CPUFriend 修法 · BIOS 硬前提
 - `references/e-cores.md` —— **开小核 / 关小核（Intel 混合架构 P/E 核）**：★ 两种取舍 · BIOS `Active Efficient Cores`（四家厂商命名）· `ProvideCurrentCpuInfo` · **`CpuTopologyRebuild` 四取值（`ctrsmt=off` / `ctrsmt=full` / `-ctrfixcnt`）** · 判据 `hw.nperflevels` · **官方已知 `-v` 冲突** · 回滚
 - `references/smbios-and-serials.md` —— **换机型 + 三码**：★★★ **主板 OEM SSDT（`xh_adls3`）与 ACPI 根因**、**顺序铁律（先完善 SSDT）**、检查清单、决策依据、序列号判据、ROM、切换脚本三态、操作教训
 - `references/memory-injection.md` —— MacPro 机型内存定制：**12 槽映射表**、**摆位规则 f**、A 层通用字段、踩坑
