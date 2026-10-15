@@ -2,7 +2,7 @@
 name: opencore-config-audit
 description: 审查、修改与维护黑苹果的 OpenCore（OpenCorePkg）EFI 配置与驱动安装：**BIOS/UEFI 设置审查（官方 9 条清单 + Dortania Intel/AMD + 社区补充的 VMD / Speed Shift；区分「必须关 / 必须开 / 看情况」；含 Windows 只读审查脚本）**、逐键对照官方文档并用官方 ocvalidate 校验 config.plist、巡检 ACPI/SSDT（对照官方 AcpiSamples）、精简注入的 kext、读取 OpenCore 引导日志与内核日志取证、**启动耗时/时间线分析（OC 段 / 内核驱动段 / 用户态段三段拆解，定位卡顿与停顿窗口）**、**系统大版本升级（macOS 15 Sequoia → 26 Tahoe：按 Darwin 版本用 MinKernel/MaxKernel 给网卡等 kext 做版本分流、OCLP root patch、机型白名单、升级时序）**、用 /etc/fstab 屏蔽磁盘、调整 boot-args 与调试开关；并含从零生成基础 EFI（Windows 上用 RapidEFI）、NVIDIA 驱动（NullMoth nvidia-macos-driver）、**AMFI 关闭导致 App 拿不到权限（麦克风 / 摄像头 TCC：不弹窗、隐私列表无条目）的手工注入修法**、Intel 无线网卡驱动（AirportItlwm / itlwm）、**MediaTek 无线网卡（MT7921 / MT7922 / RZ608 —— 蓝牙可用、Wi-Fi 实验性）**、博通网卡（BCM943602CDP / BCM43602，按 Sequoia/Tahoe 分路线）、板载声卡 AppleALC、HiDPI（非 Retina 屏清晰度）、Intel 睿频/CPU 限频（CPU-S 验证 + CPUFriend 修法）、**Intel 混合架构开小核/关小核（E 核：BIOS `Active Efficient Cores` + `ProvideCurrentCpuInfo` + `CpuTopologyRebuild`）**、MacPro 机型内存定制（摆位规则 + 映射表）与 **SMBIOS 机型切换/三码**（★ **先完善 SSDT → 再换机型 → 再重做 CPUFriend**；主板 OEM SSDT `xh_adls3` 与 `AE_NOT_FOUND` 根因、序列号三类判据、ROM、风控纪律）（先搜前人 layout-id、搜不到再按 codec 定制并提 PR）的完整方法；**并含启动界面外观（OpenCanopy 主题）：图标集、PickerAttributes、Flavour 系统、标签/字体/音频/背景、HiDPI，以及「官方图标集不提供哪些可选图标」的权威对照**。当任务涉及 OpenCore、config.plist、EFI/OC、ocvalidate、SSDT/ACPI、boot-args、kext 注入、启动选择器、开机刷屏或日志、**开机慢/启动耗时/启动卡顿/时间线分析**、**BIOS 设置/UEFI 设置/BIOS 审查/CFG Lock/VMD/Intel RST/Above 4G/Re-Size BAR/CSM/Secure Boot/VT-d/Speed Shift/装系统找不到硬盘**、**OpenCore 主题/启动界面外观/选择器/OpenCanopy/图标集 icon pack/PickerAttributes/PickerVariant/Flavour/.icns/启动声音/开机提示音/选择器字体或背景**、**升级系统/升到 macOS 26/Sequoia 升 Tahoe/升级后 Wi-Fi 没了/kext 版本限制 MinKernel MaxKernel/Darwin 版本分流/机型不被新系统支持/-no_compat_check/收不到系统更新**、**启动项消失/BIOS 里看不到 OpenCore/只剩 Windows/LauncherOption**、**启动项丢失的官方修法（OpenShell `bcfg` / `OpenControl` 解锁 NVRAM / `LauncherOption=Full` 自愈 / 从系统里写）、U 盘启动改硬盘启动、`BootKicker`**、屏蔽磁盘/隐藏磁盘、首次生成 EFI、装 NVIDIA 驱动、装 Intel 无线驱动、**装 MediaTek 无线网卡/MT7922/MT7921/RZ608 驱动或蓝牙**、板载声卡/AppleALC/layout-id、博通网卡/BCM943602CDP/OCLP root patch、HiDPI/显示不清晰/缩放、CPU 睿频/限频/卡顿（CPU-S）、内存定制/关于本机内存图/插槽映射、换机型/SMBIOS/三码/序列号/ROM/iMessage 登录时使用。内置「改 ESP 的安全流程」（备份 → 语义 diff → lint → sha 校验 → 镜像/存档 → 卸载重挂复验）。另外，**用户问「这个技能怎么用 / 使用说明 / 有哪些能力 / 能干什么」时也适用**（此时输出技能目录下的 `USAGE.md`，不要输出内部流程）。
 description_en: Audit, edit and maintain a hackintosh OpenCore (OpenCorePkg) EFI configuration and its driver installs — audit BIOS/UEFI firmware settings (OpenCore's official checklist plus Dortania's Intel/AMD lists plus community-only items such as VMD and Intel Speed Shift, split into must-disable / must-enable / conditional, with a read-only Windows audit script), verify every config.plist switch against the official documentation and ocvalidate, review ACPI/SSDT tables against the official AcpiSamples, trim injected kexts, read OpenCore boot logs and kernel logs for evidence, analyse boot time / startup timeline in three independent phases (OpenCore, kernel/driver, userspace) to locate stalls and gaps, plan a major macOS upgrade (15 Sequoia to 26 Tahoe: per-Darwin-version kext gating with MinKernel/MaxKernel for WiFi cards, OCLP root patching, supported SMBIOS whitelist, upgrade ordering), recover a vanished firmware boot entry (Boot####/BootOrder, LauncherOption), recover a missing firmware boot entry the official way (OpenShell bcfg, OpenControl NVRAM unlock, LauncherOption=Full self-heal, or writing from the OS), migrate from USB boot to internal-disk boot, mask disks with /etc/fstab, and follow the NullMoth NVIDIA driver, recover TCC permissions (microphone / camera) that disabled AMFI suppresses, Intel WiFi (AirportItlwm), MediaTek WiFi (MT7921 / MT7922 / RZ608 — Bluetooth works, Wi-Fi experimental), Broadcom WiFi (BCM943602CDP, Sequoia vs Tahoe routes), onboard audio (AppleALC layout-id / codec customisation), HiDPI scaling on non-Retina displays, Intel Turbo Boost / CPU frequency capping (verified with CPU-S, fixed with CPUFriend), Intel hybrid-architecture E-core enable/disable (BIOS Active Efficient Cores, ProvideCurrentCpuInfo, CpuTopologyRebuild), MacPro memory injection (slot layout mapping), SMBIOS model switching and serials/MLB/UUID/ROM (iMessage; board OEM SSDT / AE_NOT_FOUND root cause; order: finish SSDT first, then SMBIOS, then CPUFriend) and first-time base-EFI generation (RapidEFI on Windows) workflows, plus OpenCanopy boot-picker theming (icon sets, PickerAttributes, the flavour system, labels/fonts/audio/background, HiDPI, and the authoritative list of optional icons the official icon sets do NOT ship). Includes a mandatory safe-edit protocol for the EFI system partition. Also applies when the user asks how to use this skill, for its usage guide, or for a list of its capabilities — in that case output the skill's USAGE.md rather than the internal workflow.
-version: 0.21.0
+version: 0.22.0
 agent_created: true
 ---
 
@@ -198,10 +198,12 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 - **★ AMFI ↔ TCC 冲突（App 拿不到麦克风 / 摄像头权限）** ⇒ `references/amfi-and-tcc.md`：
   **现象三连 = 报没权限 + 不弹窗 + 隐私列表里压根没这个 App 的条目**（与「用户点了拒绝」的区别就在第三条）；
   根因 = boot-args 的 **`amfi=0x80` / `amfi_get_out_of_my_way=0x1`**（AMFI 关）⇒ macOS **不弹窗、也不生成条目**；
-  ★★ **首选是 `AMFIPass.kext`（保留 AMFI）** —— **能改用它就改用它，问题自动消失**；
-  **但 NullMoth NVIDIA 驱动明确不接受它**（上游把 `-amfipass*` 与 `amfi=0x80` 同列「不安全覆盖」名单）
+  ★★ **别的驱动首选 `AMFIPass.kext`（保留 AMFI）** —— **能改用它就改用它，问题自动消失**；
+  ★★ **但本机不行**：NullMoth 驱动把 **AMFI 参数与 `AMFIPass.kext` 一并列为必需**（并存，**不是替代**）
   ⇒ **这台机器只能二选一**：**保驱动**（留着 AMFI 参数 + **手工注入 TCC 条目**，代价**不持久**）
-  / 保弹窗（★ **不要做** —— 后果是 WindowServer 加载不了 bundle ⇒ 没显示）；
+  / 保弹窗（★ **不要做** —— 去掉 AMFI 参数上游不支持，后果是 WindowServer 加载不了 bundle ⇒ 黑屏只剩鼠标）；
+  ★ **别把 kext 和 boot-arg 搞混**：被 `NDSecurityState.m` 列进「不安全覆盖」的是 **`-amfipass*` boot-arg**，
+  **不是** `AMFIPass.kext`（后者是驱动必需项，安装脚本会主动下载 + 校验 SHA）；
   注入三要素：**`csreq` 必须由 `designated =>` 之后的 DR 文本生成**（magic 要 **`fade0c00`**，带前缀会变 `fade0c01` 被拒）
   · 字段 `client_type=0 / auth_value=2 / auth_reason=4 / auth_version=1 / indirect_object_identifier='UNUSED'`
   · 写完 **`killall tccd`** 并**回读验证**（条目扛住 tccd 重启 = 被接受）；撤销用 `tccutil reset`
@@ -215,9 +217,16 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
   `com.apple.AppleSunriseBluetooth.dext`（**自带固件** `BT_RAM_CODE_MT7922_1_1_hdr.bin` 等），
   `IOPCIMatch` = `0x792214c3`(MT7922 Wi-Fi) / **`0x792a14c3`(MT7922 蓝牙，走 PCIe！)** ⇒ **首选「什么都不装」试一遍**；
   ★ **蓝牙有两种形态**：**新的走 PCIe**（`14c3:792a`，Apple 原生管）、**老的走 USB**（`0x0e8d`，靠第三方 `SimpleMtkBtFw`）—— 先判清；
-  ★ Sequoia **没有** Sunrise ⇒ 只能走第三方：**蓝牙可用**（`SimpleMtkBtFw` 有 release），
-  **Wi-Fi 实验性**（`SimpleMtkWlan` **无 release**、能扫描但关联/连接仍在修、实机有「一连接就 panic」）；
-  ⇒ **要能日常用的 Wi-Fi 就换卡**（Broadcom / Intel），别硬啃；
+  ★ Sequoia **没有** Sunrise ⇒ 只能走第三方：**蓝牙可用**（`SimpleMtkBtFw` 有 release）；
+  ★★ **Wi-Fi 用 `flxxxxddd/SimpleMtkWlan` 这个 fork**（上游 `laobamac` 的 fork，分支 **`mt7921-fixes`**，
+  **有 CI release v1.1.0 / v1.2.0**）—— 它修好了 **MT7921 / RZ608「能 attach 但过不了流量」**，并补上
+  **802.11n（HT20/40）+ 802.11ac（VHT80）**；实测 RZ608 在 Sequoia 上 5 GHz VHT80 **30–50 Mbit/s**、开机自动加入；
+  ★★★ **三条硬限制（先讲清楚）**：**以太网式接口（`enX`）、没有原生 Wi-Fi 菜单**（连网靠 SimpleMTK 客户端）、
+  **❌ AirDrop / Handoff / Continuity（设计上不可能）**、**❌ 802.11ax**；
+  ★★ **最常踩的安装坑 = 卡被 `SSDT-Disable_Network_*.aml` 藏了**（`vendor-id` 改 `0xFFFF` ⇒ 驱动永远匹配不上）
+  ⇒ `ioreg -l | grep -A40 'pci14c3'` 应看到 `vendor-id = <c3140000>`；
+  排错用 `./tools/mtklog.sh > mtk.txt`（**常驻 ring buffer、免 root**）；可选 boot-arg `-novht` / `-noht40`；
+  ⇒ **要原生菜单 / AirDrop / Wi-Fi 6 就换卡**（Broadcom / Intel），别硬啃；
   第三方蓝牙两个致命坑：**不要**把 USB 产品名改成 `Bluetooth USB Host Controller`（会让 `bluetoothd` 走 Broadcom 内置路径而 abort）、
   **必须**注入 NVRAM 两条 data（`bluetoothExternalDongleFailed` + `bluetoothInternalControllerInfo`，且 `Add`/`Delete` 都要有）
 - **博通网卡（BCM943602CDP / BCM43602）** ⇒ `references/broadcom-wifi.md`：
@@ -353,7 +362,7 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 | 开小核后开机偶发失败（尤其带 `-v`） | `CpuTopologyRebuild` 官方已知问题：**与 verbose 启动冲突** ⇒ 排查期先关小核或临时去掉 `-v`（`e-cores.md` §4.3） |
 | 想靠「换成 5000 上限的机型 profile」抬睿频 | **实测反而暴跌到 ~1.97 GHz** ⇒ 所有上限 5000 的 profile 都是 **3–5 段**，多段必崩 ⇒ **只注入本机自己的 profile（删 `hwp`）**（`intel-turbo.md` §0.1 / §5） |
 | 改完 CPUFriendDataProvider 没效果 / 更慢了 | 先看 **`kern.boottime`** 是否早于改动 ⇒ **没重启**（内存里还是旧 profile）⇒ `intel-turbo.md` §7 |
-| 语音/摄像头 App「没权限」，**不弹窗、隐私列表里也没这个 App** | 不是 App 坏了 ⇒ **boot-args 关了 AMFI**（`amfi=0x80` / `amfi_get_out_of_my_way=0x1`）导致 macOS **不弹窗也不生成条目** ⇒ 先试 `AMFIPass.kext`，驱动不接受才手工注入（`amfi-and-tcc.md`） |
+| 语音/摄像头 App「没权限」，**不弹窗、隐私列表里也没这个 App** | 不是 App 坏了 ⇒ **boot-args 关了 AMFI**（`amfi=0x80` / `amfi_get_out_of_my_way=0x1`）导致 macOS **不弹窗也不生成条目** ⇒ 别的驱动可改用 `AMFIPass.kext`；**本机 NullMoth 把两者都列为必需** ⇒ 手工注入（`amfi-and-tcc.md`） |
 | 以为「黑苹果就该关 AMFI」 | **关 AMFI 是有代价的**（TCC 弹窗全失效 + 安全性下降）⇒ 先查驱动 README 是否**明确要求**；能用 `AMFIPass` 就别关（`amfi-and-tcc.md` §3） |
 | 手写 TCC 条目后 App 还是没权限 | 多半是 **`csreq` 错了**（magic 变 `fade0c01`）或**没重启 `tccd`** ⇒ 必须由 `designated =>` **之后**的 DR 文本生成，并 `killall tccd` 后回读验证（`amfi-and-tcc.md` §5.3） |
 
@@ -384,9 +393,9 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 - `references/bios-settings.md` —— **BIOS/UEFI 审查**：官方 9 条 + Dortania（Intel/AMD）+ 社区补充（**VMD**/Speed Shift）、**必须关/必须开/看情况**三类、CFG Lock 专题、**厂商命名对照表**、Windows 审查脚本用法
 - `references/disks-and-kexts.md` —— 磁盘屏蔽与 kext 精简的判据与「不能删」清单
 - `references/nvidia-driver.md` —— NullMoth NVIDIA 驱动：适用范围、安装、必需 OC 设置、恢复、故障对照
-- `references/amfi-and-tcc.md` —— **AMFI ↔ TCC 冲突**：关掉 AMFI ⇒ **不弹权限窗 + 隐私列表无条目** · **首选 `AMFIPass`**（但 NVIDIA 驱动不接受）· 只能二选一 · **手工注入 TCC 条目的字段与 `csreq` 生成**（magic `fade0c00`）· 排查判据 · 撤销与不持久性
+- `references/amfi-and-tcc.md` —— **AMFI ↔ TCC 冲突**：关掉 AMFI ⇒ **不弹权限窗 + 隐私列表无条目** · **`AMFIPass` 首选**（但 NullMoth 驱动要「AMFI 参数 **+** AMFIPass」**并存**）· ★ **kext ≠ `-amfipass*` boot-arg**（10-15 更正）· 只能二选一 · **手工注入 TCC 条目的字段与 `csreq` 生成**（magic `fade0c00`）· 排查判据 · 撤销与不持久性
 - `references/intel-wifi.md` —— Intel 无线网卡驱动（AirportItlwm / itlwm）：版本线、注入、蓝牙配套、排错
-- `references/mediatek-wifi.md` —— MediaTek 无线网卡（MT7921 / MT7922 / RZ608）：★★★ **macOS 26 原生 Sunrise 驱动**（`AppleSunriseWLAN/Bluetooth` dext + 自带固件 + PCIe 蓝牙 `14c3:792a`）、三条路线决策树、芯片认型、第三方 NVRAM 两坑、自编译流程
+- `references/mediatek-wifi.md` —— MediaTek 无线网卡（MT7921 / MT7922 / RZ608）：★★★ **macOS 26 原生 Sunrise 驱动**（`AppleSunriseWLAN/Bluetooth` dext + 自带固件 + PCIe 蓝牙 `14c3:792a`）、★★ **第三方 Wi-Fi 用 `flxxxxddd/SimpleMtkWlan` fork（有 release，802.11n/ac 可用）** · **三条硬限制（无原生菜单 / 无 AirDrop / 无 HE）** · **SSDT 藏卡坑** · `mtklog.sh` 排错 · 三条路线决策树、芯片认型、第三方蓝牙 NVRAM 两坑
 - `references/applealc-custom.md` —— 板载声卡（AppleALC）：★★★ **macOS 26 的 `AppleHDA` 恢复（`SimpleHDA`，无需补丁）**、先搜前人经验、按 codec 定制、本地构建、测试、提 PR
 - `references/broadcom-wifi.md` —— 博通网卡（BCM43602/BCM20703）：**按 Sequoia/Tahoe 分路线**、OCLP root patch、验证判据
 - `references/ethernet-drivers.md` —— **有线网卡第三方驱动**（Intel I225/I226 · I210/I211/I350 · Realtek RTL8125/8126）：方案对照、装法、判据

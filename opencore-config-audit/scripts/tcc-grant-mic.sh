@@ -13,8 +13,12 @@
 #   ./tcc-grant-mic.sh <App.app|bundle-id> ...     # 真正写入
 #   ./tcc-grant-mic.sh --reset [bundle-id]         # 撤销（tccutil reset）
 #
+#   ★ 路径含空格/括号时必须加引号（脚本按整参数处理，不会拆词）：
+#       ./tcc-grant-mic.sh --service audio "/Library/Audio/Plug-Ins/HAL/ARK.driver/Contents/Resources/Audio Routing Kit (ARK).app"
+#
 # 选项：
-#   --service mic|camera|<kTCCService...>   目标服务（默认 mic = kTCCServiceMicrophone）
+#   --service mic|camera|audio|<kTCCService...>   目标服务（默认 mic = kTCCServiceMicrophone）
+#                                                 audio = kTCCServiceAudioCapture（「系统音频录制」）
 #
 # 依赖：sqlite3 / codesign / csreq / PlistBuddy（macOS 自带）。
 # ★ 写入 TCC.db 需要放宽的 SIP（文件受系统保护）；只读操作不需要。
@@ -28,7 +32,7 @@ MODE=write
 RESET_ID=""
 ARGS=""
 
-usage() { sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; }
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -43,11 +47,13 @@ while [ $# -gt 0 ]; do
              case "$1" in
                mic|microphone) SERVICE=kTCCServiceMicrophone ;;
                camera)         SERVICE=kTCCServiceCamera ;;
+               audio)          SERVICE=kTCCServiceAudioCapture ;;
                *)              SERVICE="$1" ;;
              esac ;;
     -h|--help) usage; exit 0 ;;
     -*) echo "未知参数：$1（-h 看用法）" >&2; exit 2 ;;
-    *)  ARGS="$ARGS $1" ;;
+    *)  ARGS="${ARGS}${ARGS:+
+}$1" ;;
   esac
   shift
 done
@@ -122,7 +128,10 @@ fi
 
 echo "== 2) 逐 App 生成 csreq$([ "$MODE" = dry ] && echo '（dry-run，不写库）' || echo ' 并写入') =="
 ok=0; skip=0
+OLDIFS=$IFS; IFS='
+'
 for A in $ARGS; do
+  IFS=$OLDIFS
   APP=$(resolve "$A") || { printf '   [跳过] %s  找不到对应的 .app\n' "$A"; skip=$((skip+1)); continue; }
   NAME=$(basename "$APP" .app)
   BID=$(bid_of "$APP")
@@ -153,6 +162,7 @@ for A in $ARGS; do
     skip=$((skip+1))
   fi
 done
+IFS=$OLDIFS
 
 if [ "$MODE" = dry ]; then
   echo "  -- 预演成功 $ok / 跳过 $skip --（去掉 --dry-run 才真正写库）"

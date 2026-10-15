@@ -4,6 +4,9 @@
 > （`README.md` / `docs/HOW-IT-WORKS.md` / `nullmoth-setup.sh` / `NDSecurityState.m`）+ **本机 10-15 实测**。
 > ★ **一句话**：**「AMFI 关闭」和「TCC 弹窗」不能同时要** —— 但**代价可以用「手工注入 TCC 条目」补回来**，
 > 只是**不持久**（系统更新 / `tccutil reset` / 清理工具都会抹掉）。
+> ★★ **2026-10-15 更正过一次结论**：早先写「NullMoth 驱动不接受 `AMFIPass`」是**错的**
+> —— 错在把 **kext** 和 **`-amfipass*` boot-arg** 当成了一件事。`AMFIPass.kext` 是驱动**必需项**。
+> 改的是**理由**，「本机只能二选一」的结论**不变**（详见 §3 / §4）。
 
 ## 0. 现象三连（对号入座就是这个问题）
 
@@ -39,38 +42,74 @@ amfi=0x80
 
 | 来源 | 要求 |
 |---|---|
-| **NullMoth NVIDIA 驱动**（`nvidia-driver.md`） | 官方表格明写 boot-args 要带 `amfi_get_out_of_my_way=0x1 amfi=0x80`，注释 *"the AMFI args let WindowServer load the driver bundle"*；**安装器 `nullmoth-setup.sh` 主动写入**（`WANT_ARGS`），还专门为这两个 token 做归属记录 |
+| **NullMoth NVIDIA 驱动**（`nvidia-driver.md`） | 官方**必需清单是两件套**：boot-args 要带 `amfi_get_out_of_my_way=0x1 amfi=0x80`（注释 *"the AMFI args let WindowServer load the driver bundle"*）**且** `Lilu.kext` / `AMFIPass.kext` 要启用；**安装器 `nullmoth-setup.sh` 主动写入**（`WANT_ARGS`）并自动补齐这两个 kext，还专门为 AMFI token 做归属记录 |
 | **OCLP 根补丁 / 博通 Wi-Fi 侧** | 需要加载非 Apple 签名 kext —— 但它们走的是 **`AMFIPass.kext`**（**保留 AMFI** 的做法），不是关 AMFI |
 | 其它第三方 kext | 视驱动而定；**先查驱动 README 有没有明确要求**，别默认「黑苹果就要关 AMFI」 |
 
 ★ 关 AMFI 是**有意降低系统安全性**，只在驱动**明确要求**时做；不装驱动就把这几条恢复原值。
 （同时通常还要 `SecureBootModel=Disabled` + 放宽 `csr-active-config`。）
 
-## 3. ★★ 首选方案：`AMFIPass.kext` —— 一般情况用它，本机这条路被驱动自己堵死
+## 3. ★★ 首选方案：`AMFIPass.kext` —— 别的机器用它；本机「用它顶替 AMFI 参数」仍不可行
+
+> ★★ **2026-10-15 更正**：本节早先写「NullMoth NVIDIA 驱动明确不接受 `AMFIPass`」——**那是错的**。
+> 错因是**把 kext 和 boot-arg 当成了一件事**：驱动要求的是 `AMFIPass.kext`（必需项），
+> 被列进「不安全覆盖」的是 `-amfipass*` 这个 **boot-arg**。下面按驱动 **2.0.1** 上游重写。
 
 **`AMFIPass`（Lilu 插件）就是为了「不关 AMFI 也能加载非 Apple kext」而存在的** ——
-它让 AMFI 保持开启，只对指定 kext 放行。**能改用它就改用它**：AMFI 一开着，TCC 弹窗与条目全都正常，
-**根本不会有本文档这个问题**。
+它让 AMFI 保持开启，只对指定 kext 放行。**别的机器能改用它就改用它**：AMFI 一开着，
+TCC 弹窗与条目全都正常，**根本不会有本文档这个问题**。
 
-- ★★ **但本机的 NVIDIA 驱动明确不接受它**：上游全仓库搜 `AMFIPass` 只命中一处 ——
-  `app/DiagnosticsNative/authority/NDSecurityState.m`，它把 **`-amfipass*` 与 `amfi=0x80` / `amfi_get_out_of_my_way`
-  归进同一份「不安全覆盖」名单**。
-- ⇒ **对这台机器，「用 AMFIPass 顶替 AMFI 参数」是无上游依据的** ——
-  工作区早先那份 `1401文档对齐检查-20261011.md` 写「`AMFIPass.kext` = 驱动要求」是**错的**，
-  正确表述是「为博通 Wi-Fi / OCLP 根补丁侧保留」。
-- ⇒ **通用结论**：**先查驱动是否接受 AMFIPass**；接受 ⇒ 用它（问题自动消失）；不接受 ⇒ 走 §5。
+### 3.1 本机实况：`AMFIPass.kext` 是驱动的**必需项**（不是「驱动不接受」）
 
-## 4. 结论：只能二选一
+- `README.md` 的必需设置清单：boot-args 要带 `amfi_get_out_of_my_way=0x1 amfi=0x80`，
+  **并且** `Lilu.kext` 与 `AMFIPass.kext` 必须在 `Kernel > Add` 里**启用**
+  （`docs/HOW-IT-WORKS.md` §4 同）；
+- `nullmoth-setup.sh` 会主动下载这两个 kext 并校验 SHA-256，注释原话 *"the driver cannot load without it"*；
+  `1.11.0` 更新日志也有「EFI 里缺 Lilu / AMFIPass 时自动下载」一条；
+- ⇒ **正确表述 =「`AMFIPass.kext` 是驱动要求，同时博通 Wi-Fi / OCLP 根补丁侧也要」**
+  （工作区早先那份 `1401文档对齐检查-20261011.md` 写的「驱动要求」**是对的**）。
 
-驱动要 AMFI **关**、TCC 弹窗要 AMFI **开** —— **不存在「改 boot-args 两全」的写法**。
+### 3.2 ★ 真正让 WindowServer 加载驱动的就是 AMFIPass
+
+`nullmoth-setup.sh` 第 1143-1145 行的作者注释（有实测日志背书）：
+
+> AMFIPass (a Lilu plugin) is what lets WindowServer, a platform binary, load the ad hoc signed driver:
+> **with it off and the same SIP bits and amfi boot-args**, 1.9.0 logs show
+> `mapping process is a platform binary, but mapped file is not`, no Metal device and a black screen with a cursor.
+
+⇒ **WindowServer 是 platform binary、受 library validation 保护**，打通这一步的是 **AMFIPass**；
+AMFI 参数是**另一个**必需项 —— **两者并存，不是替代关系**。
+
+### 3.3 ★ 被列为「不安全覆盖」的是 `-amfipass*` **boot-arg**，不是 kext
+
+`app/DiagnosticsNative/authority/NDSecurityState.m` 收的是**boot-arg token**：
+`amfi_get_out_of_my_way` · `amfi_allow_any_signature` · `amfi_unrestrict_task_for_pid` · `cs_enforcement_disable` ·
+`amfi_disable_library_validation` · `amfi`（非 0）· **`-amfipass*`（前缀匹配）** · `dyld_flags` ·
+`ipc_control_port_options`（为 0）。
+⇒ 它表达的是「驱动**不建议**用这些参数」（会触发它的安全状态判定），
+**不等于**「驱动不接受 `AMFIPass.kext`」。
+
+- ⇒ **通用结论**：别的机器**先查驱动 README 是否接受 AMFIPass**；接受 ⇒ 用它（问题自动消失）；不接受 ⇒ 走 §5。
+- ⇒ **本机结论**：上游把「AMFI 参数 **+** AMFIPass」**两个都列为必需**
+  ⇒ 「**去掉 AMFI 参数、只留 AMFIPass**」这条**仍不可行**
+  （上游没有该组合的支持或测试记录 + 本机未验证）—— 见 §4。
+
+## 4. 结论：本机只能二选一
+
+驱动要 AMFI **关**（AMFI 参数是上游**必需项**）、TCC 弹窗要 AMFI **开** —— **不存在「改 boot-args 两全」的写法**。
+★ 注意：`AMFIPass.kext` 本机**已经在用**（§3.1），但它是**另一个必需项**，**顶不了** AMFI 参数。
 
 | 选 | 做法 | 代价 |
 |---|---|---|
-| **保驱动**（现行） | 留着 AMFI 参数，**手工注入 TCC 条目**（§5） | **不持久** —— 系统大版本更新 / `tccutil reset` / 清理工具会抹掉，需重跑 |
-| **保弹窗** | 去掉两条 boot-args，改用 `-amfipassbeta` 顶替 | ★★ **上游未背书 + 本机未验证**；**失败后果 = WindowServer 加载不了 NVIDIA bundle（没显示）** ⇒ **不要做** |
+| **保驱动**（现行） | 留着 AMFI 参数 + `AMFIPass.kext`，**手工注入 TCC 条目**（§5） | **不持久** —— 系统大版本更新 / `tccutil reset` / 清理工具会抹掉，需重跑 |
+| **保弹窗** | 去掉两条 AMFI boot-args，只靠 `AMFIPass.kext` | ★★ **上游把 AMFI 参数列为必需 + 本机未验证**；**失败后果 = WindowServer 加载不了 NVIDIA bundle（黑屏只剩鼠标）** ⇒ **不要做** |
 
 > ★ **本机踩过一次**：试过「保弹窗」那条，`config.plist` sha `45648427…` 已落盘，
 > 核对上游后**已回滚**。**别再试第二次**。
+> ★ 真要验证「AMFI 开 + AMFIPass」这个组合：做在**救援 U 盘那份 EFI** 上（**别动内置 ESP**），
+> 并先确认选择器里 `1401: Start once without NVIDIA driver` 那条可见 —— 黑屏时靠它救回来。
+> ★ 更实际的路是**推上游**：给 `nullmoth/nvidia-macos-driver` 开 issue 问该组合是否可行
+> （机制上不是完全没戏 —— WindowServer 那一步本来就是 AMFIPass 干的，但上游无任何支持或测试记录）。
 
 ## 5. 解法：直接注入 TCC 条目（`scripts/tcc-grant-mic.sh`）
 
@@ -169,6 +208,11 @@ scripts/tcc-grant-mic.sh --reset [bundle-id]    # 撤销
 ## 8. 出处
 
 - OCLP / `tccplus` 文档：AMFI 关闭 ⇒ 不弹窗 + 不生成隐私条目（原文见 §1）。
-- NullMoth NVIDIA 驱动：`README.md`（boot-args 表）· `docs/HOW-IT-WORKS.md` ·
-  `app/Resources/nullmoth-setup.sh`（`WANT_ARGS` / `SIP_BITS`）· `app/DiagnosticsNative/authority/NDSecurityState.m`（AMFIPass 归类）。
+- NullMoth NVIDIA 驱动 **2.0.1**（2026-10-15 逐条核对上游）：
+  `README.md`（必需设置清单：AMFI boot-args **+** `Lilu.kext` / `AMFIPass.kext` 启用）·
+  `docs/HOW-IT-WORKS.md` §4（同上）·
+  `nullmoth-setup.sh`（`WANT_ARGS` / `SIP_BITS`；**第 1143-1145 行 AMFIPass 注释**；第 1151-1162 行自动下载 + SHA 校验）·
+  `app/DiagnosticsNative/authority/NDSecurityState.m`（「不安全覆盖」收的是 **boot-arg token**，含 `-amfipass*`）。
+- 本机只读实测（2026-10-15 19:45）：驱动 **2.0.1** / macOS 26.7.1 / AMFI 关 /
+  `com.dhinakg.AMFIPass 1.4.1` + `as.vit9696.Lilu 1.7.3` 已加载 / 4 个 NullMoth kext 已加载。
 - 相关：`nvidia-driver.md` §3 / §8（驱动的安全边界）· `broadcom-wifi.md`（OCLP 根补丁侧）。

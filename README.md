@@ -158,7 +158,7 @@ hackintosh-skills/
 | **NVIDIA 独显**（NullMoth） | 适用卡范围、两条安装路线、★「装 `/Library/Extensions` 从 AuxKC 加载 ⇒ 不要再从 `EFI/OC/Kexts` 注入」、必需 OC 设置、恢复路径、上报纪律 |
 | **App 拿不到权限**（AMFI ↔ TCC） | 关掉 AMFI ⇒ **不弹权限窗、隐私列表里也没条目** ⇒ 语音/摄像头 App 永远拿不到权限；★ **首选 `AMFIPass.kext`**（保留 AMFI，问题自动消失），但 NullMoth 驱动**明确不接受**它 ⇒ 只能二选一；含**手工注入 TCC 条目**的字段格式与 `csreq` 生成（magic 必须 `fade0c00`）、排查判据、撤销、**不持久**提醒 |
 | **Intel 无线**（AirportItlwm / itlwm） | 两种形态、★「Sequoia 与 Tahoe 是两套 ABI 与产物 ⇒ 双系统共用配置必须用 `MinKernel`/`MaxKernel` 分开」、蓝牙配套、macOS 26 的能力与限制 |
-| **MediaTek 无线**（MT7921 / MT7922 / RZ608） | ★★ **分两条线**：**蓝牙（USB）可用**（`SimpleMtkBtFw` 有 release）；**Wi-Fi（PCIe）是实验性**（`SimpleMtkWlan` 无 release、能扫描但关联/连接仍在修）⇒ **要稳定就换卡**；含蓝牙两个致命坑（别改 USB 产品名 + NVRAM 两条 data） |
+| **MediaTek 无线**（MT7921 / MT7922 / RZ608） | ★★★ **macOS 26 原生 Sunrise 驱动**（`AppleSunriseWLAN/Bluetooth`，自带固件）⇒ 先「什么都不装」试一遍；**蓝牙（USB）走 `SimpleMtkBtFw`**；★★ **第三方 Wi-Fi 认准 `flxxxxddd/SimpleMtkWlan` fork（有 CI release v1.2.0）** —— 修好了 MT7921/RZ608「能 attach 但过不了流量」，补上 **802.11n + 802.11ac（VHT80）**，实测 30–50 Mbit/s 且开机自动加入；★★★ **三条硬限制**：**以太网式接口、没有原生 Wi-Fi 菜单、AirDrop/Handoff/Continuity 设计上不可能**、不支持 802.11ax ⇒ 要这些就换卡；★ 最常踩的坑 = **卡被 `SSDT-Disable_Network` 藏了**（`vendor-id` 改 `0xFFFF`）；排错用 `mtklog.sh`（常驻日志、免 root） |
 | **有线网卡**（Intel / Realtek） | ★★ **本机是 Intel `I225-V`**；`SimpleVGBE`（I225/I226）· `SimpleEthernet`（Lilu 插件，i225/226/210/211）· `SimpleRTK5`（RTL8125/8126）；★ **一次只换一套**、**换完复查 `en0` 归属** |
 | **博通网卡**（BCM943602CDP / BCM43602） | ★ **按系统分路线**：Sequoia 用 `IO80211FamilyLegacy`，Tahoe 用独立 `AirPortBrcmNIC-Tahoe.kext`；OCLP root patch 前置保护；★ 判死活看 `ifconfig en1` |
 | **板载声卡**（AppleALC） | ★★★ **macOS 26 前置：先用 `SimpleHDA` 恢复原版 `AppleHDA`**（OpenCore 注入，**不打补丁 / 不关 SIP / 不用 KDK**，音质无损耗）；然后先搜同型号前人 layout-id（推荐路线）→ 搜不到再按 codec 定制 → 本地构建 → 提 PR；自定义 layout 只能用 11–99 |
@@ -214,7 +214,7 @@ hackintosh-skills/
 | `nvidia-driver.md` | NullMoth NVIDIA 驱动：适用范围、安装、必需 OC 设置、恢复、故障对照 |
 | `amfi-and-tcc.md` | **AMFI ↔ TCC 冲突**：关掉 AMFI ⇒ **不弹权限窗 + 隐私列表无条目** · **首选 `AMFIPass`**（但 NVIDIA 驱动不接受）· 只能二选一 · **手工注入 TCC 条目的字段与 `csreq` 生成**（magic `fade0c00`）· 排查判据 · 撤销与不持久性 |
 | `intel-wifi.md` | Intel 无线网卡：版本线、注入、蓝牙配套、排错 |
-| `mediatek-wifi.md` | MediaTek 无线网卡：**蓝牙可用 / Wi-Fi 实验性**两条线、芯片认型、NVRAM 两坑、自编译流程、决策树 |
+| `mediatek-wifi.md` | MediaTek 无线网卡：★★★ **macOS 26 原生 Sunrise 驱动**；★★ **第三方 Wi-Fi 用 `flxxxxddd/SimpleMtkWlan` fork（有 release、802.11n/ac 可用）** · **三条硬限制** · **SSDT 藏卡坑** · `mtklog.sh` 排错 · 蓝牙 `SimpleMtkBtFw` 两坑 · 芯片认型 · 决策树 |
 | `broadcom-wifi.md` | 博通网卡：**按 Sequoia / Tahoe 分路线**、OCLP root patch、验证判据 |
 | `network-en0-order.md` | **`en0` 归属与网络接口顺序**：谁依赖 `en0`、**修补 Wi-Fi 后必须确认无线是 `en0`**、怎么钉住、连带影响 |
 | `ethernet-drivers.md` | **有线网卡第三方驱动**：Intel I225/I226 · I210/I211/I350 · Realtek RTL8125/8126 的方案对照与判据 |

@@ -4,10 +4,14 @@
 > （`com.apple.AppleSunriseWLAN.dext` + `com.apple.AppleSunriseBluetooth.dext`，**自带固件**）——
 > **优先走原生路线**，见 §0.3 / §1.5；下面的第三方仓库是**退路**。
 >
-> 上游（第三方路线）：`laobamac` 的三个仓库（同一作者，也是本 skill 里 Intel 无线用的那个 fork 作者）
-> - **Wi-Fi（PCIe）**：`laobamac/SimpleMtkWlan` —— *"an experimental macOS kernel extension for MediaTek MT792x PCIe wireless adapters"*
+> 上游（第三方路线）`laobamac` 的三个仓库（同一作者，也是本 skill 里 Intel 无线用的那个 fork 作者）
+> - **Wi-Fi（PCIe）**：`laobamac/SimpleMtkWlan` —— *"An experimental macOS kernel extension for MediaTek MT792x PCIe wireless adapters."*
 > - **蓝牙（USB）**：`laobamac/SimpleMtkBtFw` —— *"a MediaTek USB Bluetooth driver for macOS"*
 > - **Wi-Fi 客户端**：`laobamac/SimpleMTKClient` —— 菜单栏 App（`SimpleMTK`）
+>
+> ★★ **2026-10-13 起的实用进展：第三方 Wi-Fi 请用 `flxxxxddd/SimpleMtkWlan` 这个 fork**（上游 laobamac 仓库的 fork，
+> 分支 **`mt7921-fixes`**，**有 CI 构建的 release**）—— 它修好了「MT7921 / RZ608 能 attach 但过不了流量」的问题，
+> 并补上 **802.11n（HT20/40）+ 802.11ac（VHT80）**。详见 §4。
 
 ## 0. ★★★ 结论先行（先看这段，能省很多时间）
 
@@ -60,7 +64,7 @@ BT_RAM_CODE_MT7922 · MT7923 · MT7923A0 · SRS_7922
 |---|---|---|---|
 | **① 原生（Sunrise）** | ✅ **Apple 自带** | ✅ **Apple 自带** | **macOS 26+**（Sequoia 没有这两个 dext） |
 | ② 第三方 `SimpleMtkBtFw` | ✅ 有 release | — | 蓝牙走 **USB** 的老款模块 |
-| ③ 第三方 `SimpleMtkWlan` | — | ⚠️ 实验性（无 release，需自编译） | 愿意折腾 |
+| ③ 第三方 `flxxxxddd/SimpleMtkWlan` | — | ⚠️ **能用但非原生**（**有 release v1.2.0**） | 接受「以太网式接口 + 菜单栏客户端」 |
 
 > ★★ **先试路线 ①** —— 系统自带，**不用装任何 kext**。
 > 只有当「你的模块蓝牙走 USB（老款）」或「系统是 Sequoia」时，才退到 ②/③。
@@ -69,8 +73,8 @@ BT_RAM_CODE_MT7922 · MT7923 · MT7923A0 · SRS_7922
 
 | 部件 | 第三方路线状态 | 依据 |
 |---|---|---|
-| 蓝牙（USB） | 可用 | `SimpleMtkBtFw` 有 **`1.0.0`** release；issue #1 标题即 *"MT7922 bluetooth is working"* |
-| Wi-Fi（PCIe） | 实验性、未稳定 | `SimpleMtkWlan` README *"The driver is not release-stable yet."*；**无 release**；实机「扫描 OK，一连接就 panic」 |
+| 蓝牙（USB） | 可用 | `SimpleMtkBtFw` 有 **`1.0.0`** release；issue #1 标题即 *"MT7922 bluetooth is working"*（fork：`flxxxxddd/SimpleMtkBtFw`，AirPods 音频可用） |
+| Wi-Fi（PCIe） | ★ **能用，但有硬限制**（2026-10 起） | `flxxxxddd` fork 有 **release v1.1.0 / v1.2.0**；**MT7921 / RZ608 实测能连上网**；但 **802.11ax 不支持**、**没有原生 Wi-Fi 菜单**、**AirDrop / Handoff / Continuity 不可能** ⇒ §4 |
 
 > **要「能日常用的 Wi-Fi」的兜底做法仍是换卡**（Broadcom 原生 / Intel `AirportItlwm` 成熟）。
 
@@ -161,13 +165,19 @@ tonymacx86 那个帖子（标题 *"Wifi 6(E) & Bluetooth 5.x MEDIATEK chipset on
 
 Sequoia **没有**这两个 dext ⇒ 原生路线走不通，只能走下面的第三方路线（§3 / §4）。
 
-## 2. 三个项目分工
+## 2. 项目分工（上游 vs fork —— 别认错仓库）
 
 | 项目 | 管什么 | 形态 | 有 Release？ | 现状 |
 |---|---|---|---|---|
-| `laobamac/SimpleMtkWlan` | **Wi-Fi（PCIe）** | kext（+ `mtk80211` 兼容层） | ❌ **无**（必须自编译） | 实验性，bring-up 中 |
-| `laobamac/SimpleMtkBtFw` | **蓝牙（USB）固件加载** | **两个** kext | ✅ **`1.0.0`** | 可用 |
-| `laobamac/SimpleMTKClient` | Wi-Fi 菜单栏客户端 | App（`SimpleMTK`） | ❌ 无 | 配套 Wi-Fi 用 |
+| ★ **`flxxxxddd/SimpleMtkWlan`**（**fork**，分支 `mt7921-fixes`） | **Wi-Fi（PCIe）** | kext | ✅ **v1.1.0 / v1.2.0**（CI 构建） | **★ 第三方路线就用它** —— MT7921/RZ608 实测能上网 |
+| `laobamac/SimpleMtkWlan`（**上游**） | Wi-Fi（PCIe） | kext（+ `mtk80211` 兼容层） | ❌ **无**（必须自编译） | 上游主线，bring-up 中；fork 的修复**还没回到主线** |
+| `laobamac/SimpleMtkBtFw` / fork `flxxxxddd/SimpleMtkBtFw` | **蓝牙固件加载**（firmware loader + patcher） | **两个** kext | ✅ **`1.0.0`** | 可用（fork 说明：AirPods 音频可用） |
+| `laobamac/SimpleMTKClient` | Wi-Fi 菜单栏客户端 | App（`SimpleMTK`） | ❌ 无（需自编译） | **必需的** —— 见 §4.1 |
+
+> **fork 与上游的关系**：`flxxxxddd/SimpleMtkWlan` fork 自 `laobamac/SimpleMtkWlan`，
+> 在**上游 + PR #5**（`mavizao` 的 MT7922 关联/TX 修复）之上再修了一大批问题（清单见 §4.6）。
+> ★ **fork 仓库的 issue 是关的**（`has_issues=false`）⇒ **反馈问题要回上游（`laobamac/SimpleMtkWlan`）开 issue**。
+> ★ **默认分支是 `mt7921-fixes`，不是 `main`** —— 手工 clone 后记得切过去。
 
 > 注意分工：**`SimpleMtkBtFw` 不是 Wi-Fi 驱动、也不是独立蓝牙协议栈** ——
 > 它只负责「把固件塞进 MediaTek 蓝牙控制器」，**塞完就交给 macOS 自己的蓝牙栈**（和 `IntelBluetoothFirmware` 同一套路，其致谢里也点名了 `zxystd` 与 IntelBluetoothFirmware）。
@@ -225,49 +235,138 @@ ioreg -l -p IOService | grep -i -E "FirmwareLoaded|fw_name"
 - 作者给的判据：日志里的**内部设备 ID 必须是 `0x7961` 或 `0x7922`**；IORegistry 里看 `FirmwareLoaded` 与 `fw_name`
 - 系统层面确认：`system_profiler SPBluetoothDataType` 里控制器能起来
 
-## 4. 路线 B：Wi-Fi（实验性，接受风险再上）
+## 4. 路线 B：Wi-Fi（第三方：`flxxxxddd/SimpleMtkWlan`）
 
-### 4.1 现状（别抱错期望）
+### 4.1 ★★ 先接受三条硬限制（决定它能不能满足你）
 
-`SimpleMtkWlan` README 的 Status 段原文 —— 当前开发焦点就是**还没做完的那些**：
+1. **它是「以太网式」接口（`enX`），不是原生 Wi-Fi（`IO80211Family`）**
+   ⇒ **没有 macOS 原生 Wi-Fi 菜单**，扫描 / 连网全靠 **SimpleMTK** 菜单栏客户端。
+2. **❌ AirDrop / Handoff / Continuity** —— README 原话 *"not possible with this design"*
+   ⇒ **这是设计决定的，不是 bug，别去排查**。
+3. **❌ 802.11ax（HE / Wi-Fi 6）尚未支持**；**睡眠 / 唤醒未测试**。
 
-> - MT7921/MT7922 PCIe probe and attach
-> - Firmware loading
-> - DMA queue setup
-> - Hardware scan support
-> - **Association/authentication TX path debugging**
->
-> *"The driver is not release-stable yet."*
+### 4.2 实测能到什么程度（README 的 Tested hardware 原表）
 
-对应到实机：
+| 卡 | PCI ID | 系统 | 结果 |
+|---|---|---|---|
+| **MT7921K（AMD RZ608）** | `14c3:0608` | 15.8.1 Sequoia，Intel 台式 | 5 GHz VHT80 **30–50 Mbit/s**（2SS、信号弱、100 M 宽带；同位置 MacBook ≈85）；2.4 GHz 可用；**开机自动加入** |
+| **MT7922** | `14c3:7922` | Tahoe（上游 PR #5） | 5 GHz 上只有 legacy 20 MHz |
+| MT7921 | `14c3:7961` | — | 与 RZ608 同芯片族，**预期可用** |
+
+### 4.3 能力矩阵（README Status 摘要）
 
 | 能力 | 状态 |
 |---|---|
-| kext 匹配设备 / probe / attach | ✅ |
-| 加载固件 | ✅ |
-| 硬件扫描（能看到 SSID） | ✅ |
-| **关联 / 连接（输密码上网）** | ⚠️ **仍在修**；实机报告「一连接就卡死或 panic」（issue #3，MT7921） |
-| MT7922 专项修复 | issue **#5**（association context、TX 同步、packet ownership），**2026-09-19 过硬件验证，但未合进主线发布** |
+| probe / 固件加载 / MSI 中断 | ✅ |
+| 扫描（2.4 GHz + 5 GHz） | ✅ |
+| WPA2-PSK（CCMP）关联、四次握手 | ✅ |
+| 硬件 RX 解密（芯片漏掉的走软件兜底） | ✅ |
+| 切换网络 / 频段 | ✅ |
+| **802.11n**（HT20/40、MCS 0–15、SGI、RX STBC、WMM） | ✅ |
+| **802.11ac**（VHT20/40/80、2×2 MCS 0–9、RX STBC） | ✅ |
+| A-MPDU（RX Block Ack + TX 聚合） | ✅ |
+| 开机自动加入、同路由器下 **5 GHz 优先** | ✅ |
+| AUTH / ASSOC 重传（丢一帧不再整轮重扫） | ✅ |
+| 卡死自愈（DMA stall 看门狗、attach 时 PCIe FLR） | ✅ |
+| **802.11ax（HE）** | ❌ 尚未 |
+| **原生 macOS Wi-Fi 菜单** | ❌ 用 SimpleMTK |
+| **睡眠 / 唤醒** | ⚠️ 未测试 |
+| **AirDrop / Handoff / Continuity** | ❌ 该设计下不可能 |
 
-### 4.2 怎么装（没有 release，只能自编译）
+### 4.4 安装（**有 release，不用自编译**）
 
-```bash
-git clone https://github.com/laobamac/SimpleMtkWlan
-cd SimpleMtkWlan
-# 需要：Xcode + 与本地环境匹配的 Kernel SDK 头 + 项目自带的固件生成脚本
-xcodebuild -project SimpleMtkWlan.xcodeproj -scheme SimpleMtkWlan -configuration Debug build
-# 产物：SimpleMtkWlan.kext
+1. 从 `flxxxxddd/SimpleMtkWlan` 的 **Releases** 取最新 **`SimpleMtkWlan-x.y.z-RELEASE.zip`**
+   （排错期用 `-DEBUG.zip`；另附 `-RELEASE-dSYM.zip`、`SHA256SUMS.txt`、`mtklog.sh`）
+2. `SimpleMtkWlan.kext` → `EFI/OC/Kexts/`，在 `config.plist → Kernel → Add` 加一条：
+
+```xml
+<dict>
+    <key>Arch</key>           <string>x86_64</string>
+    <key>BundlePath</key>     <string>SimpleMtkWlan.kext</string>
+    <key>Comment</key>        <string>MediaTek Wi-Fi</string>
+    <key>Enabled</key>        <true/>
+    <key>ExecutablePath</key> <string>Contents/MacOS/SimpleMtkWlan</string>
+    <key>MaxKernel</key>      <string></string>
+    <key>MinKernel</key>      <string></string>
+    <key>PlistPath</key>      <string>Contents/Info.plist</string>
+</dict>
 ```
 
-- 仓库布局：`SimpleMtkWlan/hal_mwx/` 是 MT7921/MT7922 实现，`mtk80211/` 是 OpenBSD net80211 兼容层
-- 许可 **GPLv2**；固件数据由 `scripts/` 里的脚本生成
-- 连接网络需要**菜单栏客户端 `SimpleMTK`**（`SimpleMTKClient`，走 ClientKit ioctl API，macOS 10.13+）——
-  **它没有 release，同样要 Xcode 编译**；它由 `HeliPort`（Intel 那边那个客户端）改编而来
+3. ★★ **确认这张卡没被 SSDT 藏起来** —— 很多预制 EFI 会带一张 `SSDT-Disable_Network_*.aml`，
+   把网卡的 `vendor-id` / `device-id` 改成 `0xFFFF` 让 macOS 忽略它
+   ⇒ **不禁用它，驱动永远匹配不上**：
 
-### 4.3 风险与前置
+```bash
+ioreg -l | grep -A40 'pci14c3'   # 应看到 vendor-id = <c3140000>，而不是 ffffffff
+```
 
-- **连接即 panic 的可能** ⇒ 上之前：备份 EFI、备好可引导 U 盘、记下回退路径（禁用 kext 即回到「无驱动」状态）
-- 不要把「实验性」当「能日常用」；**先只做蓝牙（路线 A），Wi-Fi 等上游 release 再上**
+4. 装 **SimpleMTK**（`laobamac/SimpleMTKClient`，**没有 release，需 Xcode 编译**）→ 重启 → 从菜单栏加入网络
+
+**可选 boot-args**：`-novht`（关 802.11ac）、`-noht40`（关 HT40）。
+
+### 4.5 ★ 排错（README 给的，都很实用）
+
+- **看驱动日志** —— 驱动带一个**常驻 ring buffer**，启动失败后仍在、**免 root** 可读：
+
+  ```sh
+  ./tools/mtklog.sh > mtk.txt
+  ```
+
+  周期性的 `stats` 行会给出 RX 计数、**硬件 vs 软件解密（`rx_hwdec` / `rx_swdec`）** 与丢包原因。
+- **重启后「SimpleMtkWlan is not running」** —— **热重启不会给 M.2 卡断电**；
+  驱动现在会自动恢复（WFSYS reset → PCIe FLR），仍不行就**彻底关机再上电**。
+- **速度慢** —— 看 `stats` 里的 `rx_swdec`，应**远小于** `rx_hwdec`。
+  ★ **测速必须关掉 SimpleMTK 菜单**（客户端会触发扫描；已连接时限 2 分钟一次）。
+- **2.4 GHz 无线鼠标/键盘在 Wi-Fi 也走 2.4 GHz 时卡顿** —— **同频段射频共存，不是驱动 bug**：
+  让卡只留在 5 GHz（SimpleMTK 里只保留 5 GHz 网络），或用 USB 延长线把接收器挪离天线。
+- **开机后连网慢** —— 选网是 SimpleMTK 这个 App 做的，**它登录后才启动**，这之前驱动一直在扫描。
+- **吞吐不及真 Mac** —— **AP 发来的 Block Ack Request 固件还没往上送** ⇒ 乱序要靠 100 ms 超时补齐，
+  这是当前**主要**的吞吐瓶颈。
+- **开机 ~2 s 的 `element modified after free` panic** —— 测试机上是 **`NVMeFix.kext`** 造成的，
+  **不是本驱动**（★ 很有价值：别一看到 panic 就赖在 Wi-Fi 上）。
+
+### 4.6 fork 相对上游改了什么（判断值不值得跟 / 想自己编译时看）
+
+> 前提：在 **上游 + PR #5**（`mavizao`：association context、TX 序列化、packet ownership）之上。
+
+- **固件加载**：不再需要 16 KB jumbo mbuf cluster（开机时拿不到 ⇒ `ENOMEM`、没有 MAC、没有接口）
+- **中断**：注册真正的 **MSI** 向量而不是 INTx，不再手工置 MSI enable 位；重新使能前先排空 pending
+- **TX DMA 卡死**：多 mbuf 帧线性化进一个 cluster（**第一帧 DHCP 就把 WFDMA 卡死了**）
+- **组播流量**：芯片**不解密组播帧** ⇒ 广播 ARP/DHCP 全被丢；现在也给 `net80211` 软件 CCMP 配了密钥兜底
+- **切网络**：切走前先把 deauth 发到旧 AP 所在信道、认证期间忽略过期 disassoc、离开时移除 peer station
+  并在固件里关掉 BSS（否则**切一次之后硬件解密就失效**）
+- **漫游**：关掉 RSSI 触发的后台漫游（它在同一路由器的 2.4 / 5 GHz 之间几秒一跳）
+- **802.11n / 802.11ac**：HT/VHT caps、WMM、完整 peer STA record、RX Block Ack + TX A-MPDU 交给固件、
+  **必须宣称 HT20/40**（AP 只对宣称 40 MHz 的客户端发 80 MHz）、STA_REC_VHT、宽度取自关联协商
+- **加入**：5 GHz 在 15 RSSI 点内优先、清理过期 peer / 扫描结果、首次 AUTH 前先 deauth、
+  **AUTH/ASSOC 最多重传 3 次**（以前丢一个关联响应要等 ~20 s）
+- **健壮性**：DMA stall 看门狗（硬复位 + 重载固件）、attach 时芯片恢复（WFSYS reset → PCIe FLR）、TXWI 泄漏修复
+- **可调试**：常驻 `MtkDebugLog` ring buffer（发布在 PCI 设备上）、周期性硬件/stats dump、数据路径静默
+- **构建**：从干净 clone 就能编（MacKernelSDK 作 submodule，无绝对路径）、host 测试修好、CI + release
+
+### 4.7 自己编译（只有想跟最新代码时才需要）
+
+```bash
+git clone --recurse-submodules https://github.com/flxxxxddd/SimpleMtkWlan.git
+cd SimpleMtkWlan                     # ★ 默认分支是 mt7921-fixes，不是 main
+xcodebuild -project SimpleMtkWlan.xcodeproj -scheme SimpleMtkWlan \
+  -configuration Release -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+# -> build/Build/Products/Release/SimpleMtkWlan.kext
+./tests/run-all.sh                   # host 测试（抽出真实驱动函数对 stub 跑，带 ASan/UBSan）
+```
+
+- 要求：**完整 Xcode**（command line tools 不够）；内核头来自 `acidanthera/MacKernelSDK`
+  （**git submodule**；已 clone 但没带就 `git submodule update --init`）
+- ★ **改了 `mtk80211/` 或 `include/` 下的头文件必须 `rm -rf build` 重编** ——
+  它们在系统头文件搜索路径上，Xcode **不跟踪依赖**，否则会链进过期目标文件
+- 许可 **GPLv2**；固件按 MediaTek 固件许可再分发（同 linux-firmware）
+
+### 4.8 风险与前置
+
+- 备份 EFI、备好可引导 U 盘；**禁用该 kext 即回到「无驱动」状态**
+- **它是第三方路线**：没有原生 Wi-Fi 菜单、没有 AirDrop / Continuity、不支持 802.11ax
+  ⇒ **要这些功能就换卡**（Broadcom / Intel），见 §6 决策树
+- ★ 装上后 **`en0` 归属可能变化**（它是以太网式接口）⇒ 参考 **`network-en0-order.md`**
 
 ## 5. 支线：USB 网卡 ≠ 主板上的 PCIe 卡
 
@@ -289,13 +388,19 @@ xcodebuild -project SimpleMtkWlan.xcodeproj -scheme SimpleMtkWlan -configuration
 │           记得 §3.2 的两个坑：不改产品名 + 注入两条 NVRAM data
 │
 └─ 要 Wi-Fi
-   ├─ macOS 26+ 且芯片在 7922/7923/7932 里 ─► 先试原生（路线 ①）
-   ├─ 要稳定能用 ─► 换卡：Broadcom（原生，broadcom-wifi.md）
-   │                 或 Intel + AirportItlwm（intel-wifi.md）
-   └─ 愿意折腾 ───► 路线 ③：自编译 SimpleMtkWlan + SimpleMTK 客户端
-                    接受「能扫描、但连接可能 panic」；先备份 EFI
+   ├─ macOS 26+ 且芯片在 7922 / 7923 / 7932 里 ─► ★ 先试原生（路线 ①）
+   │
+   ├─ 要「原生 Wi-Fi 菜单 / AirDrop / Continuity / Wi-Fi 6(HE)」
+   │   └─► ✗ 第三方路线给不了（§4.1）⇒ 换卡：
+   │        Broadcom（原生，broadcom-wifi.md）或 Intel + AirportItlwm（intel-wifi.md）
+   │
+   └─ 接受「以太网式接口 + 菜单栏客户端」，只要能上网
+       ├─ MT7921 / MT7921K(RZ608) ─► ★ 路线 ③：flxxxxddd/SimpleMtkWlan release（§4）
+       │                               实测 5 GHz VHT80 30–50 Mbit/s、开机自动加入
+       └─ MT7922 ─► 先试原生；原生不行才上 ③（fork 在 Tahoe 上只有 legacy 20 MHz）
+                    ★ 先确认卡没被 SSDT-Disable_Network 藏起来（§4.4 第 3 步）
+                    ★ 必装 SimpleMTK 客户端；测速时把它的菜单关掉
 ```
-
 ## 7. 排错
 
 | 现象 | 检查 |
@@ -306,16 +411,24 @@ xcodebuild -project SimpleMtkWlan.xcodeproj -scheme SimpleMtkWlan -configuration
 | `bluetoothd` 反复重启 / 蓝牙菜单转圈 / 关机卡 BlueTool | 同上；并确认**没有**把产品名改成 `Bluetooth USB Host Controller` |
 | 日志里固件没加载 | 内部设备 ID 是不是 `0x7961` / `0x7922`；USB 是否被 `Info.plist` 匹配（`idVendor 0x0E8D` + class `0xE0/1/1`） |
 | AirPods 连上无声 | A2DP Read Clock 问题（issue #3） |
-| Wi-Fi kext 加载但无接口 | `SimpleMtkWlan` 是 Debug 构建？设备 ID 是否在支持列表？ |
-| Wi-Fi 能扫描但一连接就卡死/panic | **已知**：关联/TX 路径未完成（issue #3/#5），不是配置错 |
+| Wi-Fi kext 加载但无接口 | ★★ **卡被 SSDT 藏了**（`vendor-id` 被改成 `0xFFFF`）⇒ `ioreg -l \| grep -A40 'pci14c3'`；设备 ID 是否在支持列表 |
+| Wi-Fi 能扫描但一连接就卡死/panic | ★ 用 **fork 的 release**（上游主线仍是这条症状；fork 已修关联/TX，见 §4.6）；仍发生则跑 `mtklog.sh` 看日志 |
+| 重启后驱动 not running | **热重启不给 M.2 卡断电** ⇒ 驱动会自动恢复（WFSYS reset → PCIe FLR）；不行就**彻底关机再上电**（§4.5） |
+| Wi-Fi 慢 / 不如真 Mac | ① `stats` 里 `rx_swdec` 应远小于 `rx_hwdec`；② **测速时关掉 SimpleMTK 菜单**；③ 剩余瓶颈 = AP 的 Block Ack Request 固件未上送（100 ms 乱序超时） |
+| 2.4 GHz 无线键鼠在上网时卡顿 | **同频段射频共存，不是驱动 bug** ⇒ 卡留在 5 GHz，或把接收器用延长线挪开 |
+| 开机 ~2 s 的 `element modified after free` panic | 测试机上是 **`NVMeFix.kext`**，**不是本驱动** —— 别赖错对象 |
 | 装了蓝牙但另一套 BT 固件加载器也在 | 移除冲突项（同一条纪律见 `intel-wifi.md` §5「换网卡后要清理」） |
 
 ## 8. 安全提示与边界
 
 - 三个 kext 都**非 Apple 签名** ⇒ 需要 `SecureBootModel=Disabled`，SIP 视情况放宽；**只在确实要用这张卡时这么做**
-- `SimpleMtkWlan` 明确是 **GPLv2 的实验性 bring-up 项目**，**没有 release**；从源码构建前先看清 `CREDITS.md` 与固件再分发条款
+- `SimpleMtkWlan` 是 **GPLv2 的实验性项目**；`flxxxxddd` 的 fork **有 CI 构建的 release**（v1.1.0 / v1.2.0），
+  但**上游主线仍是 bring-up 状态、没有 release** ⇒ **第三方路线认准 fork 的 release**（§2 / §4）。
+  从源码构建前先看清 `CREDITS.md` 与固件再分发条款（固件按 MediaTek 固件许可，同 linux-firmware）
+- ★ **fork 的 issue 是关的** ⇒ 反馈/求助回上游 `laobamac/SimpleMtkWlan`；fork 默认分支是 **`mt7921-fixes`**
 - 与 `broadcom-wifi.md` / `intel-wifi.md` 的关系：**同一台机器不要同时注入三套网卡驱动**；
   换卡后按 `intel-wifi.md` §5 的纪律把旧的一套**禁用或删除**，并注意 **`en0` 归属**会随驱动挂载顺序变化（⇒ **`network-en0-order.md`**）
 - **本 reference 是通用流程**；本机（Z690）用的是 Broadcom `BCM943602CDP`，**没有 MT7922**。
   - **§0.1 的原生路线事实（两个 dext、`IOPCIMatch`、自带固件、`bluetoothd` 字符串）是在本机 macOS 26.7.1 上实测读出的** —— 这部分是硬证据
   - **§1.5 的「社区做法」与 §3/§4 的第三方路线**未在本机复现（没有对应硬件）—— 按 §0.3 / §1 先确认芯片与形态，再逐步验证
+  - **§4 的能力/限制/排错全部来自 fork 的 README 与 release 说明**（2026-10-13 的 v1.2.0），**不是本机实测** ⇒ 用前先看一眼仓库有没有更新

@@ -12,9 +12,9 @@
 | 项 | 官方口径 |
 |---|---|
 | 卡 | **Turing 及更新**：GTX 16、RTX 20/30/40/50、TITAN RTX、Quadro RTX、T 系列（T400/T600/T1000、T500/T550/T600/T1200 laptop）。Pascal / Maxwell / Kepler 及更早 **不支持**（那需要另一套内核/固件实现） |
-| 系统 | macOS **15 Sequoia**（测试 15.7.x 与 15.8.1），x86_64 |
+| 系统 | macOS **15 Sequoia**（测试 15.7.x 与 15.8.1）与 **macOS 26 Tahoe**（2.0.0 起），x86_64 |
 | 笔记本 | 屏幕接在核显上的机型，内屏不会被加速；接受 PCI ID ≠ 实现 Optimus 显示 mux |
-| macOS 26 | 官方未声明支持（1.15.0 是「last release for macOS 15」）。**本机实测**：1.15.0 在 macOS 26.7.1 上 4 个 kext 正常加载、桌面可用，但属越界使用 |
+| macOS 26 | ★ **2.0.0 起官方支持 Tahoe**（changelog：「Tahoe: ship the macOS 26 accelerator built from this release」；包内 `kexts/26` 与 `kexts/15` 分开构建）。1.15.0 时代属越界使用（当时官方只声明 macOS 15）。**本机实测**：**2.0.1** 在 macOS 26.7.1 上 4 个 kext 正常加载、桌面可用 |
 
 ## 1. 两条安装路线
 
@@ -63,12 +63,13 @@ App 有「Turn verbose on/off」按钮（= 加/删 boot-args 的 `-v`）。
 |---|---|---|
 | `UEFI → Quirks → ResizeGpuBars` | 保持现值（官方 HOW-IT-WORKS 用 `13` = 8 GB） | 强制改尺寸可能让固件在进入选择器前就停住 |
 | `Booter → Quirks → ResizeAppleGpuBars` | 保持现值（HOW-IT-WORKS 用 `-1`） | 大 BAR 可能卡在 PCI configuration |
+| `Kernel → Add` | `Lilu.kext` 与 `AMFIPass.kext` **必须启用**（Lilu 在前、AMFIPass 在后） | ★★ **AMFIPass 才是让 WindowServer（platform binary）加载 ad-hoc 签名驱动的那一环**；缺了它 = 没有 Metal 设备 + 黑屏只剩鼠标（上游安装脚本有实测日志）。安装器会自动下载并校验 SHA |
 | `Kernel → Block` | `com.apple.iokit.IONDRVSupport`，`Exclude` | 否则固件 framebuffer 会抢走 display index 0 |
 | `Misc → Security → SecureBootModel` | `Disabled` | Apple 安全启动拒绝非 Apple 签名的 kext |
 | BIOS | Above 4G Decoding **ON**、CSM **OFF** | 卡要映射 4 GB 以上的内存 |
 | SMBIOS | 能跑 macOS 15 且带独显的机型（1401 用 `MacPro7,1`；测试过 `iMacPro1,1`） | macOS 26 会拒绝 `iMacPro1,1`，`MacPro7,1` 两个版本都能跑 |
 
-**必须去掉**：任何 `nv_disable=1`、WhateverGreen 的 NVIDIA 补丁、`agdpmod=pikera`。
+**必须去掉**：任何 `nv_disable=1`、`-wegnoegpu`（这两个会把 N 卡藏起来）、WhateverGreen 的 NVIDIA 补丁、`agdpmod=pikera`。
 **显卡不需要任何 `DeviceProperties`**。
 
 **可选 boot-args（排障用）**
@@ -131,11 +132,13 @@ system_profiler SPDisplaysDataType | head -20     # 应显示你的 GeForce、Me
 
 ## 8. 安全提示
 
-装这个驱动必须放宽系统安全边界：`SecureBootModel=Disabled` + `csr-active-config` 放宽 SIP + AMFI 参数（`amfi_get_out_of_my_way`）。
+装这个驱动必须放宽系统安全边界：`SecureBootModel=Disabled` + `csr-active-config` 放宽 SIP + AMFI 参数（`amfi_get_out_of_my_way`），
+且 `Lilu.kext` / `AMFIPass.kext` 必须启用。
 这是**有意降低系统安全性**换图形加速，只在明确需要时做；不装驱动时把这几项恢复原值。
 
 > ★★ **关 AMFI 有一个隐性代价：TCC 权限弹窗全部失效** ——
 > 语音 / 摄像头类 App 会「报没权限 + 不弹窗 + 隐私列表里也没有它」。
-> **首选解法是改用 `AMFIPass.kext`（保留 AMFI）**，但**本驱动的上游明确不接受它**
-> ⇒ 本机只能「保驱动 + 手工注入 TCC 条目」（**不持久**）。
+> **别的驱动可改用 `AMFIPass.kext`（保留 AMFI）解决**；但**本驱动把 AMFI 参数与 `AMFIPass.kext` 一并列为必需**
+> （★ 两者**并存**，**不是替代关系**）⇒ 本机只能「保驱动 + 手工注入 TCC 条目」（**不持久**）。
+> ★ **别搞混**：被 `NDSecurityState.m` 归入「不安全覆盖」的是 **`-amfipass*` boot-arg**，**不是** `AMFIPass.kext`。
 > 详见 **`amfi-and-tcc.md`**（含字段格式、`csreq` 生成、排查判据、撤销）。
