@@ -139,3 +139,5 @@ system_profiler SPDisplaysDataType | head -20     # 应显示你的 GeForce、Me
 > ★★ **关 AMFI 有一个隐性代价**：**TCC 权限弹窗会全部失效** ——
 > 语音 / 摄像头类 App 会「报没权限 + 不弹窗 + 隐私列表里也没有它」。
 > 这不是驱动 bug，而是「AMFI 关闭」本身的性质；**用之前先想清楚这台机器要不要用麦克风/摄像头**。
+> ★ 需要时用 **`GeekAudio/tcc-helper`** 把「已授权」条目直接写进 TCC 数据库
+> （GUI + CLI，自动从 `Info.plist` 与 launchd 组件反推谁需要什么权限）⇒ 详见 **`amfi-and-tcc.md`**。

@@ -25,7 +25,7 @@
 
 | Skill | 一句话 | 规模 |
 |---|---|---|
-| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置 —— 覆盖从装机到日常化、再到系统大版本升级的全生命周期，并含**启动选择器（OpenCanopy）主题**与**换机型 / 三码** | 20 条铁律 · 28 份参考 · 17 个脚本 |
+| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置 —— 覆盖从装机到日常化、再到系统大版本升级的全生命周期，并含**启动选择器（OpenCanopy）主题**与**换机型 / 三码** | 20 条铁律 · 29 份参考 · 17 个脚本 |
 
 技能目录里有一份 `USAGE.md`（**随安装一起复制**），在对话里问「使用说明」即可拿到。
 
@@ -73,7 +73,7 @@ hackintosh-skills/
 │   │   └── plugin.json          # ← 插件元数据
 │   ├── SKILL.md                 # 主流程 + 20 条铁律 + 资源表
 │   ├── USAGE.md                 # ← 使用说明（随安装一起复制）
-│   ├── references/              # 28 份专题文档（见下表）
+│   ├── references/              # 29 份专题文档（见下表）
 │   └── scripts/                 # 17 个脚本（见下表）
 ```
 
@@ -156,6 +156,7 @@ hackintosh-skills/
 | 主题 | 要点 |
 |---|---|
 | **NVIDIA 独显**（NullMoth） | 适用卡范围、两条安装路线、★「装 `/Library/Extensions` 从 AuxKC 加载 ⇒ 不要再从 `EFI/OC/Kexts` 注入」、必需 OC 设置、恢复路径、上报纪律 |
+| **App 拿不到权限**（AMFI ↔ TCC） | 关掉 AMFI ⇒ **不弹权限窗、隐私列表里也没条目** ⇒ 语音/摄像头 App 永远拿不到权限；★ **别的机器首选 `AMFIPass.kext`**（保留 AMFI，问题自动消失），但 NullMoth 驱动把它与 AMFI 参数**并列列为必需** ⇒ 只能二选一；★★ **解法 = [`GeekAudio/tcc-helper`](https://github.com/GeekAudio/tcc-helper)**（Swift GUI + CLI，Release v1.0.0 有 DMG）：**自动从 `Info.plist` 的 usage description + launchd 后台组件反推谁需要什么权限**，109 个服务、任意目标（含裸可执行文件）、写入前自动备份 + 写完 `killall tccd`；★★ **要授权的是「真正申请权限的那个 helper」，不一定是主 App**；★ 条目不持久 |
 | **Intel 无线**（AirportItlwm / itlwm） | 两种形态、★「Sequoia 与 Tahoe 是两套 ABI 与产物 ⇒ 双系统共用配置必须用 `MinKernel`/`MaxKernel` 分开」、蓝牙配套、macOS 26 的能力与限制 |
 | **MediaTek 无线**（MT7921 / MT7922 / RZ608） | ★★★ **macOS 26 原生 Sunrise 驱动**（`AppleSunriseWLAN/Bluetooth`，自带固件）⇒ 先「什么都不装」试一遍；**蓝牙（USB）走 `SimpleMtkBtFw`**；★★ **第三方 Wi-Fi 认准 `flxxxxddd/SimpleMtkWlan` fork（有 CI release v1.2.0）** —— 修好了 MT7921/RZ608「能 attach 但过不了流量」，补上 **802.11n + 802.11ac（VHT80）**，实测 30–50 Mbit/s 且开机自动加入；★★★ **三条硬限制**：**以太网式接口、没有原生 Wi-Fi 菜单、AirDrop/Handoff/Continuity 设计上不可能**、不支持 802.11ax ⇒ 要这些就换卡；★ 最常踩的坑 = **卡被 `SSDT-Disable_Network` 藏了**（`vendor-id` 改 `0xFFFF`）；排错用 `mtklog.sh`（常驻日志、免 root） |
 | **有线网卡**（Intel / Realtek） | ★★ **本机是 Intel `I225-V`**；`SimpleVGBE`（I225/I226）· `SimpleEthernet`（Lilu 插件，i225/226/210/211）· `SimpleRTK5`（RTL8125/8126）；★ **一次只换一套**、**换完复查 `en0` 归属** |
@@ -212,6 +213,7 @@ hackintosh-skills/
 | `disks-and-kexts.md` | 磁盘屏蔽与 kext 精简的判据与「不能删」清单 |
 | `rapidefi-first-efi.md` | 从零：Windows 上用 RapidEFI 生成基础 EFI 及收尾 |
 | `nvidia-driver.md` | NullMoth NVIDIA 驱动：适用范围、安装、必需 OC 设置、恢复、故障对照 |
+| `amfi-and-tcc.md` | **AMFI ↔ TCC 冲突（App 拿不到权限）**：★ 现象三连（**第三条 = 隐私列表里没有条目**才是判据）· 根因（`amfi=0x80`）· **别的机器首选 `AMFIPass`**（本机不行，只能二选一）· ★★ **解法 `GeekAudio/tcc-helper`**（GUI + CLI、**自动授权从系统反推**、109 个服务、任意目标）· **要授权的是真正申请的 helper 而不是主 App** · `access` 表字段与 `csreq` magic `fade0c00` · **五个工程坑** · 诊断三分类 · 不持久 |
 | `intel-wifi.md` | Intel 无线网卡：版本线、注入、蓝牙配套、排错 |
 | `mediatek-wifi.md` | MediaTek 无线网卡：★★★ **macOS 26 原生 Sunrise 驱动**；★★ **第三方 Wi-Fi 用 `flxxxxddd/SimpleMtkWlan` fork（有 release、802.11n/ac 可用）** · **三条硬限制** · **SSDT 藏卡坑** · `mtklog.sh` 排错 · 蓝牙 `SimpleMtkBtFw` 两坑 · 芯片认型 · 决策树 |
 | `broadcom-wifi.md` | 博通网卡：**按 Sequoia / Tahoe 分路线**、OCLP root patch、验证判据 |
