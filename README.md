@@ -25,7 +25,7 @@
 
 | Skill | 一句话 | 规模 |
 |---|---|---|
-| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置 —— 覆盖从装机到日常化、再到系统大版本升级的全生命周期，并含**启动选择器（OpenCanopy）主题**与**换机型 / 三码** | 20 条铁律 · 29 份参考 · 17 个脚本 |
+| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置 —— 覆盖从装机到日常化、再到系统大版本升级的全生命周期，并含**启动选择器（OpenCanopy）主题**与**换机型 / 三码** | 21 条铁律 · 30 份参考 · 18 个脚本 |
 
 技能目录里有一份 `USAGE.md`（**随安装一起复制**），在对话里问「使用说明」即可拿到。
 
@@ -71,10 +71,10 @@ hackintosh-skills/
 ├── opencore-config-audit/
 │   ├── .codebuddy-plugin/
 │   │   └── plugin.json          # ← 插件元数据
-│   ├── SKILL.md                 # 主流程 + 20 条铁律 + 资源表
+│   ├── SKILL.md                 # 主流程 + 21 条铁律 + 资源表
 │   ├── USAGE.md                 # ← 使用说明（随安装一起复制）
-│   ├── references/              # 29 份专题文档（见下表）
-│   └── scripts/                 # 17 个脚本（见下表）
+│   ├── references/              # 30 份专题文档（见下表）
+│   └── scripts/                 # 18 个脚本（见下表）
 ```
 
 ---
@@ -112,6 +112,9 @@ hackintosh-skills/
 > 阶段 ③④ 是关键：**没有 DEBUG 构建就拿不到完整日志，拿不到日志就只能靠猜。**
 
 **② 配置审查**
+
+- ★★★ **要不要更新 kext / OpenCore —— 先证明它该更新**：**上游 tag 查不到 ≠ 来路不明** —— `dortania/build-repo` **按 commit 构建**，上游在最后一次 release 之后又有提交就把**补丁号 +1**，且常被**厂商安装脚本钉死 + 校验 SHA-256**（本机 `Lilu 1.7.3` / `VirtualSMC 1.3.9` / `WhateverGreen 1.7.2` … 上游逐个 404，全是 Dortania 构建）⇒ **换成上游 release = 降级**；判据四条（上游 tag · 构建元数据 · 二进制哈希 · **厂商安装器**），**只有最后一条能定性**；★ **`DTXcode` 老 ≠ 可疑**；★ DEBUG/RELEASE 用**体积对照**判；★★ **换 OpenCore 构建必须连官方同名 Drivers 一起换**
+
 
 - **逐键对照官方文档**：按机器上的 OpenCore 版本取官方发布包，用官方 `ocvalidate` 校验，并把
   `Configuration.tex` 里**全部配置条目**（**420 个**，其中带 `Type` 的配置项 **401 个**）的
@@ -190,6 +193,7 @@ hackintosh-skills/
 | `mask-other-disks.sh` | 按 UUID 写 fstab 屏蔽非系统卷（默认 dry-run，永不碰 EFI） |
 | `cpu-freq-probe.sh` | CPU 实际频率探针（内联汇编，防编译器折叠）—— 验证睿频 / 对比机型 |
 | `e-cores-check.sh` | **小核（E 核）体检**：拓扑（`hw.nperflevels` / `perflevel1` / `CPUID`）+ 频率 + `CpuTopologyRebuild` 加载状态 + 判读 |
+| `kext-inventory.sh` | **kext 清单体检**：版本 / `DTXcode` / `DTSDKName` / 大小 / sha256（含包内 PlugIns）+ **config 引用核对（0 缺失）** + OpenCore 本体版本；`--tsv` 便于 diff、`--save` 存档改动前证据 |
 | `cpu-name-check.sh` | **CPU 显示名体检**：显示名 vs `machdep.cpu.brand_string` · `rev*` 参数（boot-args + NVRAM）· `RestrictEvents` 加载 · config 的 `ProcessorType` / `revcpuname` / `NVRAM>Delete` 核对 |
 | `mem-check.sh` | 校验内存注入摆位（数组序号 → 预测图位，判定是否与「系统信息」错位） |
 | `bios-audit.ps1` | **Windows 侧 BIOS 审查（只读）**：判定固件类型/Secure Boot/TPM/VT-x/HT/XMP/**VMD·RST**/串口/内存槽位 |
@@ -211,6 +215,7 @@ hackintosh-skills/
 | `acpi-ssdt.md` | 官方 AcpiSamples 逐条适用条件、设备存在性检查、命名规范 |
 | `bios-settings.md` | **BIOS/UEFI 审查**：官方 9 条 + Dortania + 社区补充（**VMD**/Speed Shift）、**必须关/必须开/看情况**三类、CFG Lock 专题、**厂商命名对照表** |
 | `disks-and-kexts.md` | 磁盘屏蔽与 kext 精简的判据与「不能删」清单 |
+| `kext-and-oc-update.md` | **更新 kext 与 OpenCore**：★★★ **上游 tag 查不到 ≠ 来路不明**（Dortania `build-repo` 按 commit 构建、补丁号 +1）· **判「官方件」四条判据**（只有「厂商安装器钉没钉」能定性）· **DEBUG/RELEASE 用体积对照** · 该更新/不该更新的表 · **OC 本体更新（连 Drivers 一起换）** · 安全流程 9 步 · 坑 |
 | `rapidefi-first-efi.md` | 从零：Windows 上用 RapidEFI 生成基础 EFI 及收尾 |
 | `nvidia-driver.md` | NullMoth NVIDIA 驱动：适用范围、安装、必需 OC 设置、恢复、故障对照 |
 | `amfi-and-tcc.md` | **AMFI ↔ TCC 冲突（App 拿不到权限）**：★ 现象三连（**第三条 = 隐私列表里没有条目**才是判据）· 根因（`amfi=0x80`）· **别的机器首选 `AMFIPass`**（本机不行，只能二选一）· ★★ **解法 `GeekAudio/tcc-helper`**（GUI + CLI、**自动授权从系统反推**、109 个服务、任意目标）· **要授权的是真正申请的 helper 而不是主 App** · `access` 表字段与 `csreq` magic `fade0c00` · **五个工程坑** · 诊断三分类 · 不持久 |

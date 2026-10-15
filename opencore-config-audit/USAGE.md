@@ -19,6 +19,7 @@
 | **启动项没了** | 「BIOS 里看不到 OpenCore 了」「只剩 Windows」「用 U 盘引导后启动项消失」「bcfg 怎么加启动项」 |
 | **换引导盘** | 「从 U 盘启动改成硬盘启动」「怎么在 macOS 里加启动项」「启动项排第一」 |
 | 精简 | 「kext 精简一下，不用的删掉」「屏蔽一下其它磁盘」 |
+| **更新 kext / OC** | 「把所有 kext 更新到最新」「OpenCore 要不要升级」「这个 kext 是不是官方的」 |
 | 装驱动 | 「装 NVIDIA 驱动」「Intel 无线网卡怎么配」「我这块 MT7922 能用吗」「MT7921 能上网吗」「博通网卡怎么配」「有线网卡/2.5G 网卡怎么驱动」 |
 | 调 CPU | 「CPU 频率被压住了」「睿频怎么开」「换了 CPUFriend 数据反而更慢了」「睿频改完没效果」 |
 | **CPU 名字不对** | 「关于本机显示 Xeon W，但我的是 i7」「处理器名称怎么改」「CPU 型号显示错了」 |
@@ -38,7 +39,7 @@
 - **校验过的清单**：SSDT 该加哪个、kext 该删哪个，逐条给依据
 - **分析文档**：启动耗时、日志取证这类会落成文件
 
-## 配套脚本（16 个）
+## 配套脚本（18 个）
 
 | 脚本 | 作用 |
 |---|---|
@@ -54,18 +55,19 @@
 | `mask-other-disks.sh` | 按 UUID 屏蔽非系统卷 |
 | `cpu-freq-probe.sh` | CPU 实际频率探针 |
 | `e-cores-check.sh` | **小核（E 核）体检**（拓扑 / 频率 / `CpuTopologyRebuild` 加载 + 判读） |
+| `kext-inventory.sh` | **kext 清单体检**（版本 / `DTXcode` / sha256 / config 引用核对 / OC 本体版本） |
 | `cpu-name-check.sh` | **CPU 显示名体检**（名字对照 / `rev*` 参数 / `RestrictEvents` / `ProcessorType`） |
 | `mem-check.sh` | 校验内存注入摆位 |
 | `redact-check.sh` | **发布前脱敏自检**（扫三码 / MAC / 密钥等） |
 | `oc-theme-check.sh` | **Resources 树合规检查**（必需图标 / 真实像素尺寸 / 标签 / 字体 / 音频） |
 | `oc-fetch-iconset.sh` | 从官方 OcBinaryData 取图标集 / 字体 / 标签 / 音频 |
 
-## 参考文档（29 份）
+## 参考文档（30 份）
 
 按主题挑：`bios-settings.md`（BIOS）· `lifecycle.md`（全流程）· `os-upgrade-15-to-26.md`（升系统）·
 `nvidia-driver.md` · `amfi-and-tcc.md`（**App 拿不到权限 → tcc-helper**）· `intel-wifi.md` · `mediatek-wifi.md` · `broadcom-wifi.md`（四类网卡/显卡）·
 `applealc-custom.md`（**声卡 / macOS 26 恢复 AppleHDA**）· `hidpi.md`（显示）· `intel-turbo.md`（睿频）· `e-cores.md`（**开/关小核**）· `cpu-name.md`（**CPU 显示名**）· `memory-injection.md`（内存）· `boot-timeline.md` / `logs-and-debug.md`（日志）· `boot-entries.md`（启动项）·
-`acpi-ssdt.md` · `disks-and-kexts.md` · `official-docs-method.md` · `rapidefi-first-efi.md` ·
+`acpi-ssdt.md` · `disks-and-kexts.md` · `kext-and-oc-update.md`（**更新 kext / OC**）· `official-docs-method.md` · `rapidefi-first-efi.md` ·
 `smbios-and-serials.md`（换机型 + 三码）· `network-en0-order.md`（`en0` 归属）· `ethernet-drivers.md`（有线网卡）· `ecosystem-sources.md`（**权威来源与工具索引**）· `laobamac-toolkit.md`（工具索引）· `pitfalls.md`（踩过的坑）· `theme-opencanopy.md`（选择器主题）· `machine-facts.md`（参考机器事实）
 
 ## 注意
