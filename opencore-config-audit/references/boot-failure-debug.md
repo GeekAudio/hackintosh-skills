@@ -66,6 +66,7 @@
 | 症状 | 查什么 |
 |---|---|
 | **走到很后面（驱动都加载了）才卡** | 多半是**用户态服务没起来**。本机实例：`AppleUSBHostHIDDevice` 都建好了，但在等 **DriverKit dext `com.apple.AppleUSBHostHIDDrivers`** ⇒ **没有键鼠输入**（看着像卡死，其实是等不到服务） |
+| **卡在 Preboot** | ★ 专项排查见 `5T33Z0/OC-Little-Translated` 的 `Content/18_Troubleshooting/Fixing_Preboot`（另有 `K_Debugging/` 的 SysReport 法） |
 | **panic 了** | ★ **首选证据在 `/Library/Logs/DiagnosticReports/`**；带 `keepsyms=1` 的 panic 回溯**直接给帧名**（所以排查期值得开 `keepsyms=1`） |
 | **`decmpfs_pagein_compressed: couldn't ubc_upl_map a single page`**（`apfs_vnops.c`） | ★ 本机**已知族**：APFS **透明解压路径**的内核断言，**与 GPU / 机型 / 内存压力无关**（panic 里 `Compressor Info: 0% … 0 swapfiles` 已排除内存不足）；特征是**开机几十分钟后、新进程启动时**、**不同机型不同进程同一行代码** |
 | **开机 ~2 s 的 `element modified after free`** | ★ 本机实测是 **`NVMeFix.kext`** 造成的（**不是 GPU、不是网卡驱动**）⇒ 先**禁用 `NVMeFix` 做 A/B** |

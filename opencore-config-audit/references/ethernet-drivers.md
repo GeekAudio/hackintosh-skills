@@ -9,6 +9,8 @@
 macOS **原生不认**的板载 / 扩展有线网卡。
 
 > ★★ **本机（ASUS Z690）板载是 Intel `I225-V`** —— 原生不认，必须第三方驱动。
+> ★ **另有一条 ACPI 路线**：`5T33Z0/OC-Little-Translated` 的 **`Intel_I225-V_Fix_(SSDT-I225V)`**
+> （用 SSDT 修，而不是装 kext）—— 值得对照，见 `acpi-ssdt.md` §0.1。
 > 本机目前用的是 **`AppleIGC.kext`**，本文里的方案是它的**替代品**。
 
 ## 1. Intel 2.5G —— **I225 / I226**

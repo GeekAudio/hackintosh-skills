@@ -1,8 +1,51 @@
 # ACPI / SSDT 巡检
 
-> ★ **中文参考**：`laobamac/OC-little-zh` —— **ACPI 热补丁中文指南**（ACPI 基础 · 添加设备 · 禁用设备 ·
-> 修显卡 · 修 USB · 修睡眠唤醒 · 笔记本补丁 · CMOS · **内核扩展加载顺序** · **MMIO 白名单** · 内存速度）。
-> **写 SSDT 之前先翻它**，再对照本文的官方 `AcpiSamples`。索引见 `laobamac-toolkit.md`。
+> ★★★ **热补丁样例库主参考：`5T33Z0/OC-Little-Translated`**（<https://github.com/5T33Z0/OC-Little-Translated>，
+> **★745** · BSD-3-Clause · **仍在更新**）—— 起于 Daliansky `OC-little` 的**英译**，但**已远超原作**：
+> 新增第 7–20 章 + **完整附录 A–Z**，重写了 ACPI / USB 端口映射等章节。
+> ★★ **作者明确定位**：**不是安装指南**，是**装好之后的调优与硬件启用**；
+> **只用 ACPI 热补丁、不做 DSDT patch**（干净黑苹果路线）⇒ **与本文的判据完全同源，可以放心当样例库用**。
+> ★ **诚实提醒**：英译是 AI 工具 + 人工校对，**译者不懂中文** ⇒ 译文可能有小偏差；**关键结论仍要回到官方文档核**。
+>
+> ★ **中文参考**：`laobamac/OC-little-zh`（原作的中文版，索引见 `laobamac-toolkit.md`）。
+>
+> ★ **写 SSDT 之前先翻样例库**，再对照本文的官方 `AcpiSamples` 判「该不该加」。
+
+## 0. ★★ 按需求找哪一章（含**本机 Z690 / Alder Lake / iMac20,1** 的落点）
+
+| 你要做的事 | 去哪一章 |
+|---|---|
+| ACPI 基础 · **删除固件表** · **重命名设备** · OC 的 ACPI Patch | `Content/00_ACPI/`（`ACPI_Basics` · **`ACPI_Dropping_Tables`** · **`ACPI_Rename_Devices`** · `ACPI_Patches_OpenCore` · `ACPI_Debugging`） |
+| ★ **把多张 SSDT 合并成一张表** | `Content/00_ACPI/SSDT-ALL` |
+| 添加缺失设备 / 启用功能 | `Content/01_Adding_missing_Devices_and_enabling_Features/` |
+| **禁用设备**（ACPI 法 + `Block_Kexts` 法） | `Content/02_Disabling_Devices/Disabling_PCI_Devices/` |
+| ★ **用 ACPI 做 USB 端口映射**（`XHUB` / `XUPC` 两种方法） | `Content/03_USB_Fixes/ACPI_Mapping_USB_Ports/` |
+| **修睡眠 / 唤醒**（`060D` 秒醒 · `PTSWAK` · AOAC · ASPM） | `Content/04_Fixing_Sleep_and_Wake_Issues/` |
+| 笔记本（电池 / FN 键 / 触摸板 I2C / 品牌专用） | `Content/05_Laptop-specific_Patches/` |
+| CMOS 相关 | `Content/06_CMOS-related_Fixes/` |
+| **Quirks 逐项解释** · Config 技巧 | `Content/08_Quirks/` · `Content/A_Config_Tips_and_Tricks/` |
+| **kext 加载顺序实例** | `Content/10_Kexts_Loading_Sequence_Examples/` |
+| 显卡（iGPU/dGPU/APU）· **GPU-BAR 尺寸** · 禁用不支持的 GPU · Metal 3 | `Content/11_Graphics/` |
+| **MMIO 白名单** · AppleVTD | `Content/12_MMIO_Whitelist/` · `Content/20_AppleVTD/` |
+| 雷雳 / 外设 / 网络 / RAM 速度 | `Content/19_Thunderbolt/` · `13_Peripherals/` · `N_Networking/` · `15_RAM/` |
+| **boot-args 逐项解释** | `Content/H_Boot-args/` |
+| OCLP on Wintel · OTA 更新 · Board-ID VMM spoof | `Content/14_OCLP_Wintel/` · `S_System_Updates/OTA_Updates.md` · `09_Board-ID_VMM-Spoof/` |
+| ★ **自己做一个 ALC Layout-ID** | `Content/L_ALC_Layout-ID/`（另有更细的 `5T33Z0/AppleALC-Guides` ⇒ `applealc-custom.md`） |
+| **排错**：SysReport · Preboot 卡住 · spindump 转文本 · 让 AI 分析 bootlog | `Content/K_Debugging/` · `18_Troubleshooting/`（`Fixing_Preboot` · `Converting_Spindumps.md` · `Config_Tweaks_AI.md`） |
+| 一堆常用终端命令 | `Terminal_Commands.md` |
+| **上传 EFI 前的自检清单** | `Content/M_EFI_Upload_Chklst/` |
+
+### 0.1 ★ 这个仓库里「官方 / Dortania 没有」的东西（最值得翻的部分）
+
+- ★ **`SSDT-ALL`：把多张 SSDT 合并成一张表** —— 减少 `ACPI>Add` 条目、便于管理；
+- ★★ **`ACPI_Mapping_USB_Ports`：用 ACPI 而不是 kext 做 USB 端口映射**（`XHUB` / `XUPC` 两种方法）——
+  对「USB 15 口上限」这类问题是一条**不同于 `UTBMap` 的路线**；
+- ★ **`Intel_I225-V_Fix_(SSDT-I225V)`** —— **本机板载就是 Intel I225-V**，值得对照（现用 `AppleIGC.kext`，见 `ethernet-drivers.md`）；
+- ★ **`PMCR_Support_(SSDT-PMCR)`** —— 本机 `PMCR` 计数 **0**，属于「可能该补」的一类；
+- ★ **`ACPI_Dropping_Tables` + `ACPI_Rename_Devices`** —— 本机删 `xh_adls3` 用的就是前者那套机制；
+- ★ **`GPU-BAR_Size` / `Disabling_unsupported_GPUs`** —— 与 ReBAR / 不支持显卡相关；
+- ★ **`ACPI_Debugging`（含 `ACPIDebug.kext`）** —— ACPI 层面的取证手段；
+- ★ **`18_Troubleshooting/Fixing_Preboot`** —— 卡在 Preboot 的专项排查（补 `boot-failure-debug.md`）。
 
 ## 1. 官方依据只有这些
 
@@ -75,3 +118,4 @@ ioreg -r -c AppleSMBusController -w0 | wc -l     # 0 = 已加载但无实例 ⇒
 3. 检查 `ACPI>Add` 每条 `Path` 是否**真的存在**、目录里有没有**孤儿文件**
 4. 检查 `ACPI>Delete` 是否命中（看 OC 日志 `OCA: Deleting table …`）
 5. 最后才考虑"要不要补"；补的时候一次只加一张，重启后看内核日志是否仍 0 报错
+6. ★ 卡在 **Preboot** 之类的位置 ⇒ `5T33Z0/OC-Little-Translated` 的 `Content/18_Troubleshooting/Fixing_Preboot`（另有 `boot-failure-debug.md`）

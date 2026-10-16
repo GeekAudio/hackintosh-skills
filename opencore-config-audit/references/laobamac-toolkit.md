@@ -78,7 +78,7 @@
 
 | 仓库 | 内容 |
 |---|---|
-| ★ **`OC-little-zh`** | **ACPI 热补丁中文指南** —— ACPI 基础 · 通过 SSDT 启用/添加设备 · 禁用设备 · 修显卡（核显/独显）· 修 USB · 修重启/睡眠/唤醒 · 外设问题 · 笔记本特殊补丁 · CMOS · EFI 文件夹 · **内核扩展加载顺序** · **MMIO 白名单** · 内存速度 ⇒ **写 SSDT / 修 ACPI 时的权威中文参考**（配合 `acpi-ssdt.md`） |
+| ★ **`OC-little-zh`** | **ACPI 热补丁中文指南** —— ACPI 基础 · 通过 SSDT 启用/添加设备 · 禁用设备 · 修显卡（核显/独显）· 修 USB · 修重启/睡眠/唤醒 · 外设问题 · 笔记本特殊补丁 · CMOS · EFI 文件夹 · **内核扩展加载顺序** · **MMIO 白名单** · 内存速度 ⇒ **写 SSDT / 修 ACPI 时的中文参考**（配合 `acpi-ssdt.md`）；★ **英文扩充版见 `5T33Z0/OC-Little-Translated`**（已远超原作，另有第 7–20 章与附录 A–Z） |
 | `non-metal-frameworks` | **非 Metal 框架补丁仓库**（基于 Moraea 已删除的仓库）⇒ 老显卡在 Metal 化系统上的补丁（配合 `nvidia-driver.md`） |
 | `misc-patches` | **杂项补丁** —— *"Patches not covered in non-metal-frameworks or elsewhere"* |
 | `SimpleBuyersGuide` | 见 §3 |
@@ -127,7 +127,7 @@
 |---|---|
 | **配机 / 换硬件前** | ★ `SimpleBuyersGuide`（避坑指南） |
 | **从零生成 EFI** | `SimpleKaruzi`（已存档）或 `rapidefi-first-efi.md` 的 RapidEFI |
-| **修 ACPI / 写 SSDT** | ★ `OC-little-zh` + `acpi-ssdt.md` |
+| **修 ACPI / 写 SSDT** | ★ `OC-little-zh`（中文）+ ★★ `5T33Z0/OC-Little-Translated`（英文扩充版，样例最全）+ `acpi-ssdt.md` |
 | **装 kext 到系统目录 / 合并 KDK / 重建缓存** | ★ `SimpleLoader`（有快照保护） |
 | **声卡** | 先 USB 声卡 / `MyKextInstaller`+KDK（`applealc-custom.md` §0.5）· 兜底 `SimpleVoodooHDA`（音质有损）；`SimpleHDA` 已降为备选 |
 | **有线网卡** | `ethernet-drivers.md` |

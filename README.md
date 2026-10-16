@@ -120,7 +120,7 @@ hackintosh-skills/
   `Configuration.tex` 里**全部配置条目**（**420 个**，其中带 `Type` 的配置项 **401 个**）的
   `Type / Failsafe / Description` 抽成键库，
   逐键判定「你的取值 vs 官方默认」，分成三类：**有依据的正确偏离 / 与文档相反 / 冗余残留**
-- **ACPI / SSDT 巡检**：用官方 `Docs/AcpiSamples/`（18 个样例）逐条对照你的实际设备
+- **ACPI / SSDT 巡检**：用官方 `Docs/AcpiSamples/`（18 个样例）逐条对照你的实际设备；★★ **热补丁样例库主参考 `5T33Z0/OC-Little-Translated`**（★745，**仍在更新**）—— 起于 `daliansky/OC-little` 英译但**已远超原作**（第 7–20 章 + 完整附录 A–Z），**只用 ACPI 热补丁、不做 DSDT patch**；含 **按需求找哪一章的索引表（含本机落点）** 与**官方/Dortania 没有的那些**：`SSDT-ALL` 合并表 · **用 ACPI 做 USB 端口映射** · `SSDT-I225V` · `SSDT-PMCR` · `ACPIDebug` · `Fixing_Preboot`
 - **kext 精简**：找禁用项与孤儿文件，含「不能删」清单
 - **磁盘屏蔽**：`/etc/fstab` + `noauto`（按卷 UUID），**显式排除 EFI 分区**并做挂载验证
 
@@ -216,7 +216,7 @@ hackintosh-skills/
 | `boot-timeline.md` | **启动耗时 / 时间线分析**：三段拆解、流式过滤、停顿窗口定位 |
 | `boot-failure-debug.md` | **装不上 / 进不去系统的分层 debug 流程**：★ **四段分层** · ★★ **卡死 vs 循环重启** · 各段速查表（含 `no kext summary` / `X86PlatformShim` / `decmpfs` / `element modified after free` 等本机已定性失败族）· 装机期专属（VMD 找不到盘）· **救援顺序 6 步** · ACPI（`xh_adls3`）· 取证清单 |
 | `boot-entries.md` | **固件启动项（`Boot####` / `BootOrder`）与 `LauncherOption`**：★ **「用 U 盘引导后启动项消失」的根因**、四档取值、取证命令、**ASUS 的 `Boot0000` 坑**；★★ **§7 官方修法**（`bcfg` / `OpenControl` 解锁 NVRAM / `LauncherOption=Full` 自愈 / 从系统里写 / `BootKicker`）、**§8 从 U 盘启动改成硬盘启动（含三步验收）** |
-| `acpi-ssdt.md` | 官方 AcpiSamples 逐条适用条件、设备存在性检查、命名规范 |
+| `acpi-ssdt.md` | ACPI/SSDT 巡检：官方 AcpiSamples 逐条适用条件 · 设备存在性检查 · 命名规范 · ★★ **`5T33Z0/OC-Little-Translated` 按需求索引表**（含本机落点）· **官方/Dortania 没有的那些**（`SSDT-ALL` 合并表 · **用 ACPI 做 USB 端口映射** · `SSDT-I225V` · `SSDT-PMCR` · `ACPIDebug` · `Fixing_Preboot`） |
 | `bios-settings.md` | **BIOS/UEFI 审查**：官方 9 条 + Dortania + 社区补充（**VMD**/Speed Shift）、**必须关/必须开/看情况**三类、CFG Lock 专题、**厂商命名对照表** |
 | `disks-and-kexts.md` | 磁盘屏蔽与 kext 精简的判据与「不能删」清单 |
 | `kext-and-oc-update.md` | **更新 kext 与 OpenCore**：★★★ **上游 tag 查不到 ≠ 来路不明**（Dortania `build-repo` 按 commit 构建、补丁号 +1）· **判「官方件」四条判据**（只有「厂商安装器钉没钉」能定性）· **DEBUG/RELEASE 用体积对照** · 该更新/不该更新的表 · **OC 本体更新（连 Drivers 一起换）** · 安全流程 9 步 · 坑 |

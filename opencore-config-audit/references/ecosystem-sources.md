@@ -77,11 +77,11 @@
 
 | 来源 | 内容 |
 |---|---|
-| ★ **`daliansky/OC-little`** ★1.6k | **ACPI 热补丁样例**（英文原版）⇒ 中文版 = **`laobamac/OC-little-zh`**（见 `laobamac-toolkit.md` §6） |
+| ★ **`daliansky/OC-little`** ★1.6k | **ACPI 热补丁样例 —— 中文原作**（黑果小兵 Daliansky）⇒ 中文整理版 = **`laobamac/OC-little-zh`**（见 `laobamac-toolkit.md` §6）· **英文扩充版 = `5T33Z0/OC-Little-Translated`**（见下） |
 | ★ **`daliansky/Hackintosh`** ★10.0k | **长期维护的 EFI 合集 + 安装教程**（黑果小兵） |
 | `daliansky/daliansky.github.io` | 黑果小兵的部落阁（博客） |
-| ★ **`5T33Z0/OC-Little-Translated`** ★745 | **OC-Little 的英文翻译 + 整理**（ACPI hotpatch / 修复 / 指南） |
-| `5T33Z0/OCLP4Hackintosh` ★79 | OCLP 用在黑苹果上的简明指南 |
+| ★★★ **`5T33Z0/OC-Little-Translated`** ★745 | **ACPI 热补丁样例库主参考** —— 起于 OC-Little 英译，但**已远超原作**（新增第 7–20 章 + 完整附录 A–Z）；**只用 ACPI 热补丁、不做 DSDT patch**；覆盖 ACPI 基础/删表/改名 · 加/禁设备 · CPU 电源 · 显卡（含 **GPU-BAR**）· USB（含**用 ACPI 做端口映射**）· 睡眠唤醒 · 笔记本 · CMOS · **MMIO 白名单 / AppleVTD** · 雷雳 · boot-args / Quirks 解释 · kext 顺序 · **OCLP on Wintel** · 多系统 · 虚拟机 · **自己做 ALC Layout-ID** · 排错（SysReport / Preboot / spindump）⇒ 索引见 `acpi-ssdt.md` §0 |
+| `5T33Z0/OCLP4Hackintosh` ★79 | OCLP 用在黑苹果上的简明指南（★ `Enable_Features/Audio_Tahoe.md` = **macOS 26 用 root patch 恢复 AppleALC**） |
 | **远景论坛 `bbs.pcbeta.com`** | 中文社区 —— ★ **可直连**（我们就是从这拿到 `SimpleHDA` 一手信息的） |
 | `tonymacx86.com` | 英文老牌论坛 —— ⚠️ **有 Cloudflare 验证码，程序抓不到** |
 | `InsanelyMac` / `AppleLife` | **官方 AppleALC 指定的讨论渠道**（见 `applealc-custom.md` §6） |
