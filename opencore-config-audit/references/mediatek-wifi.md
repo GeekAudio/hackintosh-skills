@@ -12,6 +12,12 @@
 > ★★ **2026-10-13 起的实用进展：第三方 Wi-Fi 请用 `flxxxxddd/SimpleMtkWlan` 这个 fork**（上游 laobamac 仓库的 fork，
 > 分支 **`mt7921-fixes`**，**有 CI 构建的 release**）—— 它修好了「MT7921 / RZ608 能 attach 但过不了流量」的问题，
 > 并补上 **802.11n（HT20/40）+ 802.11ac（VHT80）**。详见 §4。
+>
+> ★★★ **2026-10-16：原生路线有人打包好了 —— `GeekAudio/mediatek-sunrise-hackintosh`（MT7922 Sunrise Pack）**
+> 把原来散在 tonymacx86 帖子附件里的东西收齐了：**MT7922 Wi-Fi 固件**（linux-firmware 官方 + SHA256SUMS）·
+> **两个版本从 KDK 原样提取的 `AppleSunrise.kext`**（26.7.1/25G241 与 26.3/25D5087f）· **`SSDT-ARPT_RP04_Mediatek.aml`** ·
+> **免编译的 `DeviceProperties` 伪装片段** · `Kernel>Add` 片段 · boot-args 清单 · macOS 15 第三方 kext 全套（含**预编译 SimpleMTK.app**）。
+> ⇒ **要用原生 Sunrise 路线，先拿这个包**，不用去翻 69 页帖子找附件。详见 §1.5。
 
 ## 0. ★★★ 结论先行（先看这段，能省很多时间）
 
@@ -58,6 +64,15 @@ BT_RAM_CODE_MT7922 · MT7923 · MT7923A0 · SRS_7922
 
 > **`SRS` = SunRise** —— `SRS_7922` 就是 MT7922 在 Sunrise 里的代号。
 
+★★ **2026-10-16 补充实测（本机 26.7.1/25G241）**：「26.7.1+ 什么都不用装」只对一半成立：
+- **蓝牙 dext 已内置** `BT_RAM_CODE_MT7922_1_1_hdr.bin`（+MT7923）→ 26.7.1 蓝牙免操作 ✅
+- **WLAN dext 的 `IZUBA/` 只有 MT7932 一套 Wi-Fi 固件**，`find … -iname '*7922*'` 为空 ⇒
+  **MT7922 的 Wi-Fi 固件在 26.7.1 仍缺失**，「升级免写固件」对 MT7922 Wi-Fi 不成立、对 MT7932 成立
+- `AppleSunrise.kext` 26.7.1 仍**不在** `/System/Library/Extensions`，仅 KDK 有；
+  KDK 可用 Dortania GitHub 镜像（`dortania/KdkSupportPkg/releases`，按 build 号选），
+  提取法：`hdiutil attach` KDK.dmg → `pkgutil --expand-full KernelDebugKit.pkg` →
+  `KDK.pkg/Payload/System/Library/Extensions/AppleSunrise.kext`（x86_64+arm64e，LSMinimumSystemVersion 26.7）
+
 ### 0.2 三条路线怎么选
 
 | 路线 | 蓝牙 | Wi-Fi | 前提 |
@@ -90,6 +105,9 @@ ioreg -l -p IODeviceTree | grep -i "14c3"                          # PCIe 侧（
 
 # ③ 系统是哪个大版本？（Sequoia 没有 Sunrise ⇒ 只能走第三方）
 sw_vers -productVersion && uname -r
+
+# ④ 上面都不缺 ⇒ 原生路线缺的只是「打包好的固件/kext/片段」⇒ 用
+#    GeekAudio/mediatek-sunrise-hackintosh（MT7922 Sunrise Pack，见 §1.5）
 ```
 
 ## 1. 先认芯片（别把型号认错）
@@ -146,20 +164,149 @@ ioreg -l -p IODeviceTree | grep -i "14c3"
 
 4. **能认 ⇒ 到此结束**，不用装第三方 kext、不用改 config。
 
-### 社区做法（**仅记录，未在本机复现**）
+### 社区做法（2026-01 调试全程，已从帖子全文还原；未在本机复现）
 
-tonymacx86 那个帖子（标题 *"Wifi 6(E) & Bluetooth 5.x MEDIATEK chipset on **native** Sequoia & Tahoe"*）里有人报告：
+tonymacx86 帖子 *"Wifi 6(E) & Bluetooth 5.x MEDIATEK chipset on **native** Sequoia & Tahoe"*
+（楼主 **Elias64Fr**，CaseySJ / Sn0wMan / f10 等参与实测；**全帖 69+ 页**，帖子 ID 332855）
+——**开发者没有 GitHub**：Elias64Fr / CaseySJ 均无公开仓库，BlueToolFixup 修改版、
+固件包、`SSDT-ARPT_RP04_Mediatek.aml`、日志全部以**论坛附件**形式分发（§9）。
 
-- **注入 `AppleSunrise.kext` via OpenCore** ⇒ *"Tahoe boots properly"*
-- 加 boot-arg **`wlan.debug.enable=0x1`**
+**调试时间线**：
 
-> ⚠️ **两点保留**：
-> 1. 该帖正文被 Cloudflare 验证码挡住，**我只拿到搜索快照**，没读到完整步骤；
-> 2. **本机（Z690）用的是 Broadcom `BCM943602CDP`，没有 MediaTek 卡**，所以上面两条**我没有复现**。
+| 时间 | 事件 |
+|---|---|
+| 2025-12-07 | Elias64Fr 逆向 `bluetoothd`，发现 MediaTek BT 支持（Sequoia 1 个 / Tahoe 7 个 USB 设备），固件放 `/etc/bluetool` |
+| 2026-01-07 | 发现 `AppleSunriseWLAN.dext`；Ghidra 逆出 `_wlanDebugInit`（默认 log level `0x2F`）；注入 **KDK 里的 `AppleSunrise.kext`** 后 `start ok`，但报 `Failed to open wifi.cfg` / `WIFI_MT7922_patch_mcu_1_1_hdr.bin` |
+| 2026-01-19~20 | CaseySJ / Elias64Fr / Sn0wMan 实测（见下方步骤）；确认固件缺失是根因 |
+| 2026-01-23 | 等 Apple 1 月发布会补固件 |
+| 2026-10（今） | 帖子第 69 页：**macOS 26.7.1 上已有人报告 "It works!"**；本机 26.7.1 实测 dext 已自带 BT 固件 + IZUBA(MT7932) Wi-Fi 固件 |
+
+> ★★★ **别手工翻帖子附件了 —— 用 `GeekAudio/mediatek-sunrise-hackintosh`（MT7922 Sunrise Pack，MIT）**：
 >
-> ⇒ **建议顺序**：先按上面 1–4 步「**不装任何东西**」试一遍；
-> 只有系统确实不认时，再去试社区那两条（`wlan.debug.enable=0x1` 本身是**调试开关**，不是「启用开关」）。
-> 要完整步骤 ⇒ 把帖子正文贴给我，我再补进这里。
+> | 目录 | 内容 |
+> |---|---|
+> | `firmware/` | `WIFI_MT7922_patch_mcu_1_1_hdr.bin`(134 KB) · `WIFI_RAM_CODE_MT7922_1.bin`(1.1 MB，写入时改名 **`W7922_1.bin`**) · `BT_RAM_CODE_MT7922_1_1_hdr.bin`(505 KB，USB 蓝牙用) + `SHA256SUMS`（取自 **linux-firmware** 官方 `mediatek/`） |
+> | `kexts/macos26/` | **`AppleSunrise.kext`（26.7.1/25G241）** 与 **`AppleSunrise-26.3.kext`（26.3/25D5087f，原帖同款）** —— 官方 KDK 原样提取，x86_64+arm64e |
+> | `patches/` | `Kernel-Add-AppleSunrise.xml` · **`DeviceProperties-Add.xml`（免编译 device-id 伪装）** · `boot-args.txt` |
+> | `ssdt/` | `SSDT-ARPT_RP04_Mediatek.aml`（原帖修正版，按 root port 改 4 行） |
+> | `kexts/macos15/` | Sequoia 第三方路线全套：Lilu 1.7.3 + `SimpleMtkBtFw` + `SimpleMtkBtPatcher` + `SimpleMtkWlan` + **预编译好的 `SimpleMTK-1.0.0.zip`** |
+> | `research/notes/docs/` | 全套调试笔记（含日志判读表） |
+>
+> ★ **`wifi.cfg` 不在包里**（Apple 私有配置；缺失时刷屏 `wlanCfgSet` 报错但**不致命**，仅补固件仍可能以 `wlanRemove` 收场）。
+
+**完整调试/实测步骤（CaseySJ & Elias64Fr，2026-01-19）**：
+
+1. 装 M.2 MT7922 模块（M.2→PCIe 转接卡）
+2. **OpenCore 注入 `AppleSunrise.kext`**（取自 KDK，如 `KDK_26.3_25D5087f`）⇒ Tahoe 能启动
+   ★★ **它是什么**：**内核态的 HAL（硬件抽象层）**，**只存在于 KDK 里、系统卷上没有**。
+   DEXT 是**用户态**的，**不注入这个 HAL 它根本操作不了寄存器** ⇒ 这是**原生路线的必需项**，不是可选优化。
+3. 加 boot-arg **`wlan.debug.enable=0x1`**（NVRAM）⇒ 解锁 DEXT 详细日志
+4. **设备树/device-id**：DEXT 的 Info.plist 只匹配 `0x7922` ⇒ 原生 `0x616`（RZ616）要用
+   **SSDT 把 device-id 伪造成 `0x7922`**（`SSDT-ARPT_RP04_Mediatek.aml`，按实际 root port 改 4 行；
+   MT7925 造假成 `22790000`）。同时要给 PXSX 补 DEXT 相关属性，否则 info.plist 阶段就不匹配
+5. 收集日志：`log show --style compact --debug --last boot --predicate 'drv.'`
+   （`--info` 才出 info 级；纯 `drv.` 谓词可能为空）
+6. **驱动请求的固件文件**：`wifi.cfg`、`WIFI_MT7922_patch_mcu_1_1_hdr.bin`
+   （另需 `WIFI_RAM_CODE_MT7922_1.bin`，按驱动请求改名为 `W7922_1.bin`）
+7. **开机崩溃缓解 boot-args**（0x7922 会让 DEXT 反复重启拖垮系统）：
+   `mtk.wlan.startdelay=30`（Fenvi AX5400）/ `=45`（ASUS PCE-AXE59BT）；终极手段 `mtk.wlan.hangonstart=1`
+8. **往系统卷塞固件**（Elias64Fr，实测可行）：Recovery 里 `csrutil disable` +
+   `csrutil authenticated-root disable` → 挂载主 Tahoe 卷（非 data）→ 固件拷进去
+   （`root:wheel`、`644`）→ `sudo bless --folder .../CoreServices --bootefi --create-snapshot`
+
+**调试结论**：
+- 根因 = **Wi-Fi 固件 + `wifi.cfg` 不在 DEXT 里**；只塞固件不够（缺 wifi.cfg ⇒ 满屏
+  `wlanCfgSet` 报错，Elias64Fr 说配置表只有 256 项、这些不致命，但随后驱动以
+  `wlanRemove` + `Disabling PCI device` 收场）
+- 原生 `0x616` 即使伪装成 `0x7922` 也展不开设备树（反汇编显示 0x616 被同等配置）
+- f10 在 macOS 26.3 beta + KDK_26.3 kext 上见到**完整 AWDL 支持**（唯一接近成功的报告）
+- BT 侧独立可用：改装 `BlueToolFixup`（3 组 VID/PID）即插即用；AirPods 无声需
+  「忘记设备 → iPhone/iPad 重新配对 → Mac 端重连」（CaseySJ 给 Sn0wMan 的修复）
+
+### device-id 伪装：SSDT 与「免编译 DeviceProperties」二选一
+
+DEXT 的 `Info.plist` **只匹配 `0x7922`**（另 7923 / 7932），而 **RZ616 原生是 `0x616`** ⇒ 必须伪造。
+
+| 方式 | 做法 | 备注 |
+|---|---|---|
+| **A. SSDT（原帖方案）** | `SSDT-ARPT_RP04_Mediatek.aml` 拷入 `EFI/OC/ACPI/` + `ACPI>Add` 启用 | 默认按 **RP04** 写；**其它 root port 要改其中 4 行重新编译** |
+| **B. DeviceProperties（免编译）** | 在 `DeviceProperties>Add` 里给网卡路径加 `device-id` | ★ 不用编译 SSDT，改 plist 即可 |
+
+**B 的 `device-id` 是 4 字节小端 base64**：
+
+| 目标 | device-id 字节 | `<data>` 值 |
+|---|---|---|
+| **MT7922（推荐）** | `22 79 00 00` | **`InkAAA==`** |
+| MT7925 | `25 79 00 00` | **`JXkAAA==`** |
+
+生成命令：`printf '\x22\x79\x00\x00' | base64`（`0x22`=22、`0x79`=79）。
+★ **切勿改动 `vendor-id`（保持 `0x14c3`）**；路径用
+`ioreg -l | grep -B30 'device-id' | grep -E 'acpi-path|pcidebug'` 找（或 Hackintool PCIe 列表 / Linux `lspci`）。
+★★ **如果卡被 `SSDT-Disable_Network_*.aml` 藏掉了**（`ioreg -l | grep -A40 'pci14c3'` 显示 `ffffffff`），
+**先禁用它** —— 这条对第三方路线同样成立（§4.4）。
+
+### 相关 boot-args
+
+| boot-arg | 作用 |
+|---|---|
+| **`wlan.debug.enable=0x1`** | 解锁 `AppleSunriseWLAN.dext` 的 `drv.I` 详细日志（排错用，稳定后去掉）。★ 只是**调试开关，不是启用开关** |
+| **`mtk.wlan.startdelay=30`** | DEXT 延迟 30 s 启动 —— **0x7922 伪装后 DEXT 每 ~10 s 重试崩溃会拖垮系统**；Fenvi AX5400 实测 30 够，**ASUS PCE-AXE59BT 需 `=45`** |
+| **`mtk.wlan.hangonstart=1`** | 驱动挂起自锁，**保证能进系统**（Wi-Fi 不可用，**终极手段**） |
+
+### ★ 日志判读表（Debug 的核心）
+
+收集：`log show --style compact --debug --last boot --predicate 'drv.'`
+（**info 级要加 `--info`**；纯 `drv.` 谓词可能为空，换 `--info` 再试，属正常）。
+
+| 日志行 | 含义 | 对策 |
+|---|---|---|
+| `DK: AppleSunriseWLAN::start ok` | DEXT 已 attach、**HAL 注入成功** | — |
+| `Failed to open .../wifi.cfg` | 缺配置文件 | Dext 内补入 |
+| `Failed to open .../WIFI_MT7922_patch_mcu_1_1_hdr.bin` | 缺 MCU 补丁固件 | 系统卷快照注入 |
+| `request_firmware: Failed to find firmware file` | 同上（另一条代码路径） | 同上 |
+| `wlanCfgSet:(INIT ERROR) wifi config there is no empty entry`（**刷屏**，键如 `LlwLatencyDbg`/`NanWarmUpTime`/`AwdlGenCap`） | `wifi.cfg` 缺失，配置表仅 256 项 | Elias64Fr：**不致命**（但补固件后会出现更严重错误） |
+| `wlanDownloadPatch:(INIT WARN) FW[2] load error!` | 固件加载失败 | 补固件 |
+| `wifiFirmwareLoader: Waiting for firmware to load`（再无后续） | 固件加载器卡死 | 佐证固件缺失是根因 |
+| `wlanRemove` + `Disabling PCI device` | **驱动放弃并移除设备** | ★ 调试失败的**终点信号** |
+| `IOUserServer(com.apple.AppleSunriseWLAN) has crashed too many times` panic | DEXT 崩溃循环 | `startdelay` / `hangonstart` 缓解 |
+| `corecapture: Missing ivars in CCLogPipe` | CoreCapture 日志管道问题 | 观察项，非阻塞 |
+
+### 26.7.1 到底「自带」了什么（**按芯片分，别信传言**）
+
+> 曾传言「升级到 26.7.1 就自带全部固件」**并不准确**。26.7.1(25G241) 实测：
+
+| 部件 | 26.7.1 状态 |
+|---|---|
+| **蓝牙固件**（MT7922 / MT7923） | ✅ **已在 `AppleSunriseBluetooth.dext` 内**（`BT_RAM_CODE_MT7922_1_1_hdr.bin`）⇒ 走 PCIe 的 **什么都不用装** |
+| **MT7932 / RZ717 的 Wi-Fi 固件** | ✅ 已在 `AppleSunriseWLAN.dext` 内（IZUBA 一套）⇒ **换这张卡才是真正的零操作解** |
+| **MT7922 / RZ616 的 Wi-Fi 固件** | ❌ **仍缺失**（dext 内没有 `*7922*` 文件，日志仍报 `Failed to open WIFI_MT7922_patch_mcu_1_1_hdr.bin`）⇒ **仍需按本包补** |
+
+### 不想动系统卷？按这个优先级挑
+
+| 方案 | 做法 | 代价 |
+|---|---|---|
+| **① 换 MT7932（RZ717）卡** | 26.7.1 已内置其全部 Wi-Fi 固件 | 换硬件 |
+| **② 第三方 kext 路线** | `SimpleMtkWlan` + `SimpleMtkBtFw`（固件打包在 kext 内，**只动 EFI、完全不碰系统卷**） | 以太网式接口、无原生 Wi-Fi 菜单、无 AirDrop/Handoff/Continuity、无 802.11ax |
+| **③ 只要蓝牙** | `/etc/bluetool/` + `BT_RAM_CODE_MT7922_1_1_hdr.bin`（26.7.1+ 已内置免操作） | — |
+| **④ 仍用原生驱动** | 上面的「写固件 + bless 快照」 | 需一次 bless；**本身就是可回滚写法**，`wifi.cfg` 可不写 |
+
+★ **bless 快照法比「长期关 SIP」安全**：macOS 本来就工作在快照上，建新快照后从新快照启动；
+**改回 SIP + authenticated-root 重启会自动清理**，无需手动还原。
+
+### AirDrop / Handoff / Continuity 呢？
+
+- **原生路线理论上支持 AWDL** —— f10 在 macOS 26.3 beta + KDK_26.3 kext 上是**唯一见到完整 AWDL 支持**的配置；
+- **但 MT7922 实测成功率有限，不保证** ⇒ **别为了 AirDrop 走这条路**；
+- 要 AirDrop / Continuity / Wi-Fi 6 ⇒ **换 Broadcom 或 Intel 卡**（第三方路线更是**设计上不可能**，§4.1）。
+
+### 回滚
+
+1. 改回 **RELEASE** 版 OpenCore、删掉 `wlan.debug.enable=0x1` 等 boot-arg、禁用 SSDT / `Kernel>Add` 条目 ⇒ 回到原状
+2. 系统卷改动：**启用 SIP + authenticated-root 重启即自动清理**，无需手动还原
+
+> ⚠️ **保留**：**本机（Z690）没有 MediaTek 卡，以上均未复现**。
+> `wlan.debug.enable=0x1` 是**调试开关不是启用开关**；26.0–26.2 这套手动注入流程
+> **已被 Apple 后续更新取代**（现在先试「什么都不装」，§1.5 步骤 1–4）。
 
 ### Sequoia（macOS 15）怎么办
 
@@ -172,7 +319,8 @@ Sequoia **没有**这两个 dext ⇒ 原生路线走不通，只能走下面的�
 | ★ **`flxxxxddd/SimpleMtkWlan`**（**fork**，分支 `mt7921-fixes`） | **Wi-Fi（PCIe）** | kext | ✅ **v1.1.0 / v1.2.0**（CI 构建） | **★ 第三方路线就用它** —— MT7921/RZ608 实测能上网 |
 | `laobamac/SimpleMtkWlan`（**上游**） | Wi-Fi（PCIe） | kext（+ `mtk80211` 兼容层） | ❌ **无**（必须自编译） | 上游主线，bring-up 中；fork 的修复**还没回到主线** |
 | `laobamac/SimpleMtkBtFw` / fork `flxxxxddd/SimpleMtkBtFw` | **蓝牙固件加载**（firmware loader + patcher） | **两个** kext | ✅ **`1.0.0`** | 可用（fork 说明：AirPods 音频可用） |
-| `laobamac/SimpleMTKClient` | Wi-Fi 菜单栏客户端 | App（`SimpleMTK`） | ❌ 无（需自编译） | **必需的** —— 见 §4.1 |
+| `laobamac/SimpleMTKClient` | Wi-Fi 菜单栏客户端 | App（`SimpleMTK`） | ❌ **上游确无 release**（2026-10-16 API+网页双查） | **必需的** —— 见 §4.1。2026-10-16 已在本机从其源码编译出 `SimpleMTK-1.0.0.zip`（内嵌 Sparkle 2.10.0 源码构建；因本机 `sandbox-exec` 被系统禁用，需先剥离两个未用的 SPM 依赖再编 KeychainAccess/Sparkle） |
+| ★ **`GeekAudio/mediatek-sunrise-hackintosh`**（**MT7922 Sunrise Pack**，2026-10-16 新建） | **原生路线的一站式包**：Wi-Fi 固件（linux-firmware + SHA）· 两个版本的 `AppleSunrise.kext` · SSDT · `DeviceProperties` 伪装 · `Kernel>Add` 片段 · boot-args 清单 · macOS 15 第三方 kext 全套（含**预编译 SimpleMTK.app**） | 文件集合 | 无 release（直接 clone） | **要走原生 Sunrise 先拿这个**，不用翻 69 页帖子找附件 |
 
 > **fork 与上游的关系**：`flxxxxddd/SimpleMtkWlan` fork 自 `laobamac/SimpleMtkWlan`，
 > 在**上游 + PR #5**（`mavizao` 的 MT7922 关联/TX 修复）之上再修了一大批问题（清单见 §4.6）。
@@ -381,7 +529,8 @@ xcodebuild -project SimpleMtkWlan.xcodeproj -scheme SimpleMtkWlan \
 │
 ├─ 系统是 macOS 26+，且蓝牙走 PCIe（14c3:792a）
 │   └─► ★★★ 路线 ①：原生 Sunrise —— 什么都不用装，插上重启看认不认（§1.5）
-│           不认再考虑社区那两条（AppleSunrise.kext 注入 / wlan.debug.enable=0x1）
+│           └─ 不认 ⇒ **先拿 `GeekAudio/mediatek-sunrise-hackintosh`**（固件/HAL kext/伪装片段都在里面），
+│              再按 §1.5 的「社区做法」补：注入 AppleSunrise.kext（HAL）+ device-id 伪装 + 固件（看芯片！）
 │
 ├─ 系统是 Sequoia，或蓝牙走 USB（0x0e8d）
 │   └─► 路线 ②：SimpleMtkBtFw（有 release，成功率高）
@@ -417,6 +566,10 @@ xcodebuild -project SimpleMtkWlan.xcodeproj -scheme SimpleMtkWlan \
 | Wi-Fi 慢 / 不如真 Mac | ① `stats` 里 `rx_swdec` 应远小于 `rx_hwdec`；② **测速时关掉 SimpleMTK 菜单**；③ 剩余瓶颈 = AP 的 Block Ack Request 固件未上送（100 ms 乱序超时） |
 | 2.4 GHz 无线键鼠在上网时卡顿 | **同频段射频共存，不是驱动 bug** ⇒ 卡留在 5 GHz，或把接收器用延长线挪开 |
 | 开机 ~2 s 的 `element modified after free` panic | 测试机上是 **`NVMeFix.kext`**，**不是本驱动** —— 别赖错对象 |
+| **原生路线**：`IOUserServer(com.apple.AppleSunriseWLAN) has crashed too many times` panic / DEXT 反复重启拖垮系统 | 0x7922 伪装后的已知现象 ⇒ 加 **`mtk.wlan.startdelay=30`**（个别卡 **45**）；终极手段 **`mtk.wlan.hangonstart=1`**（§1.5） |
+| **原生路线**：日志停在 `wlanRemove` + `Disabling PCI device` | ★ **驱动已放弃设备** —— 调试失败的**终点信号**：多半缺 `wifi.cfg` / 固件没写对位置或名字（`WIFI_RAM_CODE_MT7922_1.bin` 要改名 **`W7922_1.bin`**）⇒ 照 `§1.5` 日志判读表逐条对 |
+| **原生路线**：满屏 `wlanCfgSet ... no empty entry` | 缺 `wifi.cfg` —— **不致命**（观察项），但只补固件缺它仍可能收不了场 |
+| **原生路线**：device-id 伪装后仍不匹配 | ★ 三个都要查：① 有没有被 `SSDT-Disable_Network` 藏掉（`vendor-id` 变 `ffffffff`）② `device-id` 值是小端 base64（`0x7922 → InkAAA==`）③ **PXSX 下还要补 DEXT 相关属性**（§1.5） |
 | 装了蓝牙但另一套 BT 固件加载器也在 | 移除冲突项（同一条纪律见 `intel-wifi.md` §5「换网卡后要清理」） |
 
 ## 8. 安全提示与边界
@@ -428,6 +581,8 @@ xcodebuild -project SimpleMtkWlan.xcodeproj -scheme SimpleMtkWlan \
 - ★ **fork 的 issue 是关的** ⇒ 反馈/求助回上游 `laobamac/SimpleMtkWlan`；fork 默认分支是 **`mt7921-fixes`**
 - 与 `broadcom-wifi.md` / `intel-wifi.md` 的关系：**同一台机器不要同时注入三套网卡驱动**；
   换卡后按 `intel-wifi.md` §5 的纪律把旧的一套**禁用或删除**，并注意 **`en0` 归属**会随驱动挂载顺序变化（⇒ **`network-en0-order.md`**）
+- ★ **MT7922 Sunrise Pack 的许可是分层的**：仓库文本与补丁 **MIT**；`firmware/*.bin` 走 **linux-firmware 再分发条款**；
+  `SSDT-ARPT_RP04_Mediatek.aml` 原作者 **Elias64Fr** 公开发布于帖子，**使用时请署名**。
 - **本 reference 是通用流程**；本机（Z690）用的是 Broadcom `BCM943602CDP`，**没有 MT7922**。
   - **§0.1 的原生路线事实（两个 dext、`IOPCIMatch`、自带固件、`bluetoothd` 字符串）是在本机 macOS 26.7.1 上实测读出的** —— 这部分是硬证据
   - **§1.5 的「社区做法」与 §3/§4 的第三方路线**未在本机复现（没有对应硬件）—— 按 §0.3 / §1 先确认芯片与形态，再逐步验证

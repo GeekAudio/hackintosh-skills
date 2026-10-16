@@ -63,6 +63,7 @@
 | 硬件 | 作者 / 仓库 | 详见 |
 |---|---|---|
 | **Intel 无线** | **`OpenIntelWireless`** —— `itlwm` ★7.1k · `IntelBluetoothFirmware` ★2.5k · `HeliPort` ★1.3k（原作者 **`zxystd`**） | `intel-wifi.md` |
+| **MediaTek 无线 / 蓝牙** | **`GeekAudio/mediatek-sunrise-hackintosh`（MT7922 Sunrise Pack）** —— macOS 26 原生 Sunrise 的一站式包（固件 + `AppleSunrise.kext` + SSDT + 伪装片段 + macOS 15 第三方 kext 全套）· `flxxxxddd/SimpleMtkWlan`（fork）+ `laobamac/SimpleMtkBtFw`（第三方路线） | `mediatek-wifi.md` |
 | **博通无线 / 蓝牙** | **Acidanthera** —— `AirportBrcmFixup` / `BrcmPatchRAM` | `broadcom-wifi.md` |
 | **MediaTek** | **`laobamac`** —— `SimpleMtkWlan` / `SimpleMtkBtFw` | `mediatek-wifi.md` |
 | **有线网卡** | **`Mieze`** —— `LucyRTL8125Ethernet` ★296 · `IntelMausiEthernet` ★413 · `RTL8111_driver_for_OS_X` ★717 · `IntelLucy` ★76 · `RTL812xLucy` ★22<br>**`Shaneee`** —— `AppleIGB` ★30<br>**`laobamac`** —— `SimpleVGBE` 等 | `ethernet-drivers.md` |
@@ -99,6 +100,15 @@
 | `perez987/Intel-AX210-on-Sonoma-Sequoia-Tahoe` ★120 | perez987 | **Intel AX210S** 在新系统上跑通 |
 | `perez987/OpenCore-and-UEFI-Secure-Boot` ★116 | perez987 | **UEFI 安全启动 + OpenCore** |
 | `perez987/RX6600XT-on-macOS-with-softPowerPlayTable` ★110 | perez987 | AMD RX 6600 XT 的 `softPowerPlayTable`（关 Zero RPM） |
+
+**`GeekAudio`（本项目作者的产出）**：
+
+| 仓库 | 内容 |
+|---|---|
+| `GeekAudio/mediatek-sunrise-hackintosh` | ★★ **MT7922 Sunrise Pack**：把 tonymacx86 帖子 332855 的附件收齐成包（固件 + 两个版本 KDK 提取的 `AppleSunrise.kext` + SSDT + 免编译 `DeviceProperties` 伪装 + boot-args + macOS 15 第三方 kext 全套含预编译 SimpleMTK）—— 原生 Sunrise 路线的**主参考** |
+| `GeekAudio/tcc-helper` | ★★ **macOS 权限工具（TCC）**：直接往 TCC 数据库写「已授权」条目，绕过弹窗；**自动从 `Info.plist` + launchd 后台组件反推谁需要什么权限**；GUI + CLI |
+| `GeekAudio/hackintosh-skills` | 本 skill 的公开仓库（opencore-config-audit） |
+| `GeekAudio/i7-12700K-RTX3080-OpenCore-Hackintosh` | 本机 EFI 的脱敏发布仓库 |
 
 ## 7. 怎么用这份索引
 
