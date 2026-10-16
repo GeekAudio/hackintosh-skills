@@ -28,7 +28,7 @@
 | **开/关小核** | 「小核怎么开」「关掉小核」「CPU 明明是 12 核，为什么只看到 8 核」「E 核用不上」 |
 | **换机型 / 三码** | 「换一下 SMBIOS 机型」「三码怎么配」「序列号怎么生成」「ROM 填什么」「换了机型开不了机」 |
 | 升系统 | 「从 15 升到 26 要改什么」「升级后 Wi-Fi 没了」「升级后板载声卡没声音了」 |
-| **声卡** | 「板载声卡没声音」「只有 HDMI 有声音」「AppleHDA 怎么装回来」「layout-id 填多少」 |
+| **声卡** | 「板载声卡没声音」「只有 HDMI 有声音」「AppleHDA 怎么装回来」「layout-id 填多少」「自己做一个 layout-id」「耳麦插进去没声音」 |
 | 换构建 | 「从 release 换成 debug 版 OpenCore 并开日志」 |
 | **换主题** | 「换个 OpenCore 主题」「图标集怎么装」「选择器界面不出现」「图标显示不对/变形」「启动没有声音」「PickerAttributes 怎么配」 |
 | 首次装机 | 「第一次装黑苹果，EFI 怎么生成」 |
@@ -67,7 +67,7 @@
 
 按主题挑：`bios-settings.md`（BIOS）· `lifecycle.md`（全流程）· `os-upgrade-15-to-26.md`（升系统）·
 `nvidia-driver.md` · `amfi-and-tcc.md`（**App 拿不到权限 → tcc-helper**）· `intel-wifi.md` · `mediatek-wifi.md`（**含原生 Sunrise 打包方案**） · `broadcom-wifi.md`（四类网卡/显卡）·
-`applealc-custom.md`（**声卡 / macOS 26 恢复 AppleHDA**）· `hidpi.md`（显示）· `intel-turbo.md`（睿频）· `e-cores.md`（**开/关小核**）· `cpu-name.md`（**CPU 显示名**）· `memory-injection.md`（内存）· `boot-failure-debug.md`（**装不上/进不去系统**）· `boot-timeline.md` / `logs-and-debug.md`（日志）· `boot-entries.md`（启动项）·
+`applealc-custom.md`（**声卡 / macOS 26 恢复 AppleHDA / 定制 layout**）· `hidpi.md`（显示）· `intel-turbo.md`（睿频）· `e-cores.md`（**开/关小核**）· `cpu-name.md`（**CPU 显示名**）· `memory-injection.md`（内存）· `boot-failure-debug.md`（**装不上/进不去系统**）· `boot-timeline.md` / `logs-and-debug.md`（日志）· `boot-entries.md`（启动项）·
 `acpi-ssdt.md` · `disks-and-kexts.md` · `kext-and-oc-update.md`（**更新 kext / OC**）· `official-docs-method.md` · `rapidefi-first-efi.md` ·
 `smbios-and-serials.md`（换机型 + 三码）· `network-en0-order.md`（`en0` 归属）· `ethernet-drivers.md`（有线网卡）· `ecosystem-sources.md`（**权威来源与工具索引**）· `laobamac-toolkit.md`（工具索引）· `pitfalls.md`（踩过的坑）· `theme-opencanopy.md`（选择器主题）· `machine-facts.md`（参考机器事实）
 

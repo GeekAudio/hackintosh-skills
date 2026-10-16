@@ -67,7 +67,7 @@
 | **博通无线 / 蓝牙** | **Acidanthera** —— `AirportBrcmFixup` / `BrcmPatchRAM` | `broadcom-wifi.md` |
 | **MediaTek** | **`laobamac`** —— `SimpleMtkWlan` / `SimpleMtkBtFw` | `mediatek-wifi.md` |
 | **有线网卡** | **`Mieze`** —— `LucyRTL8125Ethernet` ★296 · `IntelMausiEthernet` ★413 · `RTL8111_driver_for_OS_X` ★717 · `IntelLucy` ★76 · `RTL812xLucy` ★22<br>**`Shaneee`** —— `AppleIGB` ★30<br>**`laobamac`** —— `SimpleVGBE` 等 | `ethernet-drivers.md` |
-| **声卡** | **Acidanthera**（`AppleALC`）· **`perez987`**（`AppleHDA-gone-on-macOS-26-Tahoe` 指南）· **`Mirone`**（`MyKextInstaller`）· **`laobamac`**（`SimpleLoader` / `SimpleHDA`(备选) / `SimpleVoodooHDA`）· **`chris1111`**（VoodooHDA 脚本上游） | `applealc-custom.md` |
+| **声卡** | **Acidanthera**（`AppleALC`）· ★★ **`5T33Z0`**（`AppleALC-Guides` —— **定制 layout 的实操主参考**、17 个现成 dump、`alc-verb`；另有 `OCLP4Hackintosh` 的 `Audio_Tahoe.md`）· **`perez987`**（`AppleHDA-gone-on-macOS-26-Tahoe` 指南）· **`Mirone`**（`MyKextInstaller`）· **`laobamac`**（`SimpleLoader` / `SimpleHDA`(备选) / `SimpleVoodooHDA`）· **`chris1111`**（VoodooHDA 脚本上游） | `applealc-custom.md` |
 | **NVIDIA** | **`NullMoth`** —— `nvidia-macos-driver` ★3.0k | `nvidia-driver.md` |
 | **AMD 核显 / CPU** | `NootedRed`（Vega）· `AMD_Vanilla` · `SMCAMDProcessor` | `laobamac-toolkit.md` §8 |
 | **USB Wi-Fi（外置）** | **`chris1111`** —— `Wireless-USB-*` 系列 ★1k+ | — |
@@ -95,6 +95,8 @@
 | `khronokernel/SmallTree-I211-AT-patch` ★83 | khronokernel | Intel I211-AT 支持 |
 | ★ `khronokernel/IORegistryClone` ★80 | khronokernel | **克隆 Apple 机器的 IOReg**（★ 对照真机很有价值） |
 | `khronokernel/Getting-Started-With-OpenCore` ★142 | khronokernel | OpenCore 简明上手 |
+| `5T33Z0/AppleALC-Guides` ★66 | 5T33Z0 | ★★★ **AppleALC 定制 layout 的实操主参考**（14 章：dump → 拓扑图 → PathMap → PinConfig → 编译 → 测试 → PR）· **17 个现成 codec dump** · **`alc-verb` 运行时调音** · `MuteGPIO` 表 · **精简到 90 KB** · 文件管理/回滚 |
+| `5T33Z0/OCLP4Hackintosh` | 5T33Z0 | OCLP 在黑苹果上的实操（★ `Enable_Features/Audio_Tahoe.md` = **macOS 26 用 root patch 恢复 AppleALC 全功能**） |
 | `perez987/AppleHDA-gone-on-macOS-26-Tahoe` | perez987 | ★★ **macOS 26 板载声卡：把 `AppleHDA.kext` 装回来**（KDK + `MyKextInstaller` / `SimpleLoader`）—— 声卡恢复的主参考 |
 | `perez987/Fenvi-wifi-back-on-Sonoma-Sequoia-Tahoe` ★132 | perez987 | Fenvi T919 等**博通卡**在新系统上恢复 Wi-Fi |
 | `perez987/Intel-AX210-on-Sonoma-Sequoia-Tahoe` ★120 | perez987 | **Intel AX210S** 在新系统上跑通 |
