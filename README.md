@@ -25,7 +25,7 @@
 
 | Skill | 一句话 | 规模 |
 |---|---|---|
-| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置 —— 覆盖从装机到日常化、再到系统大版本升级的全生命周期，并含**启动选择器（OpenCanopy）主题**与**换机型 / 三码** | 21 条铁律 · 31 份参考 · 18 个脚本 |
+| **`opencore-config-audit`** | 审查 / 修改 / 维护 OpenCore EFI 配置 —— 覆盖从装机到日常化、再到系统大版本升级的全生命周期，并含**启动选择器（OpenCanopy）主题**与**换机型 / 三码** | 21 条铁律 · 32 份参考 · 18 个脚本 |
 
 技能目录里有一份 `USAGE.md`（**随安装一起复制**），在对话里问「使用说明」即可拿到。
 
@@ -66,16 +66,23 @@ cp -R <skill> <项目目录>/.workbuddy-ai/skills/
 hackintosh-skills/
 ├── README.md
 ├── USAGE.md                     # 怎么调用 + 索引（给人看）
+├── PUBLISHING.md                # 发布流程（自有市场 / SkillHub）
 ├── .codebuddy-plugin/
 │   └── marketplace.json         # ← 插件市场清单（加市场时读它）
-├── opencore-config-audit/
-│   ├── .codebuddy-plugin/
-│   │   └── plugin.json          # ← 插件元数据
-│   ├── SKILL.md                 # 主流程 + 21 条铁律 + 资源表
-│   ├── USAGE.md                 # ← 使用说明（随安装一起复制）
-│   ├── references/              # 31 份专题文档（见下表）
-│   └── scripts/                 # 18 个脚本（见下表）
+├── tools/                       # 维护者工具（不随技能安装）
+│   └── doc-lint.sh              #   文档一致性自检：防「一处结论写错，沿引用链传染」
+└── opencore-config-audit/
+    ├── .codebuddy-plugin/
+    │   └── plugin.json          # ← 插件元数据
+    ├── SKILL.md                 # 主流程 + 21 条铁律 + 资源表
+    ├── USAGE.md                 # ← 使用说明（随安装一起复制）
+    ├── references/              # 32 份专题文档（见下表）
+    └── scripts/                 # 18 个脚本（见下表）
 ```
+
+> **改完文档先跑一遍** `bash tools/doc-lint.sh`：检查 references/scripts 索引是否双向对齐、
+> 有没有死链、三处版本号是否一致，以及**有没有把已知的错误说法又写回去**
+> （例如「AirDrop 依赖 `en0`」这类 —— 本 skill 曾经全线写错过一次）。
 
 ---
 
@@ -167,6 +174,7 @@ hackintosh-skills/
 | **MediaTek 无线**（MT7921 / MT7922 / RZ608 / RZ717） | ★★★ **macOS 26 原生 Sunrise 驱动** ⇒ 先「什么都不装」试一遍；★★ **26.7.1「自带」什么要按芯片分**（蓝牙固件 MT7922/7923 已内置 · **MT7932/RZ717 的 Wi-Fi 固件已内置**（换 RZ717 才是真正零操作）· **❌ MT7922/RZ616 的 Wi-Fi 固件仍缺失**）；★★★ **要动手就先用 `GeekAudio/mediatek-sunrise-hackintosh`（MT7922 Sunrise Pack）** —— 把原帖 69 页附件收齐成包：固件（linux-firmware + SHA256）· **两个版本 KDK 提取的 `AppleSunrise.kext`** · SSDT · **免编译 `DeviceProperties` device-id 伪装**（`0x7922 → InkAAA==`）· boot-args 清单 · macOS 15 第三方 kext 全套（含预编译 SimpleMTK.app）；★ **`AppleSunrise.kext` = 内核态 HAL（只存在于 KDK）⇒ 不注入它 DEXT 操作不了寄存器**；含**日志判读表**与 `wlan.debug.enable` / `mtk.wlan.startdelay` / `mtk.wlan.hangonstart` boot-args 表；**第三方 Wi-Fi 用 `flxxxxddd/SimpleMtkWlan` fork（有 release，802.11n/ac 可用）**但**硬限制**：以太网式接口、无原生 Wi-Fi 菜单、**AirDrop/Continuity 设计上不可能**、无 HE；★ 最常踩 = **卡被 `SSDT-Disable_Network` 藏了** |
 | **有线网卡**（Intel / Realtek） | ★★ **本机是 Intel `I225-V`**；`SimpleVGBE`（I225/I226）· `SimpleEthernet`（Lilu 插件，i225/226/210/211）· `SimpleRTK5`（RTL8125/8126）；★ **一次只换一套**、**换完复查 `en0` 归属** |
 | **博通网卡**（BCM943602CDP / BCM43602） | ★ **按系统分路线**：Sequoia 用 `IO80211FamilyLegacy`，Tahoe 用独立 `AirPortBrcmNIC-Tahoe.kext`；OCLP root patch 前置保护；★ 判死活看 `ifconfig en1` |
+| **AirDrop / 接力**（隔空投送） | ★★★ **只取决于 `awdl0`**（= 无线跑 Broadcom 原生 `IO80211Family` 栈）⇒ **`itlwm.kext` 必然不可用**（官方 FAQ：走 `IOEthernetController` 而非 `IO80211Family`；`AirportItlwm` 也只支持 Handoff + 通用剪贴板）；★★★ **与 `ROM` / `en0` / 机型 / 序列号 / `SystemUUID` 无关** —— 那是 Dortania **iServices**（iMessage）的要求，被误扩展到 AirDrop；含 **8 步排查顺序**与四个误判 |
 | **板载声卡**（AppleALC） | ★★★ **macOS 26 前置：先把 `AppleHDA` 弄回来**（Apple 在 DP2 删了它；**不先做这步，后面所有 layout-id 都是白试**）；★ 判据：**HDMI/DP 数字音频仍可用** ⇒「只有 HDMI 有声、板载没声」正是这个现象；★★ 主参考 **`perez987/AppleHDA-gone-on-macOS-26-Tahoe`**，方案按省事排序：**USB 声卡** · **KDK + `MyKextInstaller`**（首选）/ `SimpleLoader` —— 要求 **KDK + `AppleALC ≥ 1.9.5` + `csr-active-config=03080000`**，装完重启、`kextstat \| grep AppleHDA` 验证 · OCLP root patch（`5T33Z0/OCLP4Hackintosh` 的 `Audio_Tahoe.md`）· `SimpleVoodooHDA`（音质有损）；★★ **代价：系统一升级/重装就全丢，每次都要重装**；★ `SimpleHDA` 已降为备选；★★ **自己定制 layout 走 `5T33Z0/AppleALC-Guides`**（官方 wiki 讲规则、这份讲怎么做）：14 章流程 · **17 个现成 codec dump**（带 `verbs.txt` + 十进制版 + `.svg` 拓扑图）· **`alc-verb` 运行时调音**（`alcverbs=1`，**不重编不重启**；固化用 `WakeConfigData`，组合口用 `ALCPlugFix-Swift`）· **`MuteGPIO` 十进制速查表** · **精简 AppleALC 3.8 MB → ~90 KB** · **文件管理/回滚工作流**；★ 两种取 dump：Linux（**唯一能出拓扑图**）或 OpenCore（DEBUG + `SysReport` + `AudioDXE.efi`）；★★ **`-alcdbg`/`-liludbg` 只在 DEBUG 构建下有效**；★ 自定义 layout 只能用 11–99 |
 | **HiDPI**（one-key-hidpi） | 非 Retina 屏清晰度；★ NVIDIA 驱动未完善，含风险与恢复路径；★ 别和引导期 `UIScale` 混 |
 | **Intel 睿频** | ★★★ **最佳方法定案：注入「本机自己的 profile，只把 `hwp` 删掉」** —— 四点判据（**1 段** / 上限尽可能高 / **`hwp` 已删** / `CPUFloor` 匹配）；★ `hwp` **不在 plist 里**（在 7668 B 向量二进制偏移 ~7128 的变量名表内）⇒ 判「有没有作用」要**逐字节比**；★★ **反面结论：注入别的机型 profile 会压垮睿频**（实测 `iMac19,1` ⇒ 1.97 GHz、`MacPro7,1` ⇒ 2.3 GHz）；含 **76 份 profile 五族选型表**（分水岭 = 段数，**上限 5000 的全是 3–5 段** ⇒ 与结构兼容不可兼得）；★ CPU-S 验证 · **改完必须重启** · BIOS `Speed Shift` 必须 Enabled |
@@ -226,7 +234,8 @@ hackintosh-skills/
 | `intel-wifi.md` | Intel 无线网卡：版本线、注入、蓝牙配套、排错 |
 | `mediatek-wifi.md` | MediaTek 无线网卡：★★★ **macOS 26 原生 Sunrise 驱动** · ★★★ **原生路线用 `GeekAudio/mediatek-sunrise-hackintosh`（MT7922 Sunrise Pack，含固件/HAL kext/免编译 device-id 伪装）** · **26.7.1 按芯片分的固件现状** · **`AppleSunrise.kext` = 内核态 HAL（必需）** · **日志判读表 / boot-args 表** · ★★ **第三方 Wi-Fi 用 `flxxxxddd/SimpleMtkWlan` fork（有 release，802.11n/ac 可用）** · **三条硬限制** · **SSDT 藏卡坑** · `mtklog.sh` 排错 · 三条路线决策树、芯片认型、第三方蓝牙 NVRAM 两坑 |
 | `broadcom-wifi.md` | 博通网卡：**按 Sequoia / Tahoe 分路线**、OCLP root patch、验证判据 |
-| `network-en0-order.md` | **`en0` 归属与网络接口顺序**：谁依赖 `en0`、**修补 Wi-Fi 后必须确认无线是 `en0`**、怎么钉住、连带影响 |
+| `network-en0-order.md` | **`en0` 归属与网络接口顺序**：谁依赖 `en0`、**修补 Wi-Fi 后必须确认无线是 `en0`**、怎么钉住、连带影响。★ **AirDrop / 接力不依赖 `en0`** |
+| `airdrop-handoff.md` | **AirDrop / 接力 / Handoff / 连续互通**：★★★ **根因只看 `awdl0`（= 无线跑 Broadcom 原生 `IO80211Family` 栈）** · **`itlwm.kext` 必然不可用（官方 FAQ 原文）** · **四个误判（`ROM` / `en0` / `SystemUUID` / 序列号）** · **8 步排查顺序** · 选卡原则 · 本机实测反例 |
 | `ethernet-drivers.md` | **有线网卡第三方驱动**：Intel I225/I226 · I210/I211/I350 · Realtek RTL8125/8126 的方案对照与判据 |
 | `ecosystem-sources.md` | ★★ **黑苹果生态权威来源索引**：Acidanthera / Dortania 官方 · **corpnewt 工具链**（ProperTree / GenSMBIOS / SSDTTime / USBMap）· `USBToolBox` · `blacktop/ipsw-diffs` · 驱动作者 · 中文资源 · ★ **「做什么事信谁」对照表** |
 | `laobamac-toolkit.md` | **laobamac 工具与补丁索引（48 仓库全表）**：驱动 · 装机 · ★ **硬件避坑（`SimpleBuyersGuide`）** · 维护工具（`SimpleLoader`）· macOS 26 启动台 · 参考补丁（`OC-little-zh`）· AMD · fork 说明 · ★ **哪些已存档** |

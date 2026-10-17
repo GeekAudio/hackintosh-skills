@@ -22,6 +22,7 @@
 | 精简 | 「kext 精简一下，不用的删掉」「屏蔽一下其它磁盘」 |
 | **更新 kext / OC** | 「把所有 kext 更新到最新」「OpenCore 要不要升级」「这个 kext 是不是官方的」 |
 | 装驱动 | 「装 NVIDIA 驱动」「Intel 无线网卡怎么配」「我这块 MT7922 能用吗」「MT7921 能上网吗」「MT7922 Reno/RZ616 怎么装」「原生 Sunrise 要装什么」「博通网卡怎么配」「有线网卡/2.5G 网卡怎么驱动」 |
+| **AirDrop / 接力** | 「隔空投送搜不到设备」「AirDrop 用不了」「接力不工作」「Handoff 没反应」「是不是 ROM 填错了」「`awdl0` 没有」 |
 | 调 CPU | 「CPU 频率被压住了」「睿频怎么开」「换了 CPUFriend 数据反而更慢了」「睿频改完没效果」 |
 | **CPU 名字不对** | 「关于本机显示 Xeon W，但我的是 i7」「处理器名称怎么改」「CPU 型号显示错了」 |
 | **App 拿不到权限** | 「麦克风没权限」「不弹权限窗」「隐私设置里没有这个软件的开关」「装完显卡驱动后语音软件用不了」 |
@@ -63,10 +64,10 @@
 | `oc-theme-check.sh` | **Resources 树合规检查**（必需图标 / 真实像素尺寸 / 标签 / 字体 / 音频） |
 | `oc-fetch-iconset.sh` | 从官方 OcBinaryData 取图标集 / 字体 / 标签 / 音频 |
 
-## 参考文档（31 份）
+## 参考文档（32 份）
 
 按主题挑：`bios-settings.md`（BIOS）· `lifecycle.md`（全流程）· `os-upgrade-15-to-26.md`（升系统）·
-`nvidia-driver.md` · `amfi-and-tcc.md`（**App 拿不到权限 → tcc-helper**）· `intel-wifi.md` · `mediatek-wifi.md`（**含原生 Sunrise 打包方案**） · `broadcom-wifi.md`（四类网卡/显卡）·
+`nvidia-driver.md` · `amfi-and-tcc.md`（**App 拿不到权限 → tcc-helper**）· `intel-wifi.md` · `mediatek-wifi.md`（**含原生 Sunrise 打包方案**） · `broadcom-wifi.md`（四类网卡/显卡）· `airdrop-handoff.md`（**AirDrop / 接力：只看 `awdl0`，与 `ROM`/`en0`/UUID 无关**）·
 `applealc-custom.md`（**声卡 / macOS 26 恢复 AppleHDA / 定制 layout**）· `hidpi.md`（显示）· `intel-turbo.md`（睿频）· `e-cores.md`（**开/关小核**）· `cpu-name.md`（**CPU 显示名**）· `memory-injection.md`（内存）· `boot-failure-debug.md`（**装不上/进不去系统**）· `boot-timeline.md` / `logs-and-debug.md`（日志）· `boot-entries.md`（启动项）·
 `acpi-ssdt.md`（**ACPI 热补丁样例库索引**）· `disks-and-kexts.md` · `kext-and-oc-update.md`（**更新 kext / OC**）· `official-docs-method.md` · `rapidefi-first-efi.md` ·
 `smbios-and-serials.md`（换机型 + 三码）· `network-en0-order.md`（`en0` 归属）· `ethernet-drivers.md`（有线网卡）· `ecosystem-sources.md`（**权威来源与工具索引**）· `laobamac-toolkit.md`（工具索引）· `pitfalls.md`（踩过的坑）· `theme-opencanopy.md`（选择器主题）· `machine-facts.md`（参考机器事实）

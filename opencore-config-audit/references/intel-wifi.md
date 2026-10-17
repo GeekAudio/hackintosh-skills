@@ -81,7 +81,7 @@ Intel 无线网卡上的**蓝牙**不由 itlwm 负责，需要：
 | Wi-Fi 完全不出现在系统里 | `Lilu` 是否加载、`Kernel → Add` 顺序是否 Lilu 在前、kext 是否与当前 macOS **ABI 匹配**（Sequoia/Tahoe 别装错） |
 | kext 加载了但没有接口 | `MinKernel`/`MaxKernel` 是否把当前 Darwin 排除掉了（`uname -r`）；`system_profiler SPAirPortDataType` 里有没有接口 |
 | 能连 2.4G 连不上 5G / 连上很慢 | HE 是否开了（`itlwm_he=1`）、信道/加密方式是否在支持列表内（WPA3-only 与强制 PMF **不支持**） |
-| AirDrop / 接力不可用 | **已知不支持**（AWDL 未实现），不要当故障查 |
+| AirDrop / 接力不可用 | **已知不支持，不要当故障查**。官方 FAQ 原文：*"Only **Handoff** and **Universal Clipboard** works with AirportItlwm, **other features are not supported**"*；`itlwm.kext` 更彻底 —— 走 `IOEthernetController` 而非 `IO80211Family` ⇒ **没有 `awdl0`**。完整依据见 `airdrop-handoff.md` §1.2 |
 | 装完蓝牙坏 | 蓝牙是另一组 kext（§3），先确认那三个的状态 |
 
 ## 5. 与「换网卡」的关系（重要）

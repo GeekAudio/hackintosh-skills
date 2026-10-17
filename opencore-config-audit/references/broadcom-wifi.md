@@ -87,7 +87,7 @@ bluetoothInternalControllerInfo = 000000000000000089653a552efd
   ioreg -p IOUSB -w0 -l | grep -i -A3 "bluetooth"     # 应见 Bluetooth USB Host Controller / BCM20703
   ```
 
-### 2.5 `built-in` 注入（Dortania 的 en0 / Continuity 要求）
+### 2.5 `built-in` 注入（Dortania 的 `en0` / iServices 要求）
 
 ```
 DeviceProperties → Add →
@@ -119,9 +119,13 @@ DeviceProperties → Add →
    ⇒ 见 `network-en0-order.md`
 ```
 
-> ★★ **为什么这一步不能省**：`en0` 是 Apple 服务认定的「主网卡」——
-> `ROM`、iMessage / FaceTime、Continuity / AirDrop 都挂在它上面。
+> ★★ **为什么这一步不能省**：`en0` 是 Apple **iServices** 认定的「主网卡」——
+> `ROM`、iMessage / FaceTime / App Store 都挂在它上面。
 > 打补丁 / 换卡后 `en0` 换人 ⇒ 这些会**静默失效**。查法与「钉住」方法见 **`network-en0-order.md`**。
+>
+> ★ **AirDrop / 接力 / 连续互通不在这个清单里** —— 它只要求「有 `awdl0`（Broadcom 原生栈）+ 蓝牙 BLE」，
+> 与 `en0` / `ROM` / 序列号 / UUID **都无关**。别为了 AirDrop 去改 `ROM`。
+> 排查顺序与权威依据见 **`airdrop-handoff.md`**。
 
 ### 3.1 ★★ 打补丁前必须先跑保护脚本（否则 NVIDIA 驱动会失效）
 

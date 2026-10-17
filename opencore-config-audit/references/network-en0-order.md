@@ -16,17 +16,26 @@
 |---|---|
 | **`PlatformInfo > Generic > ROM`** | Dortania 要求填 **`en0` 的真实 MAC** ⇒ `en0` 换人后 ROM 就不一致了（见 `smbios-and-serials.md` §5.3 / §6.1） |
 | **iMessage / FaceTime / App Store** | 按 `en0` 判机器身份；`en0` 不对会「登录不了 / 掉线」 |
-| **Continuity / AirDrop / Handoff / 接力** | 需要 `en0` + `built-in=<01>`（Dortania 的 en0 要求，见 `broadcom-wifi.md` §2.5） |
 | **Wi-Fi 本体** | 见 §2 —— 打补丁 / 换卡之后要确认无线是不是 `en0` |
+
+> ★★ **不依赖 `en0` 的：AirDrop / 接力 / Handoff / 连续互通。**
+> 它只取决于「有没有 `awdl0`」（= 无线是否跑 Broadcom 原生 `IO80211Family` 栈）+ 蓝牙 BLE 服务，
+> 与 `en0` / `ROM` / 序列号 / UUID **都无关**。
+> 早前本文把 `Continuity / AirDrop` 列进「依赖 `en0`」是**错的** —— 那是把 Dortania 的
+> **iServices**（iMessage）要求错误扩展到了 AirDrop（Dortania 原文：*"The type doesn't matter"*，
+> 且通篇不提 AirDrop；Apple 官方对连续互通只要求「同一 Apple ID + Wi-Fi + 蓝牙」）。
+> ⇒ **排查 AirDrop 请走 `airdrop-handoff.md`，不要在这里找。**
 
 ## 2. ★★ 为什么「修补 Wi-Fi」之后必须确认 `en0`
 
 打 **OCLP root patch**、**换网卡**、**增删网卡 kext** 都会改变**驱动挂载顺序** ⇒
 **无线可能从 `en0` 掉到 `en1`（或有线抢走 `en0`）**。后果：
 
-- `ROM` 与 `en0` 不一致 ⇒ **iMessage / FaceTime 可能异常**
-- **Continuity / AirDrop / 接力失效**
+- `ROM` 与 `en0` 不一致 ⇒ **iMessage / FaceTime / App Store 可能异常**
 - 依赖「主网卡」的服务表现异常
+
+> ★ **AirDrop / 接力不会因此失效** —— 那是 `awdl0` 的事（见 `airdrop-handoff.md`）。
+> 别把「换完卡 AirDrop 坏了」归因到 `en0` 换人上。
 
 ⇒ **所以 Wi-Fi 修补流程（`broadcom-wifi.md` §3 / `os-upgrade-15-to-26.md` 升级后）里必须加一步：
 确认 `en0` 是不是无线。**
@@ -77,5 +86,6 @@ networksetup -setairportpower en0 on
 - ★ **看 `ifconfig`，别只看 `system_profiler`** —— 重启后驱动要读卡、关联、DHCP，**十几秒才起来**，
   期间 `system_profiler` 返回空 ⇒ 容易误判成「失败」（见 `broadcom-wifi.md` §4）
 - 无线是否真的活：`ifconfig en0`（或 `en1`）要有 **`inet` + `status: active`**
-- **`awdl0` 存在** ⇒ AirDrop / 接力可用
+- **`awdl0` 存在** ⇒ AirDrop / 接力**有戏**（完整判据见 `airdrop-handoff.md`：
+  还要 `llw0` + 蓝牙 `LEA`/`AACP`/`GATT`）
 - 换网卡后**同一台机器不要同时注入多套网卡驱动**（`intel-wifi.md` §5）

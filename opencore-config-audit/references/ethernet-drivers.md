@@ -63,7 +63,8 @@ system_profiler SPEthernetDataType | head -30
 ```
 
 > ★★ **换完必须复查 `en0`** —— 换驱动会改变挂载顺序，`en0` 可能换人 ⇒
-> `ROM` / iMessage / Continuity 会**静默失效**（详见 `network-en0-order.md`）。
+> `ROM` / iMessage / FaceTime / App Store 会**静默失效**（详见 `network-en0-order.md`）。
+> ★ **AirDrop / 接力不受影响**（它只看 `awdl0`，见 `airdrop-handoff.md`）。
 
 ## 5. 安全提示
 
