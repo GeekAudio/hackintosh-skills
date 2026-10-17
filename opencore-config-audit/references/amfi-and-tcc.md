@@ -193,3 +193,49 @@ bin/tcchelper-cli revoke   <App> <service> [--db ...] [--path]
 - `GeekAudio/tcc-helper` → `README.md`（GUI/CLI 用法、自动授权思路、五个坑）+ `Sources/TCCAuto.swift`（`usageMap`）+ Release `v1.0.0`。
 - OCLP / `tccplus` 文档：AMFI 关闭 ⇒ 不弹窗 + 不生成隐私条目（原文见 §1）。
 - 相关：`nvidia-driver.md` §8（驱动的安全边界）· `broadcom-wifi.md`（OCLP 根补丁侧）。
+
+---
+
+## 附录：Gatekeeper /「任何来源」/「无法验证开发者」（**与 TCC 无关，但常一起排查**）
+
+### A.1 先分清是两个问题
+
+| 现象 | 根因 | 去哪 |
+|---|---|---|
+| 双击 App 弹「**无法打开，因为无法验证开发者**」/「**已损坏，应移到废纸篓**」/「来自身份不明的开发者」 | **Gatekeeper**（系统策略评估，`spctl`） | 本附录 |
+| App **能打开**，但麦克风 / 摄像头 / 屏幕录制拿不到权限、也不弹窗 | **AMFI 关闭 ⇒ TCC 不记录** | §0–§7 |
+
+★ 两者都表现为「App 用不了」，但**修法完全不通用** —— 先看 App 到底有没有启动。
+
+### A.2 命令
+
+```bash
+spctl --status                  # assessments enabled / disabled（只读，不用 sudo）
+sudo spctl --global-disable     # 关闭 Gatekeeper 全局评估 = 旧版「任何来源」
+sudo spctl --global-enable      # 恢复
+```
+
+| 项 | 说明 |
+|---|---|
+| **`--master-disable`** | ★ **macOS 15+（Sequoia/Tahoe）已不是文档化的做法**，对应开关是 **`--global-disable`**。<br>二进制里仍留着 `master-disable` 兼容旧脚本，**但别写进新流程**（网上大量教程还是它） |
+| **GUI 路径** | 系统设置 → 隐私与安全性 → 安全性 → 「**允许来自任何来源**」。<br>部分版本该选项**默认不显示**，要先跑一次 `--global-disable` 才出现（Ventura 时代的经典现象） |
+| `spctl --disable-status` | 26.7.1 返回：*"The option to globally disable the assessment system is currently available in **System Settings**."*<br>⇒ **Apple 正在把入口收回 GUI**，CLI 仍可用但已非官方推荐路径 |
+
+### A.3 本机实测（macOS 26.7.1 / Tahoe）
+
+```bash
+spctl --status          # → assessments disabled
+spctl --help            # 列出的开关：--assess / --status / --global-disable / --disable-status
+strings /usr/sbin/spctl | grep global-   # → global-disable、global-enable 都在
+```
+
+- ★ **`--global-enable` 只在二进制里，`--help` 不列** ⇒ 恢复时照用即可，别以为它被删了
+- 本机 `assessments disabled`，与「装第三方驱动 / 工具后一切正常」的现状一致
+
+### A.4 判据与边界
+
+- ★ **「已损坏，应移到废纸篓」≠ 真损坏**：多半是 Gatekeeper 拦 + `quarantine` 属性。
+  先摘属性：`xattr -d com.apple.quarantine /Applications/xxx.app`，**不行再动 `spctl`**
+- ★ **关 Gatekeeper 不会让 kext 加载成功** —— kext 看的是 **`SecureBootModel` / SIP / 签名**（见 §1、
+  `nvidia-driver.md` §8），两套机制别混
+- ★ 关掉后系统**不再校验任何下载的 App** ⇒ 与 §7 同一条纪律：**只在明确知道要装什么的时候开，装完考虑 `--global-enable` 恢复**
