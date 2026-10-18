@@ -256,7 +256,7 @@ strings -a /System/Volumes/Data/Library/KernelCollections/AuxiliaryKernelExtensi
 |---|---|---|
 | **① Linux（推荐）** | Ventoy 做启动盘 → 启动任意发行版「Try」→ 一条命令收集：<br>`cd ~/Desktop && mkdir CodecDump && for c in /proc/asound/card*/codec#*; do f="${c/\/*card/card}"; cat "$c" > CodecDump/${f//\//-}.txt; done && zip -r CodecDump.zip CodecDump` | ★ **只有 Linux 的 dump 能生成拓扑图**（Clover / OpenCore 的不行） |
 | **② OpenCore** | 换 **DEBUG** 版 OpenCore（含同名 Drivers）→ `Misc>Debug>SysReport=true` · `UEFI>ConnectDrivers=true` · `UEFI>Drivers` 加 **`AudioDXE.efi`** → 重启（会慢些）→ ESP 根出现 `SysReport/Audio/` → **改回 RELEASE 并把那两个开关关掉** | 拿不到拓扑图，**只能应急** |
-| **③ Windows + HDAU** | 见 §3.0.1 —— **路线 B 的硬约束，定制前必须走的一步** | 没有拓扑图 |
+| **③ Windows（两条子路线）** | 见 §3.0.1 —— **路线 B 的硬约束，定制前必须走的一步**：GUI 走 `HDAU.exe`；脚本走 **`HDAudDev.dll` 直连**（免管理员、可脚本化、产出 Linux 风格 `codec_dump.txt/.json`） | 没有拓扑图（脚本路线产出的 `codec_dump.txt` 可直接喂 Codec-Graph，见下） |
 
 ### 3.0.1 ★★★ 硬约束：路线 B 开动手之前，必须已有 Windows 下取全的数据
 
@@ -284,16 +284,84 @@ strings -a /System/Volumes/Data/Library/KernelCollections/AuxiliaryKernelExtensi
 | 4 | **插孔语义表**：哪口是耳机 / 麦 / 线路，颜色 + 面板丝印 | 由 1–3 推导 | 分组顺序与验收清单 |
 | 5 | codec 的 `CodecID` / `Revision` / 控制器路径与 ACPI 名 | 识别信息 | `Info.plist` 与 DeviceProperties |
 
-**Windows 侧操作（HDAU / Intel HD Audio tool）**：
+**前置一步：确认 codec 已启用** —— codec 被禁用时枚举不到任何接口，脚本会直接提示「没有枚举到任何接口」：
+
+```bat
+:: ProblemCode 22 = 已禁用（InstanceId 换成本机实际值）
+pnputil /enum-devices /instanceid "HDAUDIO\FUNC_01&VEN_10EC&DEV_0897&SUBSYS_…&REV_…\4&…&0&0001"
+:: 已禁用则启用（此操作可逆）
+pnputil /enable-device "<上面的 InstanceId>"      :: 需要管理员，或在设备管理器里右键「启用设备」
+```
+
+**路线 ① GUI（HDAU / Intel HD Audio tool）**：
 
 1. 设备管理器 → 声音、视频和游戏控制器 → 找到硬件 ID 含目标 codec 的设备（示例：`VEN_10EC&DEV_0897`）
-   → 先启用：`pnputil /enable-device "<设备实例 ID>"`
-2. 打开 `HDAU.exe`（`HdauSetup.msi` 安装包内）→ `File → Local Machine Codecs` → 选板载 codec
-   （示例实例 ID：`HDAUDIO\FUNC_01&VEN_10EC&DEV_0897&SUBSYS_…&REV_…`）⇒ 出现完整节点树
+2. 打开 `HDAU.exe`（`HdauSetup.msi` 安装包内）→ `File → Local Machine Codecs` → 选板载 codec ⇒ 出现完整节点树
 3. 导出（这一步就是上面清单的 1–3）：
    - `File → Save Working Codec As...` → 完整 codec 节点树（XML）—— **节点、连接表、Amp 能力**
    - `File → Export PinConfig Settings As...` → pin config（registry / BIOS / inf 三种格式，取 **32 位 Pin Config Default**）
    - `File → Export PinConfig Settings with system specific name` → 当前目录直接落 `.reg`，一步到位
+
+**路线 ② 脚本（`HDAudDev.dll` 直连，免管理员、可脚本化、产出 Linux 风格 dump）** ★ 要反复导出 / 想进 CI 就走这条：
+
+微软官方 HDAU 3.3 自带一个原生库 **`HDAudDev.dll`**，导出的几个函数可以直接对 codec 发 HDA verb。
+绕开 GUI 只调这个 DLL，就能拿到与 Linux `/proc/asound/card*/codec#*` **等价**的拓扑数据。
+依赖只有 **Python 3 标准库 + `HDAudDev.dll`**，**不需要管理员权限**。
+
+```bat
+:: 拿 DLL（微软官方工具包）：取 hdausetup_x64.msi → 从 MSI 的 _Streams 表取出内嵌 cab → 展开
+C:\Windows\System32\expand.exe -F:* hdau.cab out\
+:: out\ 下得到 HDAU.exe / HDAudDev.dll / Topo.dll / Config.xml
+:: 把 HDAudDev.dll 和 dump 脚本放同一目录，脚本启动时自动加载
+
+python hda_codec_dump.py --probe                :: 探测验证链路：列私有接口→打开→读 VendorId
+python hda_codec_dump.py --out <路径基名>        :: 完整 dump：写 <base>.txt + <base>.json
+python hda_codec_dump.py --only 10EC0897        :: 只 dump 指定 VendorId 的 codec
+python hda_codec_dump.py --nvidia               :: 连 HDMI codec 一起 dump（AppleALC 用不到）
+```
+
+- **`codec_dump.txt` 是 Linux codec_dump 风格** ⇒ 可**直接喂 `Codec-Graph.py`** 出拓扑图；
+  `codec_dump.json` 是同上的机器可读版（含每个字段的原始 32 位值）；
+- **文末会自动打印一张 Pin Complex 一览表**（NID / Pin Default / 设备类型 / 位置 / 颜色 / 关联组 / 序号）⇒ 定制 layout 时直接查这张表；
+- **探测通过的样子**：`GrabDeviceHandle=True` 且读到的 VendorId 是目标 codec（如 `0x10EC0897`）。
+
+**核心调用序列**（自己写脚本时照着来，三步）：
+
+```python
+import ctypes
+from ctypes import wintypes as wt
+
+dll = ctypes.WinDLL("HDAudDev.dll")
+dll.GrabDeviceHandle.argtypes = [ctypes.c_wchar_p];  dll.GrabDeviceHandle.restype = ctypes.c_bool
+dll.SendVerbLong.argtypes     = [ctypes.c_uint32];   dll.SendVerbLong.restype  = ctypes.c_int64
+dll.ReleaseDeviceHandle.argtypes = [];               dll.ReleaseDeviceHandle.restype = None
+
+GUID_PRIVATE = "{A17579F0-4FEC-4936-9364-249460863BE5}"   # HD Audio 私有接口类（微软公开常量）
+GUID_KS      = "{6994AD04-93EF-11D0-A3CC-00A0C9223196}"   # KS 媒体类（端点拓扑，微软公开常量）
+
+# ① SetupAPI 枚举完整设备接口路径（DIGCF_PRESENT|DIGCF_DEVICEINTERFACE = 0x02|0x10）
+#    x64 上 SetupDiGetDeviceInterfaceDetailW 的 cbSize 必须填 8；字符串从 buf+4 开始
+# ② GrabDeviceHandle(path) → True；verb(0x00, 0xF00, 0x00) → 0x10EC0897
+# ③ 根节点 → function group → widget 遍历：
+
+def verb(nid, verb12, payload=0, codec=0):
+    v = ((codec & 0xF) << 28) | ((nid & 0xFF) << 20) | ((verb12 & 0xFFF) << 8) | (payload & 0xFF)
+    return int(dll.SendVerbLong(ctypes.c_uint32(v))) & 0xFFFFFFFF
+
+fg_type   = verb(nid,   0xF00, 0x05)          # 0x01 = Audio Function Group
+w_start, w_count = verb(fg_nid, 0xF00, 0x04)  # 高16=起始 NID，低16=数量
+wcaps     = verb(wid,   0xF00, 0x09)          # type = (wcaps >> 20) & 0xF
+
+if (wcaps >> 20) & 0xF == 4:                  # Pin Complex
+    pin_default = verb(wid, 0xF1C, 0x00)      # 32 位 Pin Config Default
+    pin_caps    = verb(wid, 0xF00, 0x0C)
+    eapd        = verb(wid, 0xF0C, 0x00)      # 0x2 = EAPD 使能
+
+n = verb(wid, 0xF00, 0x0E) & 0x7F             # Connection List：每 4 个一组读
+for base in range(0, n, 4):
+    word = verb(wid, 0xF02, base)
+    conns += [(word >> (8*k)) & 0xFF for k in range(4)]
+```
 
 > ★★ **导出时务必排除显卡的 HDMI codec**（示例机上是 `10DE:009A`）—— 它也出现在 codec 列表里，
 > **取错会得到一张完全无关的节点树。**
@@ -313,6 +381,33 @@ strings -a /System/Volumes/Data/Library/KernelCollections/AuxiliaryKernelExtensi
 > 同样含 Pin Default 与连接表，**且是唯一能出拓扑图的一份**（拓扑图工具链只认它）；
 > OpenCore `SysReport` 只能应急、拿不到拓扑图。
 > ⇒ **降级取数后，「哪口对应哪个丝印」仍需找一台 Windows（或看主板说明书 + 实测）确认**，不要跳过清单第 4 项。
+
+### 3.0.2 交叉验证：让 Windows 自己作证「哪个 pin 是面板上哪个孔」
+
+dump 出来后如果还不知道「哪个 pin 对应哪个孔」，**不用猜**——Windows 自己建的 KS 拓扑接口会把答案写出来。
+用同一个枚举函数改枚举 **KS 媒体类** GUID，把接口路径末尾的 refstring 拿出来：
+
+```python
+paths = enum_interfaces(GUID_KS)                  # 同一个枚举函数，换 GUID
+refs  = [p.rsplit("\\", 1)[-1] for p in paths if "0897" in p.lower()]
+# -> eheadphonetopo / elineouttopo / emicintopo / emixedcapturetopo / espdifouttopo / espdifoutwave
+```
+
+| Windows 端点 | 对应 pin | 含义 |
+|---|---|---|
+| `elineouttopo` | 0x14 | 线路输出主端点 |
+| `eheadphonetopo` | 0x1b | 耳机 |
+| `espdifouttopo` / `espdifoutwave` | 0x1e | 光纤 S/PDIF 输出 |
+| `emicintopo` + `emixedcapturetopo` | 0x18 / 0x19 / 0x1a | 麦克风 + 混合录音（**输入被聚合成一组**） |
+
+**三条可直接抄的判读规则**：
+
+1. **播放侧出现几个 `e*outtopo`，就有几个独立输出端点** —— 同一个 DefAssociation 组的多个 pin
+   （如 5.1 的 L/R、后环绕、中置低音）**只会建一个端点**，这直接验证了关联组分组；
+2. **录音侧常见一个 `emicintopo` + 一个 `emixedcapturetopo`** ⇒ 驱动把多个输入口聚合了
+   ⇒ **AppleALC 的 `PlatformsXX.xml` 里输入也只应选一组**（与 §3.8 结论一同源）；
+3. 端点 `NOTPRESENT` = **插孔没插设备**（presence detect 为空），**不是故障**；
+   S/PDIF 输出没有 presence detect，恒为 `ACTIVE`。
 
 ★ **两个必看的坑**：
 1. **必须把文件改名成 `codec_dump.txt`**，否则转换脚本会失败；
@@ -412,6 +507,9 @@ alc-verb <NID> <verb> <parameter>      # 例：alc-verb 0x19 0x707 0x40
 | `0x4XX` | Set Processing Coefficient（写系数值） |
 | `0xF06` | Get Converter Stream/Channel（**采样时看这个 DAC 有没有流**，§5.7） |
 | `0xF1C–0xF1F` | Get Pin Config Default 四个字节（逐字节回读，§3.0） |
+| **`0xF00` + payload** | **Get Parameter**（Windows 脚本路线遍历全树就靠它，§3.0.1）：`0x00` VendorID（如 `0x10EC0897`）· `0x02` RevisionID · `0x04` NodeCount（高16=起始NID / 低16=数量）· `0x05` FunctionGroupType · `0x08` AFG Caps · `0x09` Widget Caps（**type = `caps>>20 & 0xF`，4 = Pin Complex**）· `0x0C` Pin Caps · `0x0D` / `0x12` Amp-In / Amp-Out Caps · `0x0E` Conn List Length（低 7 位） |
+| **`0xF02` + 组基址** | Get Connection List Entry（**一次返回 4 个 entry**） |
+| **`0xF0C`** | Get EAPD/BTL（`0x2` = EAPD 使能） |
 
 选项：`-d <int>` 选 codec 序号（默认 0，多 codec 时用）· `-l` / `-L` 列 verb · `-q` 静默。
 
@@ -766,7 +864,34 @@ PR 里应当包含：
 | AppleHDA | 600.2，装在 `/System/Library/Extensions`（来自 KDK 15.8.1 build 24H32） |
 | AppleALC | 1.9.9（自编译，带上表 layout），**Lilu 排在它前面** |
 | 运行时补丁 | 前置麦克风偏置：`alc-verb 0x19 0x707 0x24`，挂 LaunchAgent 开机补 |
-| 引脚速查（示例） | `0x14` 后置绿 LINE OUT · `0x18/0x19` 后置/前置粉 MIC IN · `0x1a` 后置蓝 LINE IN · `0x1b` 前置绿耳机 · `0x1e` 光纤 SPDIF |
+
+**示例 · 取数结果（Windows 侧 dump，`evidence/06-alc897-codec-dump.txt`）**
+—— codec 共 37 个 widget（`0x02–0x26`，AFG `0x01`），Pin Complex 14 个，**有物理口的只有 8 个**：
+
+| NID | Pin Config Default | 设备类型 | 位置 / 颜色 | 关联组 / 序号 | EAPD |
+|---|---|---|---|---|---|
+| `0x14` | `0x01014010` | Line Out | 后置 / 绿 | 1 / 0 | `0x2` |
+| `0x15` | `0x01011012` | Line Out | 后置 / 黑 | 1 / 2 | — |
+| `0x16` | `0x01016011` | Line Out | 后置 / 橙 | 1 / 1 | — |
+| `0x18` | `0x01A19030` | Mic In | 后置 / 粉 | 3 / 0 | — |
+| `0x19` | `0x02A19040` | Mic In | 前置 / 粉 | 4 / 0 | — |
+| `0x1a` | `0x0181303F` | Line In | 后置 / 蓝 | 3 / 15 | — |
+| `0x1b` | `0x02214020` | HP Out | 前置 / 绿 | 2 / 0 | `0x2` |
+| `0x1e` | `0x01456150` | SPDIF Out | 后置 / 橙（光纤） | 5 / 0 | — |
+
+> `0x11 / 0x12 / 0x17 / 0x1c / 0x1d / 0x1f` 全部为 N/A（无物理连接），是 codec 模板占位，**不需要配置 layout**。
+> 注意 `0x14/0x15/0x16` 同属关联组 1 ⇒ Windows 只为它们建**一个**输出端点（§3.0.2 判读 1）；
+> `0x18` 与 `0x1a` 同在关联组 3、`0x19` 单独一组 —— 分组方式直接影响 §3.8 结论一的排法。
+
+**示例 · 路由与 Amp 能力**（写 PathMap 时的原始素材）：
+
+```
+【播放】0x02[DAC]→0x0c[Mixer]→0x14(绿主)/0x1b(耳机, EAPD 0x2 靠 presence 切换) ; 0x06[DAC]→0x1e(S/PDIF)
+        （0x03→0x0d→0x15、0x04→0x0e→0x16 是 5.1 模拟扩展）
+【录音】0x18/0x19/0x1a/0x1b → 0x22[Mixer 12入] → 0x09[ADC] ; 0x18/0x19/0x1a/0x1b → 0x23[Mixer 11入] → 0x08[ADC]
+Amp：0x02–0x05 DAC out=0x00025757 · 0x07–0x09 ADC in=0x80023F17 · 0x0b Mixer in=0x80051F17 ·
+     0x0c–0x0f/0x22/0x23/0x26 mute=1 · 0x18–0x1b Pin in=0x00270300（nsteps=3 ⇒ 麦克风 boost 0–3 档）
+```
 
 **任何时候都要守住的三条**：① 本机音频设备叫 **`HDAS`** —— 查路径用 `gfxutil -f HDAS`，
 **官方明确禁止把它改名成 `HDEF`**（*"Do not use renaming HDAS to HDEF, B0D3 to HDAU, etc."*）；
