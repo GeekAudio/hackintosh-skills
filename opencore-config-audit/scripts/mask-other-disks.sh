@@ -10,7 +10,7 @@
 #
 # ★ 铁律：EFI 分区（Partition Type = EFI）永不写入 fstab；写完后会做一次
 #   「按 UUID 找 ESP → 卸载 → 重挂 → 读 config.plist」的验证。
-set -u
+set -euo pipefail
 
 APPLY=0; UNDO=0; KEEP=""
 while [ $# -gt 0 ]; do
@@ -48,14 +48,14 @@ while IFS= read -r dev; do
   ptype=$(printf '%s\n' "$info" | awk -F': *' '/Partition Type/{print $2}')
   mp=$(printf '%s\n'  "$info" | awk -F': *' '/Mount Point/{print $2}')
   [ -n "$uuid" ] || continue                       # 无卷 UUID（合成卷/容器）跳过
-  [ "$ptype" = "EFI" ] && { printf '   skip %-10s %-22s EFI 分区（永不屏蔽）\n' "$dev" "$name"; continue; }
+  if [ "$ptype" = "EFI" ]; then printf '   skip %-10s %-22s EFI 分区（永不屏蔽）\n' "$dev" "$name"; continue; fi
   case "$fs" in *APFS*) printf '   skip %-10s %-22s APFS（系统卷）\n' "$dev" "$name"; continue;; esac
   case "$mp" in /|/System/*) printf '   skip %-10s %-22s 系统挂载点\n' "$dev" "$name"; continue;; esac
   case " $KEEP " in *" $uuid "*) printf '   keep %-10s %-22s 用户指定保留\n' "$dev" "$name"; continue;; esac
   printf '   MASK %-10s %-22s %-6s %s\n' "$dev" "${name:-<无名>}" "${fs:-?}" "$uuid"
   TARGETS="$TARGETS $uuid|$dev|${name:-unnamed}|${fs:-ntfs}"
 done <<EOF
-$(diskutil list | grep -oE 'disk[0-9]+s[0-9]+' | sort -u)
+$(diskutil list | grep -oE 'disk[0-9]+s[0-9]+' | sort -u || true)
 EOF
 
 if [ -z "$TARGETS" ]; then echo "   （没有需要屏蔽的卷）"; fi

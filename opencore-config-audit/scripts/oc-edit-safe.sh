@@ -13,7 +13,7 @@
 #   oc-edit-safe.sh finish "$S" "$W" docaudit-console-off
 #
 # 约定：工作区里放 _oc-current.plist（镜像）与 <archive-dir>/config.plist.vNN-<说明>（版本存档）
-set -u
+set -euo pipefail
 
 MODE="${1:?用法: oc-edit-safe.sh begin|finish <esp_config> <workdir> [标签]}"
 CFG="${2:?缺少 esp_config}"
@@ -29,7 +29,7 @@ mkdir -p "$WORK"
 #   否则（例如把工作区里的副本传进来）df 会给出 /System/Volumes/Data 之类的系统卷，
 #   误卸载系统卷是危险操作 ⇒ 宁可跳过。
 ESP_DEV=""
-MP=$(df -P "$CFG" | awk 'NR==2{print $NF}')
+MP=$(df -P "$CFG" | awk 'NR==2{print $NF}' || true)
 case "$MP" in
   /Volumes/*)
     INFO=$(diskutil info "$MP" 2>/dev/null || true)
@@ -58,14 +58,14 @@ finish)
   echo "== 1) 语法与官方校验 =="
   plutil -lint "$CFG" || { echo "plutil 校验失败 —— 建议回滚备份"; exit 1; }
 
-  OV=$(ls -1 "$WORK"/_oc-docs-audit/oc*/Utilities/ocvalidate/ocvalidate 2>/dev/null | head -1)
+  OV=$(ls -1 "$WORK"/_oc-docs-audit/oc*/Utilities/ocvalidate/ocvalidate 2>/dev/null | head -1 || true)
   if [ -n "$OV" ]; then "$OV" "$CFG" || echo "   ★ ocvalidate 有报错，先修"; else echo "   (未找到 ocvalidate，跳过)"; fi
 
   echo
   echo "== 2) 语义差异（相对基线备份）=="
-  BASE_F=$(ls -t "$WORK"/_oc-backup-before-$LABEL-*.plist 2>/dev/null | head -1)
+  BASE_F=$(ls -t "$WORK"/_oc-backup-before-$LABEL-*.plist 2>/dev/null | head -1 || true)
   # 标签不一致时回退到最近一次备份（begin/finish 的 LABEL 不必完全相同）
-  [ -n "$BASE_F" ] || BASE_F=$(ls -t "$WORK"/_oc-backup-before-*.plist 2>/dev/null | head -1)
+  [ -n "$BASE_F" ] || BASE_F=$(ls -t "$WORK"/_oc-backup-before-*.plist 2>/dev/null | head -1 || true)
   if [ -n "$BASE_F" ]; then
     echo "   基线: $BASE_F"
     "${PYTHON:-python3}" - "$BASE_F" "$CFG" <<'PY'
@@ -96,7 +96,7 @@ PY
   echo "== 4) 版本存档 =="
   ARCH="$WORK/xh_adls3修复-20261013"
   mkdir -p "$ARCH"
-  N=$(ls -1 "$ARCH"/config.plist.v[0-9]* 2>/dev/null | sed -n 's/.*\.v\([0-9]\+\).*/\1/p' | sort -n | tail -1)
+  N=$(ls -1 "$ARCH"/config.plist.v[0-9]* 2>/dev/null | sed -n 's/.*\.v\([0-9]\+\).*/\1/p' | sort -n | tail -1 || true)
   N=$(( ${N:-0} + 1 ))
   DST="$ARCH/config.plist.v$N-$LABEL"
   cp -p "$CFG" "$DST" && echo "   → $DST"

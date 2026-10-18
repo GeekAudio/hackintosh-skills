@@ -9,7 +9,7 @@
 #   （例 1.0.8：OpenRuntime.efi 24,576 → 36,864；OpenCanopy.efi 114,688 → 151,552）
 #   只换 OpenCore.efi 会得到「构建混搭」的引导器。
 # 只替换**官方同名**驱动，第三方驱动（如驱动安装 App 放的 NullMothLogo.efi）保持不动。
-set -u
+set -euo pipefail
 
 TARGET="${1:?用法: oc-swap-build.sh <debug|release> [版本号] [--efi <EFI 根目录>] [--yes]}"
 shift
@@ -25,7 +25,7 @@ done
 case "$TARGET" in debug|DEBUG) TARGET=debug; KIND=DEBUG;; release|RELEASE) TARGET=release; KIND=RELEASE;; *) echo "目标只能是 debug 或 release"; exit 2;; esac
 
 # ---------- 1) 版本与当前构建 ----------
-CUR=$(nvram 4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102:opencore-version 2>/dev/null | awk '{print $2}')
+CUR=$(nvram 4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102:opencore-version 2>/dev/null | awk '{print $2}' || true)
 echo "== 1) 现状 =="
 echo "   NVRAM opencore-version : ${CUR:-<读不到>}"
 CURKIND="未知"
@@ -60,7 +60,8 @@ OC="$EFIROOT/OC"; BOOT="$EFIROOT/BOOT"
 ESP_DEV=""; MP=$(df -P "$OC/OpenCore.efi" | awk 'NR==2{print $NF}')
 case "$MP" in
   /Volumes/*) INFO=$(diskutil info "$MP" 2>/dev/null || true)
-              printf '%s\n' "$INFO" | grep -q 'Partition Type:.*EFI' && ESP_DEV=$(printf '%s\n' "$INFO" | awk -F': *' '/Device Identifier/{print $2}');;
+              printf '%s\n' "$INFO" | grep -q 'Partition Type:.*EFI' \
+                && ESP_DEV=$(printf '%s\n' "$INFO" | awk -F': *' '/Device Identifier/{print $2}') || true;;
 esac
 
 # ---------- 4) 备份 ----------
@@ -69,7 +70,7 @@ echo
 echo "== 3) 备份到 $BK =="
 mkdir -p "$BK/OC" "$BK/BOOT" "$BK/Drivers"
 cp -p "$OC/OpenCore.efi" "$BK/OC/" 2>/dev/null && echo "   OpenCore.efi"
-cp -p "$BOOT/bootx64.efi" "$BK/BOOT/" 2>/dev/null && echo "   BOOT/bootx64.efi"
+cp -p "$BOOT/bootx64.efi" "$BK/BOOT/" 2>/dev/null && echo "   BOOT/bootx64.efi" || echo "   (无 bootx64.efi，跳过)"
 cp -pR "$OC/Drivers/." "$BK/Drivers/" 2>/dev/null && echo "   Drivers/（$(ls "$OC/Drivers" | wc -l | tr -d ' ') 个文件）"
 
 # ---------- 5) 替换 ----------
@@ -80,7 +81,7 @@ if [ "$YES" != 1 ]; then
   read -r a; case "$a" in y|Y) ;; *) echo "   已取消"; exit 0;; esac
 fi
 cp -p "$SRC/OC/OpenCore.efi" "$OC/OpenCore.efi" && echo "   OC/OpenCore.efi"
-[ -f "$SRC/BOOT/BOOTx64.efi" ] && cp -p "$SRC/BOOT/BOOTx64.efi" "$BOOT/bootx64.efi" && echo "   BOOT/bootx64.efi"
+if [ -f "$SRC/BOOT/BOOTx64.efi" ]; then cp -p "$SRC/BOOT/BOOTx64.efi" "$BOOT/bootx64.efi" && echo "   BOOT/bootx64.efi"; fi
 for f in "$SRC/OC/Drivers"/*; do
   n=$(basename "$f")
   [ -f "$OC/Drivers/$n" ] || continue          # 只换 ESP 上已有的
@@ -102,7 +103,7 @@ for f in "$SRC/OC/Drivers"/*; do
   a=$(shasum -a 256 "$OC/Drivers/$n" | awk '{print $1}'); b=$(shasum -a 256 "$f" | awk '{print $1}')
   [ "$a" = "$b" ] || { echo "   ★ Drivers/$n 不一致"; rc=1; }
 done
-[ $rc -eq 0 ] && echo "   全部一致 ✓"
+if [ $rc -eq 0 ]; then echo "   全部一致 ✓"; else echo "   ★ 有不一致，先别重启"; fi
 
 # ---------- 7) 落盘 + 重启提示 ----------
 echo

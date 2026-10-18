@@ -1,8 +1,8 @@
 ---
 name: opencore-config-audit
-description: 审查、修改与维护黑苹果的 OpenCore（OpenCorePkg）EFI 配置与驱动安装：**BIOS/UEFI 设置审查（官方 9 条清单 + Dortania Intel/AMD + 社区补充的 VMD / Speed Shift；区分「必须关 / 必须开 / 看情况」；含 Windows 只读审查脚本）**、逐键对照官方文档并用官方 ocvalidate 校验 config.plist、巡检 ACPI/SSDT（对照官方 AcpiSamples）、精简注入的 kext、读取 OpenCore 引导日志与内核日志取证、**更新 kext 与 OpenCore（判「该不该更新」：厂商安装器钉没钉 / Dortania build-repo 构建识别）**、**装不上/进不去系统的分层 debug 流程**、**启动耗时/时间线分析（OC 段 / 内核驱动段 / 用户态段三段拆解，定位卡顿与停顿窗口）**、**系统大版本升级（macOS 15 Sequoia → 26 Tahoe：按 Darwin 版本用 MinKernel/MaxKernel 给网卡等 kext 做版本分流、OCLP root patch、机型白名单、升级时序）**、用 /etc/fstab 屏蔽磁盘、调整 boot-args 与调试开关；并含从零生成基础 EFI（Windows 上用 RapidEFI）、NVIDIA 驱动（NullMoth nvidia-macos-driver）、**AMFI 关闭导致 App 拿不到权限（TCC）时的 tcc-helper 注入修法**、**Gatekeeper /「任何来源」/「无法验证开发者」的判定与 `sudo spctl --global-disable`（`--master-disable` 在 macOS 15+ 已过时）**、Intel 无线网卡驱动（AirportItlwm / itlwm）、**MediaTek 无线网卡（MT7921 / MT7922 / RZ608 —— 蓝牙可用、Wi-Fi 实验性）**、博通网卡（BCM943602CDP / BCM43602，按 Sequoia/Tahoe 分路线）、**AirDrop / 接力 / Handoff / 连续互通（★ 根因只看 `awdl0`：`itlwm.kext` 必然不可用；与 `ROM` / `en0` / `SystemUUID` 无关）**、板载声卡 AppleALC（先搜前人 layout-id、搜不到再按 codec 定制并提 PR；**定制前硬约束：必须先在 Windows 下用 HDAU 取全数据**）、HiDPI（非 Retina 屏清晰度）、Intel 睿频/CPU 限频（CPU-S 验证 + CPUFriend 修法）、**Intel 混合架构开小核/关小核（E 核：BIOS `Active Efficient Cores` + `ProvideCurrentCpuInfo` + `CpuTopologyRebuild`）**、MacPro 机型内存定制（摆位规则 + 映射表）与 **SMBIOS 机型切换/三码**（★ **先完善 SSDT → 再换机型 → 再重做 CPUFriend**；主板 OEM SSDT `xh_adls3` 与 `AE_NOT_FOUND` 根因、序列号三类判据、ROM、风控纪律）（先搜前人 layout-id、搜不到再按 codec 定制并提 PR）的完整方法；**并含启动界面外观（OpenCanopy 主题）：图标集、PickerAttributes、Flavour 系统、标签/字体/音频/背景、HiDPI，以及「官方图标集不提供哪些可选图标」的权威对照**。当任务涉及 OpenCore、config.plist、EFI/OC、ocvalidate、SSDT/ACPI、boot-args、kext 注入、启动选择器、开机刷屏或日志、**开机慢/启动耗时/启动卡顿/时间线分析**、**BIOS 设置/UEFI 设置/BIOS 审查/CFG Lock/VMD/Intel RST/Above 4G/Re-Size BAR/CSM/Secure Boot/VT-d/Speed Shift/装系统找不到硬盘**、**OpenCore 主题/启动界面外观/选择器/OpenCanopy/图标集 icon pack/PickerAttributes/PickerVariant/Flavour/.icns/启动声音/开机提示音/选择器字体或背景**、**升级系统/升到 macOS 26/Sequoia 升 Tahoe/升级后 Wi-Fi 没了/kext 版本限制 MinKernel MaxKernel/Darwin 版本分流/机型不被新系统支持/-no_compat_check/收不到系统更新**、**启动项消失/BIOS 里看不到 OpenCore/只剩 Windows/LauncherOption**、**启动项丢失的官方修法（OpenShell `bcfg` / `OpenControl` 解锁 NVRAM / `LauncherOption=Full` 自愈 / 从系统里写）、U 盘启动改硬盘启动、`BootKicker`**、屏蔽磁盘/隐藏磁盘、首次生成 EFI、**装第三方 App 打不开/「任何来源」/「未知来源」/「无法验证开发者」/「已损坏，应移到废纸篓」/`spctl`/Gatekeeper**、装 NVIDIA 驱动、装 Intel 无线驱动、**装 MediaTek 无线网卡/MT7922/MT7921/RZ608 驱动或蓝牙**、板载声卡没声音/只有 HDMI 有声音/AppleHDA 怎么装回来/ALC897/layout-id 填多少/自己做一个 layout-id/alc-verb/前置麦克风没声音/插上耳机不切换/哪个口是哪个口、博通网卡/BCM943602CDP/OCLP root patch、**AirDrop 用不了/隔空投送找不到设备/接力不工作/Handoff/连续互通/`awdl0` 没有**、HiDPI/显示不清晰/缩放、CPU 睿频/限频/卡顿（CPU-S）、内存定制/关于本机内存图/插槽映射、换机型/SMBIOS/三码/序列号/ROM/iMessage 登录时使用。内置「改 ESP 的安全流程」（备份 → 语义 diff → lint → sha 校验 → 镜像/存档 → 卸载重挂复验）。另外，**用户问「这个技能怎么用 / 使用说明 / 有哪些能力 / 能干什么」时也适用**（此时输出技能目录下的 `USAGE.md`，不要输出内部流程）。
-description_en: Audit, edit and maintain a hackintosh OpenCore (OpenCorePkg) EFI configuration and its driver installs — audit BIOS/UEFI firmware settings (OpenCore's official checklist plus Dortania's Intel/AMD lists plus community-only items such as VMD and Intel Speed Shift, split into must-disable / must-enable / conditional, with a read-only Windows audit script), verify every config.plist switch against the official documentation and ocvalidate, review ACPI/SSDT tables against the official AcpiSamples, trim injected kexts, read OpenCore boot logs and kernel logs for evidence, decide whether to update kexts/OpenCore (vendor-pinned vs Dortania build-repo builds), layered debugging when macOS won't install or boot, analyse boot time / startup timeline in three independent phases (OpenCore, kernel/driver, userspace) to locate stalls and gaps, plan a major macOS upgrade (15 Sequoia to 26 Tahoe: per-Darwin-version kext gating with MinKernel/MaxKernel for WiFi cards, OCLP root patching, supported SMBIOS whitelist, upgrade ordering), recover a vanished firmware boot entry (Boot####/BootOrder, LauncherOption), recover a missing firmware boot entry the official way (OpenShell bcfg, OpenControl NVRAM unlock, LauncherOption=Full self-heal, or writing from the OS), migrate from USB boot to internal-disk boot, mask disks with /etc/fstab, and follow the NullMoth NVIDIA driver, recover TCC permissions suppressed by disabled AMFI (GeekAudio/tcc-helper), Gatekeeper / "Allow applications from: Anywhere" / "cannot be opened because the developer cannot be verified" / "is damaged and should be moved to the Trash" (sudo spctl --global-disable; --master-disable is obsolete on macOS 15+), Intel WiFi (AirportItlwm), MediaTek WiFi (MT7921 / MT7922 / RZ608 — Bluetooth works, Wi-Fi experimental), Broadcom WiFi (BCM943602CDP, Sequoia vs Tahoe routes), AirDrop / Handoff / Continuity (root cause is awdl0 only — itlwm can never work; unrelated to ROM, en0 or SystemUUID), onboard audio (AppleALC layout-id / codec customisation; hard rule: extract the codec data under Windows with HDAU before writing a layout — unless the user can already provide it), HiDPI scaling on non-Retina displays, Intel Turbo Boost / CPU frequency capping (verified with CPU-S, fixed with CPUFriend), Intel hybrid-architecture E-core enable/disable (BIOS Active Efficient Cores, ProvideCurrentCpuInfo, CpuTopologyRebuild), MacPro memory injection (slot layout mapping), SMBIOS model switching and serials/MLB/UUID/ROM (iMessage; board OEM SSDT / AE_NOT_FOUND root cause; order: finish SSDT first, then SMBIOS, then CPUFriend) and first-time base-EFI generation (RapidEFI on Windows) workflows, plus OpenCanopy boot-picker theming (icon sets, PickerAttributes, the flavour system, labels/fonts/audio/background, HiDPI, and the authoritative list of optional icons the official icon sets do NOT ship). Includes a mandatory safe-edit protocol for the EFI system partition. Also applies when the user asks how to use this skill, for its usage guide, or for a list of its capabilities — in that case output the skill's USAGE.md rather than the internal workflow.
-version: 0.35.1
+description: 审查、修改与维护黑苹果 OpenCore（OpenCorePkg）EFI：BIOS/UEFI 设置审查、config.plist 逐键对照官方文档并用 ocvalidate 校验、ACPI/SSDT 巡检、kext 精简与更新判断、引导与内核日志取证、装不上或进不去系统的分层 debug、启动耗时分析、系统大版本升级（15→26 的版本分流）、磁盘屏蔽、从零生成基础 EFI、换机型与三码。硬件侧覆盖 NVIDIA 独显、Intel / MediaTek / 博通无线网卡、有线网卡、板载声卡 AppleALC、HiDPI、Intel 睿频与小核、内存定制、AMFI/TCC 权限修复、Gatekeeper、AirDrop / 接力、OpenCanopy 主题。触发场景：开机卡 EB、卡 ExitBootServices、卡代码、循环重启、黑屏、启动项丢失、选择器不显示、只有 HDMI 有声音、板载声卡没声音、AppleHDA 装不回来、layout-id 填多少、麦克风没权限、隐私列表里没有这个软件、双击 App 打不开、AirDrop 用不了、隔空投送找不到设备、接力不工作、Wi-Fi 连不上、网卡驱动、蓝牙不可用、睿频上不去、CPU 被限频、小核要不要关、关于本机 CPU 名不对、内存显示不对、显示不清晰、改机型、三码、序列号、ROM、iMessage 登录不了。内置「改 ESP 的安全流程」（备份 → 语义 diff → lint → sha 校验 → 镜像/存档 → 卸载重挂复验）。用户问「这个技能怎么用 / 使用说明 / 有哪些能力 / 能干什么」时也适用（此时输出技能目录下的 USAGE.md，不要输出内部流程）。
+description_en: Audit, edit and maintain a hackintosh OpenCore (OpenCorePkg) EFI configuration — BIOS/UEFI firmware settings, per-key verification of config.plist against the official docs plus ocvalidate, ACPI/SSDT inspection, kext trimming and update decisions, boot and kernel log forensics, layered debug for installs that fail or never reach the desktop, boot-time analysis, major OS upgrades (15 → 26 with MinKernel/MaxKernel routing), disk masking, generating a first EFI from Windows, SMBIOS model change and serials. Hardware coverage — NVIDIA GPUs, Intel / MediaTek / Broadcom WiFi, Ethernet, onboard audio via AppleALC, HiDPI, Intel Turbo and E-cores, memory injection, AMFI/TCC permission repair, Gatekeeper, AirDrop / Handoff, OpenCanopy themes. Triggers — stuck at EB, stuck at ExitBootServices, boot loop, black screen, lost boot entry, picker not showing, audio only over HDMI, no onboard audio, AppleHDA missing on macOS 26, which layout-id to use, app has no microphone permission, app missing from Privacy list, app won't open on double-click, AirDrop not working, Handoff not working, WiFi not connecting, network driver, Bluetooth unavailable, Turbo stuck low, CPU frequency capped, should I disable E-cores, wrong CPU name in About This Mac, wrong memory display, blurry display, change SMBIOS model, serials, ROM, iMessage sign-in fails. Includes the safe ESP editing flow (backup → semantic diff → lint → sha check → mirror/archive → remount and re-verify). Also applies when the user asks how to use this skill, what it can do, or for usage instructions — in that case output USAGE.md from the skill directory instead of internal workflow details.
+version: 0.36.0
 agent_created: true
 ---
 
@@ -246,199 +246,87 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 - ★ **坑**：沙箱里 `PATH` 会被搞坏（`stat`/`strings`/`grep` 突然 command not found）⇒ 脚本里 `export PATH=/usr/bin:/bin:/usr/sbin:/sbin`；
   ★ `rsync -a --delete` 会让目标与源**完全一致**（别用于「只该多几个文件」的场景）
 
-### 阶段 8 · 驱动与硬件特性（NVIDIA / Intel 无线 / 博通网卡 / 板载声卡 / HiDPI / Intel 睿频·小核 / **内存定制 / SMBIOS+三码**）
+### 阶段 8 · 驱动与硬件特性
 
-- **NVIDIA 独显** ⇒ `references/nvidia-driver.md`：适用卡范围（Turing+）、两条安装路线（官方包 / 1401 App）、
+> 本节**只做路由**：症状 → 读哪个文件。命令、参数值、根因分析都在 references 里，别在这里重复。
+> ★ 标「★★★」的是**顺序前提**（不先做，后面的都白试）。
+
+- **NVIDIA 独显** ⇒ `references/nvidia-driver.md`：适用卡范围（Turing+）、官方包 / 1401 App 两条路线、
   ★「kext 装 `/Library/Extensions` 从 AuxKC 加载 ⇒ **不要**再从 `EFI/OC/Kexts` 注入」、
-  官方要求的 OpenCore 设置表（`csr-active-config` / boot-args / `ResizeGpuBars` / `Kernel>Block IONDRVSupport` / `SecureBootModel` / BIOS）、
-  恢复路径（选择器里的 1401 项、`-nvoff`）、官方 TROUBLESHOOTING 摘要、Send logs 上报纪律
-- **★ AMFI ↔ TCC 冲突（App 拿不到麦克风 / 摄像头 / 屏幕录制权限）** ⇒ `references/amfi-and-tcc.md`：
-  **现象三连 = 报没权限 + 不弹窗 + 隐私列表里压根没这个 App 的条目**（★ **第三条才是判据**，与「用户点了拒绝」的区别就在这）；
-  根因 = boot-args 的 **`amfi=0x80` / `amfi_get_out_of_my_way=0x1`**（AMFI 关）⇒ macOS **不弹窗、也不生成条目**；
-  ★★ **别的驱动首选 `AMFIPass.kext`（保留 AMFI）** ⇒ 问题自动消失；**本机不行**（NullMoth 把 AMFI 参数与 AMFIPass **并列列为必需**）
-  ⇒ **只能二选一**，走「保驱动 + 注入 TCC 条目」；
-  ★★ **解法 = `GeekAudio/tcc-helper`**（<https://github.com/GeekAudio/tcc-helper>，Swift GUI + CLI，MIT，Release `v1.0.0` 有 DMG）
-  —— **不再靠人肉列 App 清单**：**自动授权**从系统里反推（`Info.plist` 的 usage description → TCC 服务映射
-  + 扫 **launchd job** / **包内子组件** / `/Library/Audio/Plug-Ins/HAL` 等组件目录 / 运行中的 App）；
-  ★★ **最容易错的一步：要授权的是「真正申请权限的那个 helper / 子组件」，不一定是主 App**
-  （例：Loopback 的麦克风权限属于包内的 `Audio Routing Kit (ARK).app`，给 `Loopback.app` 授权没用）⇒ 可钻进 `.app` 内选子组件；
-  ★ 写的是 `access` 表（`auth_value=2` / `auth_reason=4` / `indirect_object_identifier='UNUSED'`），
-  **`csreq` magic 必须 `fade0c00`**（带 `designated =>` 前缀会变 `fade0c01`，TCC 不认）；
-  ★★ **条目不持久**（系统大版本更新 / `tccutil reset` / 清理工具会抹掉，需重跑）；
-  ★ **别和 Gatekeeper 混**：**App 双击根本打不开**（「无法验证开发者」/「已损坏」）是 **Gatekeeper**，
-  不是 TCC ⇒ 见同文档**附录**：`sudo spctl --global-disable`（`--master-disable` 在 macOS 15+ 已过时）；
-  先试 `xattr -d com.apple.quarantine <App>`
+  必需 OC 设置表、恢复路径、Send logs 上报纪律
+- **AMFI ↔ TCC（App 拿不到麦克风 / 摄像头 / 屏幕录制）** ⇒ `references/amfi-and-tcc.md`：
+  ★★ 判据 = 报没权限 + 不弹窗 + **隐私列表里压根没这个 App 的条目**（第三条才是判据）；
+  根因 = boot-args `amfi=0x80`；★ 别的机器首选 `AMFIPass.kext`，**本机不行**（NullMoth 要求关 AMFI）
+  ⇒ 只能二选一、走注入 TCC 条目；★★ 解法 `GeekAudio/tcc-helper`；
+  **最容易错：要授权的是真正申请权限的 helper / 子组件，不是主 App**；
+  ★ 与 Gatekeeper 是两回事（双击打不开 = Gatekeeper，见该文档附录）
 - **Intel 无线网卡** ⇒ `references/intel-wifi.md`：`AirportItlwm` vs `itlwm` 两种形态、
-  ★「Sequoia 与 Tahoe 是**两套 ABI 与产物** ⇒ 双系统共用一个配置时必须用 `MinKernel`/`MaxKernel` 分开」、
-  macOS 26 的能力与限制（HE 默认关，需 `itlwm_he=1`；不支持 WPA3-only / 强制 PMF / AWDL / AirDrop / MLO）、
-  Intel 蓝牙要另装 `IntelBluetoothFirmware` + `IntelBTPatcher`（+ `BlueToolFixup`）、排错与「换网卡后要清理」清单
-- **MediaTek 无线网卡（MT7921 / MT7922 / RZ608）** ⇒ `references/mediatek-wifi.md`：
-  ★★★ **macOS 26 原生内置 Apple 自己的 MediaTek 驱动** —— `com.apple.AppleSunriseWLAN.dext` +
-  `com.apple.AppleSunriseBluetooth.dext`（**自带固件** `BT_RAM_CODE_MT7922_1_1_hdr.bin` 等），
-  `IOPCIMatch` = `0x792214c3`(MT7922 Wi-Fi) / **`0x792a14c3`(MT7922 蓝牙，走 PCIe！)** ⇒ **首选「什么都不装」试一遍**；
-  ★★ **26.7.1「自带」什么要按芯片分**（**别信「升级就自带全部固件」的传言**）：**蓝牙固件 MT7922/7923 已内置** ·
-  **MT7932/RZ717 的 Wi-Fi 固件已内置**（⇒ 换 RZ717 才是真正零操作）· **❌ MT7922/RZ616 的 Wi-Fi 固件仍缺失**（仍需补）；
-  ★★★ **原生路线要动手 ⇒ 先拿 `GeekAudio/mediatek-sunrise-hackintosh`（MT7922 Sunrise Pack）** ——
-  把原帖 69 页附件收齐成包：Wi-Fi 固件（linux-firmware + SHA256SUMS）· **两个版本 KDK 提取的 `AppleSunrise.kext`** ·
-  SSDT · **免编译 `DeviceProperties` device-id 伪装**（`0x7922 → InkAAA==`）· `Kernel>Add` 片段 · boot-args 清单 ·
-  macOS 15 第三方 kext 全套（含**预编译 SimpleMTK.app**）；
-  ★★ **`AppleSunrise.kext` 是内核态 HAL、只存在于 KDK** ⇒ DEXT 是用户态的，**不注入它根本操作不了寄存器**（原生路线必需项）；
-  boot-arg **`wlan.debug.enable=0x1`** 只是**调试开关不是启用开关**；DEXT 崩溃循环用 `mtk.wlan.startdelay=30/45`、终极 `mtk.wlan.hangonstart=1`；
-  ★ **蓝牙有两种形态**：**新的走 PCIe**（`14c3:792a`，Apple 原生管）、**老的走 USB**（`0x0e8d`，靠第三方 `SimpleMtkBtFw`）—— 先判清；
-  ★ Sequoia **没有** Sunrise ⇒ 只能走第三方：**蓝牙可用**（`SimpleMtkBtFw` 有 release）；
-  ★★ **Wi-Fi 用 `flxxxxddd/SimpleMtkWlan` 这个 fork**（上游 `laobamac` 的 fork，分支 **`mt7921-fixes`**，
-  **有 CI release v1.1.0 / v1.2.0**）—— 它修好了 **MT7921 / RZ608「能 attach 但过不了流量」**，并补上
-  **802.11n（HT20/40）+ 802.11ac（VHT80）**；实测 RZ608 在 Sequoia 上 5 GHz VHT80 **30–50 Mbit/s**、开机自动加入；
-  ★★★ **三条硬限制（先讲清楚）**：**以太网式接口（`enX`）、没有原生 Wi-Fi 菜单**（连网靠 SimpleMTK 客户端）、
-  **❌ AirDrop / Handoff / Continuity（设计上不可能）**、**❌ 802.11ax**；
-  ★★ **最常踩的安装坑 = 卡被 `SSDT-Disable_Network_*.aml` 藏了**（`vendor-id` 改 `0xFFFF` ⇒ 驱动永远匹配不上）
-  ⇒ `ioreg -l | grep -A40 'pci14c3'` 应看到 `vendor-id = <c3140000>`；
-  排错用 `./tools/mtklog.sh > mtk.txt`（**常驻 ring buffer、免 root**）；可选 boot-arg `-novht` / `-noht40`；
-  ⇒ **要原生菜单 / AirDrop / Wi-Fi 6 就换卡**（Broadcom / Intel），别硬啃；
-  第三方蓝牙两个致命坑：**不要**把 USB 产品名改成 `Bluetooth USB Host Controller`（会让 `bluetoothd` 走 Broadcom 内置路径而 abort）、
-  **必须**注入 NVRAM 两条 data（`bluetoothExternalDongleFailed` + `bluetoothInternalControllerInfo`，且 `Add`/`Delete` 都要有）
+  ★「Sequoia 与 Tahoe 是两套 ABI 与产物 ⇒ 双系统共用配置必须用 `MinKernel`/`MaxKernel` 分开」、
+  macOS 26 能力限制（**无 AWDL ⇒ 无 AirDrop**）、Intel 蓝牙要另装三件套、换卡后清理清单
+- **MediaTek 无线（MT7921 / MT7922 / RZ608 / RZ717）** ⇒ `references/mediatek-wifi.md`：
+  ★★★ **macOS 26 原生内置 Apple 的 MediaTek 驱动**（`AppleSunriseWLAN/Bluetooth.dext`）⇒ **首选「什么都不装」试一遍**；
+  ★★ **26.7.1「自带」什么要按芯片分**（别信「升级就自带全部固件」）：蓝牙 MT7922/7923 已内置 ·
+  MT7932/RZ717 的 Wi-Fi 已内置 · **MT7922/RZ616 的 Wi-Fi 仍缺**；
+  ★★ 原生路线要动手 ⇒ 用 `GeekAudio/mediatek-sunrise-hackintosh`（含 `AppleSunrise.kext` —— **内核态 HAL，必需项**）；
+  ★★★ **三条硬限制**：以太网式接口无原生菜单 · **❌ AirDrop / Handoff / Continuity（设计上不可能）** · ❌ 802.11ax
+  ⇒ **要原生菜单 / AirDrop / Wi-Fi 6 就换卡，别硬啃**；
+  ★★ **最常踩的坑 = 卡被 `SSDT-Disable_Network_*.aml` 藏了**（`vendor-id=0xFFFF` ⇒ 驱动永远匹配不上）
 - **博通网卡（BCM943602CDP / BCM43602）** ⇒ `references/broadcom-wifi.md`：
-  ★★ **必须按系统分路线** —— Sequoia(15) 用 `IO80211FamilyLegacy` + 其内部 plugin `AirPortBrcmNIC.kext`（`MaxKernel 24.99.99`），
-    Tahoe(26) 用 **独立的 `AirPortBrcmNIC-Tahoe.kext`（`MinKernel 25.0.0`）**（OCLP 2.5.1 的条目到 Sequoia 为止 ⇒ 升 26 后 Wi-Fi 会直接消失）；
-  两版都要：`Kernel>Block` 屏蔽 `IOSkywalkFamily` + `Kernel>Add` 顺序 IOSkywalkFamily → IO80211FamilyLegacy → 驱动、
-  NVRAM 两条蓝牙 data、USB 端口设 Internal(255)、`built-in=<01>`；
-  ★ **打 OCLP root patch 前必须先跑保护脚本**（否则 mtime=epoch 的 NVIDIA kext 会被搬到 `Relocated Extensions`）；
-  ★ 判 Wi-Fi 死活**看 `ifconfig en1`，别只看 `system_profiler`**；
-    ★★ **打完补丁 / 换完卡必须确认「无线 = `en0`」**（补丁会改变驱动挂载顺序，`en0` 可能换人 ⇒ `ROM` / iMessage / FaceTime / App Store 静默失效）⇒ `references/network-en0-order.md`
+  ★★ **必须按系统分路线** —— Sequoia 用 `IO80211FamilyLegacy`（`MaxKernel 24.99.99`）、
+  Tahoe 用独立的 `AirPortBrcmNIC-Tahoe.kext`（`MinKernel 25.0.0`）⇒ **升 26 后不换会直接没 Wi-Fi**；
+  ★ **打 OCLP root patch 前必须先跑保护脚本**（否则 mtime=epoch 的 NVIDIA kext 会被搬走）；
+  ★ 判死活**看 `ifconfig en1`，别只看 `system_profiler`**；
+  ★★ 打完补丁必须确认「无线 = `en0`」⇒ `references/network-en0-order.md`
 - **AirDrop / 接力 / Handoff / 连续互通（隔空投送用不了）** ⇒ `references/airdrop-handoff.md`：
   ★★★ **只取决于一件事：无线是否跑在 Broadcom 原生 `IO80211Family` 栈上、从而产生 `awdl0`**；
-  **`itlwm.kext` ⇒ 永远没有 `awdl0` ⇒ AirDrop 必然不可用**（官方 FAQ：`itlwm` 走 `IOEthernetController` 而非 `IO80211Family`；
-  `AirportItlwm` 也只支持 *Handoff + Universal Clipboard*）—— **驱动设计层面的限制，改 config 救不回来**；
-  ★★★ **`ROM` / `en0` 归属 / 机型 / 序列号 / `SystemUUID` 与 AirDrop 无关** —— 那是 Dortania **iServices**（iMessage）的要求，
-  被错误扩展成了 AirDrop；Dortania 原文 *"`en0` … The type doesn't matter"*，Apple 官方对连续互通只要求「同一 Apple ID + Wi-Fi + 蓝牙」；
-  ★ **8 步排查顺序**（`awdl0` → 驱动栈 → `llw0` → `AirDrop: Supported` → 蓝牙 `LEA`/`AACP`/`GATT` → 双蓝牙控制器 → 系统开关 → Apple ID）；
-  ★ 判据：`ifconfig awdl0` 是硬判据，`system_profiler` 重启后十几秒才准
-- **有线网卡（Intel I225/I226 · I210/I211/I350 · Realtek RTL8125/8126）** ⇒ `references/ethernet-drivers.md`：
-  ★★ **本机板载是 Intel `I225-V`**（原生不认，现用 `AppleIGC.kext`）—— 替代方案：
-  `SimpleVGBE`（I225/I226，基于 Linux IGC）、`SimpleEthernet`（**Lilu 插件**，i225/226/210/211）、
-  `SimpleRTK5`（RTL8125/8126）；★ **一次只换一套**（多套会互相抢设备）；
-  ★★ **换完必须复查 `en0` 归属**（换驱动改挂载顺序 ⇒ `references/network-en0-order.md`）
+  `itlwm.kext` ⇒ 永远没有 `awdl0` ⇒ 必然不可用（**驱动设计层面的限制，改 config 救不回来**）；
+  ★★★ **`ROM` / `en0` 归属 / 机型 / 序列号 / `SystemUUID` 与 AirDrop 无关** —— 那是 iServices（iMessage）的要求
+- **有线网卡（I225/I226 · I210/I211/I350 · RTL8125/8126）** ⇒ `references/ethernet-drivers.md`：
+  ★★ 本机板载 `I225-V` 原生不认（现用 `AppleIGC`）—— 替代 `SimpleVGBE` / `SimpleEthernet` / `SimpleRTK5`；
+  ★ **一次只换一套**（多套会互相抢设备）；★★ 换完必须复查 `en0` 归属
 - **换机型 / 三码** ⇒ `references/smbios-and-serials.md`：
-  ★★★ **顺序铁律（本机是特例）：先完善 SSDT/ACPI（在【旧机型】下验证通过）→ 再换 SMBIOS → 再重做 CPUFriend 数据**
-  —— 不先处理 BIOS 那张 `xh_adls3`，换机型**必循环重启**（铁律 19）
-  - **真正让本机进不去系统的是主板 OEM SSDT**：ASUS Z690 的 BIOS 里 `OEM Table ID = xh_adls3`，
-    换机型（board-id 变）触发 macOS **重新解析 ACPI 表** ⇒ 该表解析不过（**`HS06 AE_NOT_FOUND`**）
-    ⇒ 电源管理/ACPI 层出问题 ⇒ **循环重启**（不是卡死 ⇒「多等一会儿」无效）
-    **修法 = `ACPI > Delete` 删原表（`SSDT` + `OemTableId=xh_adls3`）+ `ACPI > Add` 加 `SSDT-XHADLS3.aml`**
-  - ★ **已排除的方向**（别白试）：USB 端口图（T3 图验证可用、USB 日志全程正常）· OCLP 根补丁（restore 回滚后仍失败）·
-    机型本身（`MacPro7,1` 是官方支持机型）· 15 端口上限 · NVRAM 残留
-  - ★ **USB 图那件事是「文档里的一般机制」**（Dortania/USBToolBox 说 macOS 会按「机型 + 控制器名」附加内置 USB 图），
-    **但本机实测不是它** ⇒ 知道有这回事，别一上来就重做整张 USB 图
-  - **决策**：功能收益 / 成本 / 风险三条摆清楚 —— **能不换就不换**；被新版系统逼的**优先走 boot-arg 绕过**
-  - ★★★ **必须连三码一起换**（否则「关于本机」显示旧机型；见铁律 20）
-  - **必须同时重做 `CPUFriendDataProvider`**（`MacPro7,1` 强制 `hwp=on` ⇒ 不重做 = 白换）
-  - ★ **内存注入也要跟着改**（**槽位数随机型变**：`MacPro7,1`=12 槽、`iMac20,1`=4 槽）⇒ `memory-injection.md`
-  - ★ **电脑名 / 主机名 / SMB 名**是独立设置、**不会自动改**（藏在 `preferences.plist` + `com.apple.smb.server.plist` 两处）⇒ §3.2
-  - **救援**：备份整个 EFI + **备一个能用的 U 盘 EFI**；进不去就退回「保留原机型 + `-no_compat_check` + `revpatch=sbvmm`」
-  - **三码**：官方 `macserial` 生成、**序列号三类判据**（官网「无效」=可用 / 显示保修=必须换 / 「核实购买日期」=最理想）、
-    **`ROM` 必须是 `en0` 真实 MAC**、改 ROM 可用 **base64 等长替换**、
-    ★ **换码要克制（脏码 + 频繁换号触发风控）**、换完**先 FaceTime 再信息**、
-    ★★ **三码 + ROM 不要写进任何会公开的地方**
+  ★★★ **顺序铁律：先完善 SSDT/ACPI（在【旧机型】下验证通过）→ 再换 SMBIOS → 再重做 CPUFriend**
+  —— 不先处理 ASUS 的 `xh_adls3` OEM SSDT，换机型**必循环重启**（不是卡死 ⇒「多等一会儿」无效）；
+  ★★★ **必须连三码一起换**（否则「关于本机」显示旧机型）+ **必须重做 `CPUFriendDataProvider`**
+  （`MacPro7,1` 强制 `hwp=on`）+ **内存注入跟着改**（槽位数随机型变）；
+  ★ 电脑名 / 主机名 / SMB 名是独立设置、不会自动改；
+  ★ 救援：备份整个 EFI + **备一个能用的 U 盘 EFI**；★★ 三码 + ROM **不要写进任何会公开的地方**
 - **内存定制（`PlatformInfo > Memory`）** ⇒ `references/memory-injection.md`：
-  ★★ **先确认机型**：**槽位数随机型变**（`MacPro7,1`=12 槽 / `iMac20,1`=4 槽）—— 换机型要同步重做；
-  ★★ **分两层别混** —— **A 层「系统信息 → 内存」= 全机型通用**（就是标准 SMBIOS Type 17 字段，
-  `DeviceLocator` 决定显示的名字、`MaxCapacity` 单位是 **bytes**、键名是 **`SerialNumber`**）；
-  **B 层「关于本机」的内存图 = MacPro 机型专有**：那张 12 槽图的摆位由 **`Devices` 数组顺序**决定，
-  规则是「**数组第 j 项画到固定第 f(j) 个图位**」，`f = [8,7,10,9,12,11,5,6,3,4,1,2]`（= 真机 Type 17 表顺序）；
-  ⇒ **槽号用真机编号（1=F1…12=C1）+ 数组按 f 序排**，才能「图位 v = Slot v = 列表第 v 行」；
-  校验用 `scripts/mem-check.sh`（算出每条会被画到哪个图位并判定是否错位）；
-  ★ 2 条内存的「至少四条」警告**去不掉**（真机也一样）；4 槽消费主板布局下左图**不画编号**
-- **CPU 被压在低频（卡顿/掉帧）⇒ Intel 睿频** ⇒ `references/intel-turbo.md`：
-  ★★★ **最佳方法（已定案）**：**注入「本机自己那份 profile，只把 `hwp` 删掉」** —— 四点全中才算最佳：
-  **1 段**（`FrequencyVectors` 每段恒 7668 B，**多段必崩**）+ **上限尽可能高**（1 段族天花板 4500）+ **`hwp` 已删除**（最关键）+ **`CPUFloor` 匹配**（1300）；
-  ★★ **`hwp` 不在 plist 里** —— 它在**向量二进制内偏移 ~7128 的变量名表**里，`plutil`/`PlistBuddy` 搜不到；
-  **禁用 = 删除该项**（不是改名），判「有没有作用」必须**逐字节比向量二进制**（只比 plist 键会判错成 no-op）；
-  ★★★ **反面结论：注入任何别的机型的 profile 都会压垮睿频**（实测 `iMac19,1` ⇒ **1.97 GHz**、`MacPro7,1` ⇒ **2.3 GHz**）
-  ⇒ **别靠换 profile 抬上限，此路不通**；选型照 §5 五族表（**第一分水岭 = 段数**；**所有上限 5000 的 profile 都是 3–5 段** ⇒ 与「结构兼容」不可兼得）；
-  ★ **验证用 CPU-S**（看「当前睿频状态」是否「未睿频」+ 频率列表有没有覆盖高倍频），配合 Intel Power Gadget 与 `cpu-freq-probe.sh` 交叉印证（基线单线程 4.28 / 8 线程 4.29–4.35 GHz，**八核一致无振荡比数值更重要**）；
-  先排除热降频（`xcpm.cpu_thermal_level=0`）与 XCPM 上限（`hard_plimit_max=49`）；
-  ★★ **改完必须重启**（`kern.boottime` 早于改动时间 = 没重启 ⇒ 内存里跑的仍是旧 profile）—— 这是「修了没好」的头号原因；
-  修法 = **CPUFriend + CPUFriendDataProvider**（顺序 Lilu → CPUFriend → DataProvider；`ExecutablePath` 必须空；解回必须 7668 B/段）；
-  ★ 硬前提：**BIOS `Intel Speed Shift Technology` 必须 Enabled**（否则 `xcpm_hwp_enable` #GP panic）；
-  ★ **别混淆**：BIOS 的 HWP 要**开**、macOS 侧**刻意不走 HWP**（传统 XCPM）—— 这个组合是正确解，别去「修」
+  ★★ 先确认机型（**槽位数随机型变**：`MacPro7,1`=12 / `iMac20,1`=4）；
+  ★★ **分两层别混** ——「系统信息 → 内存」全机型通用（标准 Type 17 字段）；
+  「关于本机」那张 12 槽图是 **MacPro 专有**，摆位由 `Devices` 数组顺序决定
+  ⇒ 校验用 `scripts/mem-check.sh`
+- **CPU 被压在低频（卡顿 / 掉帧）⇒ Intel 睿频** ⇒ `references/intel-turbo.md`：
+  ★★★ **最佳方法（已定案）：注入「本机自己那份 profile，只把 `hwp` 删掉」** —— 四点判据见文档；
+  ★★ **`hwp` 不在 plist 里**（在向量二进制内的变量名表），禁用 = **删除该项**，判有没有作用必须逐字节比向量；
+  ★★★ **反面结论：注入任何别的机型的 profile 都会压垮睿频**（实测 1.97 / 2.3 GHz）⇒ **别靠换 profile 抬上限**；
+  ★★ **改完必须重启**（`kern.boottime` 早于改动时间 = 没重启 ⇒ 跑的仍是旧 profile），这是「修了没好」的头号原因；
+  ★ 硬前提：BIOS `Intel Speed Shift Technology` 必须 Enabled；验证用 CPU-S + `scripts/cpu-freq-probe.sh`
 - **小核（E 核）开 / 关 ⇒ Intel 混合架构** ⇒ `references/e-cores.md`：
-  ★ **「关小核」与「开小核」是两种取舍** —— 关掉最稳（macOS 调度 E 核本就是雷区，且**关掉几乎零代价**）；
-  开着多 4 核 4 线程，但**必须连 `CpuTopologyRebuild` 一起上**；
-  **关 = BIOS `Active Efficient Cores = 0`（配置一行不用改）**；
-  **开 = BIOS `= All` + `ProvideCurrentCpuInfo=true`（官方 README 明写必需）+ `CpuTopologyRebuild.kext`（紧跟 Lilu）**；
-  ★ **判据**：`hw.nperflevels` **1 = E 核没暴露 / 2 = P+E 都识别**（`perflevel1.physicalcpu` 才是 E 核数）；
-  ★★ **别误判「CPU 缺核」** —— `CPUID.1FH` 报 20 逻辑处理器而 macOS 只报 8 核 16 线程是**正常**；
-  ★★ **boot-arg 语法分版本**：v2.x 是 **`ctrsmt=off` / `ctrsmt=full`**（等号），v1.x 的 `-ctrsmt` 在 v2.x 上**不生效**；
-  `-ctrfixcnt` **必须**配 `AppleMCEReporterDisabler.kext`，否则起不来；
-  ★★ **官方已知问题：开小核 + `-v` 可能随机启动失败**（排查时注意，别误判成配置坏）；
-  自检用 `scripts/e-cores-check.sh`
-- **「关于本机」显示的 CPU 名不对 ⇒ CPU 改名** ⇒ `references/cpu-name.md`：
-  ★ **先定性：纯外观问题**（频率 / 核数 / L2L3 全对，只是**显示名按机型映射**）⇒ 不在意就别改；
-  **改法 = RestrictEvents 三件套**：**`revpatch=cpuname`（boot-args）+ `revcpu=1`（boot-args）+ `revcpuname=<名>`（NVRAM）**；
-  ★★ **最大的坑：NVRAM 的 `rev*` 优先级低于 boot-args**（官方原话 *"but have lower priority"*）
-  ⇒ 只在 NVRAM 写 `cpuname` **无效**，**boot-args 的 `revpatch=` 里必须也含 `cpuname`**（本机实测踩过）；
-  ★ **`revcpuname` 含空格 ⇒ 只能放 NVRAM**（boot-args 按空格分词会截断）；**Intel 上 `revcpu` 默认 0 ⇒ 必须显式 `revcpu=1`**；
-  ★ `revcpuname` 上限 48 字符（建议 ≤20）；★ `NVRAM>Delete` 也要列这些键；
-  ★ **`ProcessorType` 必须配核数**（`PlatformInfo>Generic>ProcessorType`，8 核以上 = **`0x0F01`**=3841 / 1-6 核 = `0x0601`）；
-  ★ **两条别走错的路**：**`Cpuid1Data` 改不了名字**（品牌串在 CPUID `0x80000002-4`，它改的是 leaf 1）；
-  **别去改 `AppleSystemInfo.strings`**（密封系统卷，RestrictEvents 就是替代它）；自检用 `scripts/cpu-name-check.sh`
-- **显示不清晰 ⇒ HiDPI** ⇒ `references/hidpi.md`：用 `xzhih/one-key-hidpi` 给非 Retina 屏模拟 HiDPI
-  （写 `/Library/Displays/Contents/Resources/Overrides/`，**不动密封系统卷**；两个模式：只注入 `scale-resolutions` /
-  连同 patched EDID 一起注入，**先试前者**）；
-  ★★ **本机驱动是 NullMoth 的 NVIDIA 驱动，自述未完善** —— 而 HiDPI 正踩在「显示模式/缩放/元数据」这条它出过真 bug 的路径上
-  （本机显示器尺寸报错就是这个根因）⇒ **开之前先记录基线、一次只改一项、先确认 `.hidpi-disable` 与 Recovery 恢复路径**；
-  ★ 别和**引导期** HiDPI（`UEFI>Output>UIScale`）搞混，两者独立
+  ★ **关掉最稳、几乎零代价**（macOS 调度 E 核本就是雷区）；
+  开 = BIOS `All` + `ProvideCurrentCpuInfo=true` + `CpuTopologyRebuild`；
+  ★ **判据 `hw.nperflevels`**（1 = E 核没暴露 / 2 = 都识别）；
+  ★★ `CPUID.1FH` 报 20 逻辑处理器而 macOS 只报 8 核 16 线程是**正常**；
+  ★★ **boot-arg 语法分版本**（v2.x `ctrsmt=off`；v1.x 的 `-ctrsmt` 在 v2.x 不生效）；自检 `scripts/e-cores-check.sh`
+- **「关于本机」CPU 名不对 ⇒ CPU 改名** ⇒ `references/cpu-name.md`：
+  ★ **先定性：纯外观问题**，不在意就别改；改法 = RestrictEvents 三件套（`revpatch=cpuname` + `revcpu=1` + `revcpuname`）；
+  ★★ **最大的坑：NVRAM 的 `rev*` 优先级低于 boot-args** ⇒ 只在 NVRAM 写 `cpuname` **无效**；
+  ★ `revcpuname` 含空格只能放 NVRAM；`ProcessorType` 必须配核数（8 核以上 = `0x0F01`）；
+  自检 `scripts/cpu-name-check.sh`
+- **显示不清晰 ⇒ HiDPI** ⇒ `references/hidpi.md`：用 `xzhih/one-key-hidpi`（**不动密封系统卷**），
+  两个模式**先试只注入 `scale-resolutions`**；★ 别和**引导期** HiDPI（`UEFI>Output>UIScale`）搞混
 - **板载声卡（AppleALC）** ⇒ `references/applealc-custom.md`：
   ★★★ **macOS 26 前置（不先做这步，后面全白试）**：Apple 在 DP2 删了 `AppleHDA.kext`
-  ⇒ **`AppleALC` 是在 `AppleHDA` 旁边工作的，前者不在，板载音频就整个没了**；
-  ★★ **判据**：**HDMI / DisplayPort 数字音频仍然可用**（走别的 kext）⇒「只有 HDMI 有声音、板载没声音」正是这个现象；
-  ★★ **主参考 `perez987/AppleHDA-gone-on-macOS-26-Tahoe`** —— 方案按省事排序：
-  **① USB 声卡**（很多原生支持，完全不动系统）· **② KDK + `MyKextInstaller`（Mirone，首选，更新频繁、能在 App 里直接下 `AppleHDA.kext`）**
-  / `SimpleLoader`（laobamac，已显过时）—— 要求 **KDK** + **`AppleALC ≥ 1.9.5`** + **`csr-active-config = 03080000`**，
-  `AppleHDA.kext` 取自 KDK（Sequoia 那份也能用），装完**重启**，用 `kextstat | grep AppleHDA` 验证 ·
-  **③ OCLP root patch**（团队仍在早期，暂不适合普通用户）· ④ `SimpleVoodooHDA`（**音质有损**，兜底）；
-  ★★ **KDK 版本是最大的坑：macOS 26 的 KDK 里根本没有 `AppleHDA`**（26.x 的 KDK 全盘搜不到）
-  ⇒ **别在同版本 KDK 上浪费时间，直接回退 `KDK 15.8.1 build 24H32`（最后一个带 `AppleHDA` 的版本，600.2）**；
-  ★ 装**到 `/System/Library/Extensions`**、`kmutil install --volume-root / --update-all` 重建集合、
-  装完 **sha256 与 KDK 那份逐字节比对** + 查 AuxKC 里 `com.apple.driver.AppleHDA` 出现次数（>0 才扛得住重启）；
-  ★ `MyKextInstaller` 提权走 SMJobBless helper（`com.mirone.MyKextInstaller.Helper`）⇒ 不需要手动 sudo
-  ★★ **代价：系统一升级 / 重装就全丢，每次都要重装**（与「OpenCore 注入」类方案根本不同）；
-  ★ `SimpleHDA`（此前推荐）**已降为备选**（作者不允许二次开发 + 只有 alpha + 有已知问题）
-  ★★ **实战首选参考 `5T33Z0/AppleALC-Guides`**（官方 wiki 讲**规则**、这份讲**怎么做**）：14 章完整流程 ·
-  **17 个现成 codec dump**（带 `verbs.txt` + 十进制版 + `.svg` 拓扑图）· **`alc-verb` 运行时调音**（`alcverbs=1` + `alc-verb <NID> <verb> <param>`，
-  **不重编不重启**；固化用 `WakeConfigData`，组合口用 `ALCPlugFix-Swift`）· **`MuteGPIO` 十进制速查表** ·
-  **精简 AppleALC 3.8 MB → ~90 KB**（★ 只有保留的 layout 才可用）· **文件管理/回滚工作流**；
-  ★ **三种取数办法**：Linux（**唯一能出拓扑图**）/ OpenCore（DEBUG + `SysReport` + `AudioDXE.efi`）/
-  **Windows（硬约束，两条子路线：`HDAU.exe` GUI，或 `HDAudDev.dll` 直连的 Python 脚本 —— 免管理员、可脚本化、产出 Linux 风格 `codec_dump.txt/.json`）**；
-  ★★ **dump 完再用 Windows 端点反证插孔映射**（枚举 KS 拓扑接口，`elineouttopo`/`eheadphonetopo`/`emicintopo` 等 refstring 直接说明哪个 pin 是哪个孔；
-  播放侧几个 `e*outtopo` = 几个独立输出端点，同一关联组只建一个 ⇒ 验证分组）；
-  ★★ dump 必须改名 `codec_dump.txt`、**务必排除显卡的 HDMI codec**（取错=一张完全无关的节点树）
-  ★★ **`-alcdbg` / `-liludbg` 只在 DEBUG 构建下有效**（release 完全忽略）
-  ★★ **AppleHDA 三条实测根因（任何 codec 通用，优先级高于 pin config）**：
-  **① PathMap 一个设备组放多条路径 ⇒ 只保留最后一条**（社区 auto-switch 排法依赖插孔检测，没检测就静默消失；ASUS 板上报不了是常态）
-  · **② 插孔型 Mic In 引脚建不出输入设备**（`PortConnectivity 0b00`，Mic/ExtMic 都不行）⇒ 引脚标 `0b10` 固定内置
-  · **③ 插孔检测可能整体是死的**（`Get Pin Sense` 恒 0，插着音箱正在出声也是 0）⇒ **先测再决定排法，别改 PathMap**；
-  ★ **设备名不能自定义**（只有 `Built-in Microphone` / `Built-in Line Input`），多麦同名**靠顺序区分**（UID 尾号 = 输入组顺序）
-  ★★ **不用耳朵验证**：后台播放的同时读寄存器（`0xF07` pin ctl / `0xF06` conv）——「哪个设备点亮了哪个口」纯软件判读；
-  输入链路用「峰值=底噪」验活；VREF 会随运行态变（`0x22 ↔ 0x24`）别拿单次读数下结论；**刚登录跑 CoreAudio 工具会得 0 个设备（等 5 秒）**
-  ★ **构建期判据**：改 pin config **不改**二进制 sha（数据在 `PinConfigs.kext` 的 `Info.plist`，不在 codec 目录的 plist）；
-  改 XML 才改 sha，且要解压 `.xml.zlib` 查关键字确认真编进去了
-  ★ **先搜同型号前人经验（推荐路线）**：查官方 `Supported-codecs` 表 → 搜 `repo:acidanthera/AppleALC <codec>` 的 issue/PR →
-    搜「主板型号 + layout-id」→ 逐个试 `alcid=N`；
-  ★★★ **走定制路线前先问用户能不能提供 Windows 侧取数**（节点树 / 32 位 Pin Config Default / EAPD / 插孔语义）——
-  **能提供就直接进定制流程用他的数据；不能才讲硬约束**；
-  ★★ **硬约束：动手写 layout 之前必须在 Windows 下用 HDAU / `HDAudDev.dll` 取全数据**（macOS 侧看不到面板丝印，「哪口是麦 / 哪口有检测」只有 Windows 下最容易确认；
-  缺数据空手写 = 必返工）；没有 Windows 时 Linux dump 可降级（**且是唯一能出拓扑图的一份**），但插孔语义仍要回 Windows 确认；
-  搜不到才走定制路线：官方 6 步算法、`Resources/<CODEC>/Info.plist` 字段、
-  ★ **自定义 layout 只能用 11–99**（1–10 保留给 Mirone/Toleda）、每条都要写机型与作者注释、
-  官方 CI 的构建命令、`layout-id` 注入与 `-alcdbg` 调试、**官方禁止把 HDAS 改名成 HDEF**、PR 要带 codec dump + 机型 + 结果
-- **启动界面外观（OpenCanopy 主题）** ⇒ `references/theme-opencanopy.md`：
-  ★ **必需图标缺一个 OpenCanopy 就不启动** —— 先跑 `scripts/oc-theme-check.sh` 再谈美化；
-  `PickerMode` 必须 `External` + `UEFI>Drivers` 里启用 `OpenCanopy.efi`；
-  `PickerVariant` 写**相对路径、用反斜杠**（`Acidanthera\GoldenGate`）；
-  ★★ **`OCUI: … Not Found` 多数是正常的**（官方图标集**不提供**那批可选图标，**别去「补」**）；
-  ★ **不要顺手改主题** —— 用户没要求换外观时 `PickerMode`/`PickerVariant`/`PickerAttributes`/`Resources` 一律不动；
-  ★ 改 `Resources/` 也是改 ESP ⇒ 走安全流程；**换坏了会看不到选择器**（留一份能用的图标集 + 逃生口 `PickerMode=Builtin`）
+  ⇒ 判据「**只有 HDMI 有声、板载没声**」；★★ **26 的 KDK 里根本没有 AppleHDA** ⇒ 直接回退 `KDK 15.8.1 build 24H32`；
+  ★★ **代价：系统一升级 / 重装就全丢**；
+  ★★ **定制前先问用户能不能提供 Windows 侧取数**（能提供就直接进流程，不能才讲硬约束并给
+  HDAU / `HDAudDev.dll` 两条取数路线）；
+  ★★ **AppleHDA 三条实测根因**（PathMap 同组多路径只留最后一条 / 插孔型 Mic 引脚建不出设备 /
+  插孔检测可能整体是死的）；★ **不用耳朵验证**（播放中读 `0xF07`/`0xF06`）
+- **启动界面外观（OpenCanopy）** ⇒ `references/theme-opencanopy.md`：
+  ★ **必需图标缺一个就不启动** —— 先跑 `scripts/oc-theme-check.sh` 再谈美化；
+  ★★ **`OCUI: … Not Found` 多数是正常的**（官方图标集不提供那批可选图标，别去「补」）；
+  ★ **不要顺手改主题**（用户没要求换外观时一律不动）；**换坏了会看不到选择器**（留 `PickerMode=Builtin` 逃生口）
 
 > 装第三方驱动一定会动到安全边界（`SecureBootModel=Disabled`、放宽 SIP、AMFI 参数）——
 > **在报告里明确写出来**，并给出「不装时如何恢复」。
@@ -497,6 +385,9 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 | 想靠改 `Cpuid1Data` 改 CPU 显示名 | **改不了** —— 品牌串在 CPUID `0x80000002-4`，`Cpuid1Data` 只动 leaf 1 ⇒ 用 `revcpuname`（`cpu-name.md` §7） |
 
 ## 资源
+
+> 脚本统一 `set -euo pipefail`（**失败即停**，不会把半成品当成品继续跑）。
+> ★ 会改 ESP / 系统卷的三个（`oc-edit-safe.sh` · `oc-swap-build.sh` · `mask-other-disks.sh`）先 dry-run 再执行。
 
 - `scripts/fetch-opencore-docs.sh` —— 下载同版官方包、抽取校验器与文档、建键库
 - `scripts/oc-verify.sh` —— 一键校验（ocvalidate + 引用的文件是否存在 + sha 对照）
