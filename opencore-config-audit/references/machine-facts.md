@@ -88,14 +88,21 @@ ipc_control_port_options=0 nvfb=1 nvaccel=1 nvfbheads=4 -nvkmsnosmooth
 - ★ 本机 ACPI 命名：根设备 **`PC00`**（非 `PCI0`）、音频 **`HDAS`**（非 `HDEF`）、核显 **`GFX0`**（无 `IGPU`）
 - 设备存在性：`SBUS`=1 / `BUS0`=0→（启用 SMBus SSDT 后应有 1）/ `PMCR`=0 / `AWAC`=0 / `RTC`=1 / `GPRET`=0 / `HPET`=1 / `GPRW`=0
 
-## kext 现状（18 个，23 MB）
+## kext 现状（`Kernel>Add` 22 条）
 
-启用：Lilu、CPUFriend、CPUFriendDataProvider、VirtualSMC、SMCProcessor、SMCSuperIO、WhateverGreen、AppleIGC、
-BlueToolFixup、NVMeFix、RestrictEvents、USBToolBox、XHCI-unsupported、UTBMap、AMFIPass、
-IOSkywalkFamily、IO80211FamilyLegacy、AirPortBrcmNIC-Tahoe（+ 禁用的 `IO80211FamilyLegacy…/AirPortBrcmNIC.kext` 作 Sequoia 回退）
+启用：Lilu、**AppleALC**、**CpuTopologyRebuild**、CPUFriend、CPUFriendDataProvider、VirtualSMC、SMCProcessor、
+SMCSuperIO、WhateverGreen、AppleIGC、BlueToolFixup、NVMeFix、RestrictEvents、USBToolBox、XHCI-unsupported、UTBMap、
+AMFIPass、IOSkywalkFamily、IO80211FamilyLegacy、AirPortBrcmNIC-Tahoe、**NvidiaSensor**
+（其中 `IO80211FamilyLegacy…/AirPortBrcmNIC.kext` 一条 `Enabled=False`，作 Sequoia 回退：
+博通走 **MinKernel 23 / MaxKernel 24.99.99 用 `AirPortBrcmNIC`，≥25 用 `AirPortBrcmNIC-Tahoe`** 分流）
 
-已删除（备份在工作区 `_kexts-removed-20261014/`）：`itlwm`、`IntelBluetoothFirmware`、`IntelBTPatcher`、
-`AppleALC`、`CpuTopologyRebuild`
+`Kernel>Block` 2 条：`IONDRVFramebuffer`（抢 NVRMFB 的 index 0）、`Allow IOSkywalk Downgrade`（OCLP Modern Wireless）
+
+已删除（备份在工作区 `_kexts-removed-20261014/`）：`itlwm`、`IntelBluetoothFirmware`、`IntelBTPatcher`
+
+**板载音频现状**：`AppleHDA.kext` 600.2 装在 **`/System/Library/Extensions`**（来自 KDK 15.8.1 build 24H32，macOS 26 必装回）；
+`AppleALC` 1.9.9 自编译，DeviceProperties 注入到 `PciRoot(0x0)/Pci(0x1F,0x3)`：`layout-id=<0e000000>`（本机自建 layout 14）
++ `alc-verbs=<01000000>`。完整方法与坑见 `applealc-custom.md`。
 
 ## macOS 侧屏蔽（`/etc/fstab`）
 
