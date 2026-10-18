@@ -151,6 +151,31 @@ rule_index() {
     done | sort -u
   )
   [ "$miss" -eq 0 ] && echo "   ✓ 无命中"
+
+  hdr "B5  资源清单里每条独立成行（防编辑时粘连）"
+  # ★ 症状：两条 `- \`references/xxx.md\` —— …` 被粘成一行（多半是编辑时漏了换行）。
+  #   路径本身都存在 ⇒ B3/B4 查不出来，只有条目数对不上时才暴露。
+  #   判据：以 `- \`references/` 或 `- \`scripts/` 开头的行，行内不应再出现第二个同样的开头。
+  #   正文里「用 A；先 B」这种多路径叙述不算——它不以 `- \`` 开头。
+  python3 - "$SKILL/SKILL.md" <<'PY'
+import re, sys
+path = sys.argv[1]
+head = re.compile(r'^- `(?:references|scripts)/')
+item = re.compile(r'- `(?:references|scripts)/')
+hits = []
+for i, line in enumerate(open(path, encoding='utf-8'), 1):
+    if not head.match(line):
+        continue
+    n = len(item.findall(line))
+    if n > 1:
+        hits.append((i, n, line.strip()[:60]))
+for i, n, s in hits:
+    print(f"   ✗ 条目粘连（{n} 条并成一行）L{i}：{s}…")
+if not hits:
+    print("   ✓ 无命中")
+sys.exit(1 if hits else 0)
+PY
+  [ $? -eq 0 ] || ERRORS=$((ERRORS + 1))
 }
 
 # 规则 C：版本号三处一致（发布前最容易漏的一步）
