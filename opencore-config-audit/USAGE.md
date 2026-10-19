@@ -43,11 +43,12 @@
 - **校验过的清单**：SSDT 该加哪个、kext 该删哪个，逐条给依据
 - **分析文档**：启动耗时、日志取证这类会落成文件
 
-## 配套脚本（19 个）
+## 配套脚本（20 个）
 
 | 脚本 | 作用 |
 |---|---|
 | `toolcheck.sh` | **开工前的工具链自检**（系统自带 / 官方包 / 需自备三层，查状态·路径·版本；缺什么、怎么补一目了然） |
+| `get-iasl.sh` | **一键取 `iasl`**（ACPICA 源码 → 编译 → 装 `~/bin`，打出版本与 sha256） |
 | `oc-nvram-bootentry.sh` | **从系统里读/写固件启动项**（`dump` / `backup` / `restore` / `add` / `del`）★ 写操作要提权，且需 `RequestBootVarRouting=false` |
 | `bios-audit.ps1` | **Windows 侧 BIOS 审查（只读）** —— 在 Windows 里先跑这个 |
 | `fetch-opencore-docs.sh` | 取同版官方包 + 建配置键库 |

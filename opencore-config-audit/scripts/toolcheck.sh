@@ -37,7 +37,7 @@ probe_ver() {
   case "$n" in
     python3)    out="$("$p" -V 2>&1 | head -1)" ;;
     git)        out="$("$p" --version 2>&1 | head -1)" ;;
-    iasl)       out="$("$p" -v 2>&1 | grep -i 'compiler version' | head -1)" ;;
+    iasl)       out="$("$p" -v 2>&1 | grep -o 'version [0-9]\{8\}' | head -1)" ;;
     dot)        out="$("$p" -V 2>&1 | head -1)" ;;
     shellcheck) out="$("$p" --version 2>&1 | grep -i '^version' | head -1)" ;;
     jq)         out="$("$p" --version 2>&1 | head -1)" ;;

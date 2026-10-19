@@ -79,15 +79,24 @@
 ### 2.1 ★★ `ACPIe` 的正确用法（实测）
 
 ```bash
-ACPIe -f <表文件.aml> <搜索路径> [第几次出现]
+ACPIe -f <表文件.aml> <搜索路径>
 ```
 
-- 找到 ⇒ `Returned offset: 66`
-- 没找到 ⇒ `EXIT: No entry found in the table.`
-- ★★ **两种结果 `$?` 都是 0** ⇒ **判据只能看 stdout 文本**，不能写 `if ACPIe …; then`
+**三种输出，退出码全是 0**：
 
-用途：**判「这张表里到底有没有某个设备路径」**（例如某 OEM SSDT 里有没有 `_SB.PCI0.XHCI`），
-比反编译整张表快得多。官方 `Configuration.pdf` 也点名 "Use `ACPIe` utility to debug"。
+| stdout | 含义 |
+|---|---|
+| `Returned offset: 66` | **找到了**（可信） |
+| `EXIT: No entry found in the table.` | 没找到 —— 或表解析到某处就停了 |
+| `EXIT: ACPI table is incorrect or not supported by parser!` | 表解析失败 |
+
+★★★ **只有第一种能当结论**。后两种**无法区分「路径真的不存在」和「工具解析不了这张表」**
+（实测：同一张 `SSDT-PLUG.aml`，搜 `_SB.PR00` 命中、搜 `_SB.PCI0` / `PR00` / `_SB` 全报
+`ACPI table is incorrect or not supported by parser!`）⇒ **否定结论必须回 `iasl -d` 反编译确认**。
+★★ 退出码恒 0 ⇒ **不能写 `if ACPIe …; then`**，只能 grep stdout。
+
+用途：**快速初筛「某张表里有没有某个设备路径」**（例如某 OEM SSDT 里有没有 `_SB.PCI0.XHCI`），
+比反编译整张表快。官方 `Configuration.pdf` 也点名 "Use `ACPIe` utility to debug"。
 
 ### 2.2 官方包里的 UEFI 工具（`EFI/OC/Tools/`）—— 在**选择器里**跑
 
@@ -130,9 +139,10 @@ ACPIe -f <表文件.aml> <搜索路径> [第几次出现]
 
 | 路线 | 命令 / 做法 | 前提 |
 |---|---|---|
-| **A. 源码编译（最可控）** | 从 ACPICA 下源码，在源码根目录执行官方 README 给的命令：<br>`CFLAGS="-mmacosx-version-min=10.7 -O3" LDFLAGS="-mmacosx-version-min=10.7" make iasl -j $(getconf _NPROCESSORS_ONLN)`<br>产物在 `generate/unix/bin/iasl` | 有 Xcode CLT（`make` / `clang`） |
-| **B. 包管理器** | Homebrew `acpica`（提供 `iasl`）· MacPorts `acpica` | 已装 brew / port |
-| **C. 借第三方包内的二进制** | 部分 GUI / 脚本工具自带编译器（见 §3.5 各工具的包内文件） | 只作应急，**版本不可控** |
+| **A. 官方 release 的预编译二进制** | ACPICA 的 release 页**直接给 `iasl` 与 `acpidump` 二进制** | ★★ **实测是 Linux ELF**（`/lib64/ld-linux-x86-64.so.2`）⇒ **macOS 跑不了**；只有 Linux / WSL 侧能用 |
+| **B. 源码编译（macOS 上唯一可控路线）** | ★ **直接用 `scripts/get-iasl.sh`**（下源码 → 编译 → 装到 `~/bin` → 打出版本与 sha256）。手工做则在源码根目录执行官方 README 的命令：<br>`CFLAGS="-mmacosx-version-min=10.7 -O3" LDFLAGS="-mmacosx-version-min=10.7" make iasl -j $(getconf _NPROCESSORS_ONLN)`<br>产物在 `generate/unix/bin/iasl` | 有 Xcode CLT（`make` / `clang`）；实测十几秒编完 |
+| **C. 包管理器** | Homebrew `acpica`（提供 `iasl`）· MacPorts `acpica` | 已装 brew / port |
+| **D. 借第三方包内的二进制** | 部分 GUI / 脚本工具自带编译器（见 §3.5 各工具的包内文件） | 只作应急，**版本不可控** |
 
 **验证**：
 
@@ -279,13 +289,16 @@ gfxutil -h | head -3
 
 ---
 
-## 7. 自检
+## 7. 自检与获取
 
 ```bash
 scripts/toolcheck.sh                 # 表格输出：工具 / 状态 / 路径 / 版本
 scripts/toolcheck.sh --oc-dir <官方包根>   # 顺带核对 ocvalidate / macserial 版本
 scripts/toolcheck.sh --strict        # 缺「必需」项时退出码非 0（可接进 CI / 前置检查）
 scripts/toolcheck.sh --json          # 机器可读
+
+scripts/get-iasl.sh                  # 取 iasl：下源码 → 编译 → 装 ~/bin → 打版本与 sha256
+scripts/get-iasl.sh 20260930 ~/bin   # 指定版本与安装目录
 ```
 
 输出里的「必需」只包含**核心流程跑不动**的那几项（`plutil` / `PlistBuddy` / `nvram` / `ioreg` /

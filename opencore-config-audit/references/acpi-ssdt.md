@@ -140,9 +140,13 @@ ioreg -r -c AppleSMBusController -w0 | wc -l     # 0 = 已加载但无实例 ⇒
 ### 6.3 编译完必须做的四项验证
 
 1. **回读**：`iasl -d` 把自己编出来的 `.aml` 反编译回来，与 `.dsl` 语义对一遍
-   —— 防「编译通过但内容不对」（例如 `-f` 留下的半成品）
-2. **搜路径**：`ACPIe -f <表.aml> <路径>` 确认关键设备 / 方法真的在里面
-   （★★ **命中与未命中退出码都是 0**，只能看 stdout：`Returned offset: N` vs `EXIT: No entry found`）
+   —— 防「编译通过但内容不对」（例如 `-f` 留下的半成品）。
+   ★ **别拿 sha 与官方 `Binaries/*.aml` 比**：实测同一份 `.dsl` 编译出来**字节数相同（900 B）但 sha 不同**
+   （编译器版本 / 时间戳会进产物）⇒ 判据是**反编译后 diff**，不是 sha
+2. **搜路径**：`ACPIe -f <表.aml> <完整路径>` 确认关键设备 / 方法真的在里面
+   （★★★ **只有 `Returned offset: N` 能当结论**；`No entry found` 与
+   `ACPI table is incorrect or not supported by parser!` **都是退出码 0 的模糊失败**，
+   无法区分「不存在」与「解析不了」⇒ 否定结论必须回 `iasl -d` 反编译确认，见 `toolchain.md` §2.1）
 3. **落盘**：放 `EFI/OC/ACPI` + 同步 `ACPI>Add>Path` ⇒ `plutil -lint` + `ocvalidate` ⇒ 重启
 4. **生效**：引导日志看这张表有没有被加载（`OCA:` 段），再 `ioreg` / `kmutil showloaded` 看结果
 
