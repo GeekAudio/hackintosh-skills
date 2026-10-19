@@ -1,8 +1,8 @@
 ---
 name: opencore-config-audit
-description: 审查、修改与维护黑苹果 OpenCore（OpenCorePkg）EFI：BIOS/UEFI 设置审查、config.plist 逐键对照官方文档并用 ocvalidate 校验、ACPI/SSDT 巡检、kext 精简与更新判断、引导与内核日志取证、装不上或进不去系统的分层 debug、启动耗时分析、系统大版本升级（15→26 的版本分流）、磁盘屏蔽、从零生成基础 EFI、换机型与三码。硬件侧覆盖 NVIDIA 独显、Intel / MediaTek / 博通无线网卡、有线网卡、板载声卡 AppleALC、HiDPI、Intel 睿频与小核、内存定制、AMFI/TCC 权限修复、Gatekeeper、AirDrop / 接力、OpenCanopy 主题。触发场景：开机卡 EB、卡 ExitBootServices、卡代码、循环重启、黑屏、启动项丢失、选择器不显示、只有 HDMI 有声音、板载声卡没声音、AppleHDA 装不回来、layout-id 填多少、麦克风没权限、隐私列表里没有这个软件、双击 App 打不开、AirDrop 用不了、隔空投送找不到设备、接力不工作、Wi-Fi 连不上、网卡驱动、蓝牙不可用、睿频上不去、CPU 被限频、小核要不要关、关于本机 CPU 名不对、内存显示不对、显示不清晰、改机型、三码、序列号、ROM、iMessage 登录不了。内置「改 ESP 的安全流程」（备份 → 语义 diff → lint → sha 校验 → 镜像/存档 → 卸载重挂复验）。用户问「这个技能怎么用 / 使用说明 / 有哪些能力 / 能干什么」时也适用（此时输出技能目录下的 USAGE.md，不要输出内部流程）。
-description_en: Audit, edit and maintain a hackintosh OpenCore (OpenCorePkg) EFI configuration — BIOS/UEFI firmware settings, per-key verification of config.plist against the official docs plus ocvalidate, ACPI/SSDT inspection, kext trimming and update decisions, boot and kernel log forensics, layered debug for installs that fail or never reach the desktop, boot-time analysis, major OS upgrades (15 → 26 with MinKernel/MaxKernel routing), disk masking, generating a first EFI from Windows, SMBIOS model change and serials. Hardware coverage — NVIDIA GPUs, Intel / MediaTek / Broadcom WiFi, Ethernet, onboard audio via AppleALC, HiDPI, Intel Turbo and E-cores, memory injection, AMFI/TCC permission repair, Gatekeeper, AirDrop / Handoff, OpenCanopy themes. Triggers — stuck at EB, stuck at ExitBootServices, boot loop, black screen, lost boot entry, picker not showing, audio only over HDMI, no onboard audio, AppleHDA missing on macOS 26, which layout-id to use, app has no microphone permission, app missing from Privacy list, app won't open on double-click, AirDrop not working, Handoff not working, WiFi not connecting, network driver, Bluetooth unavailable, Turbo stuck low, CPU frequency capped, should I disable E-cores, wrong CPU name in About This Mac, wrong memory display, blurry display, change SMBIOS model, serials, ROM, iMessage sign-in fails. Includes the safe ESP editing flow (backup → semantic diff → lint → sha check → mirror/archive → remount and re-verify). Also applies when the user asks how to use this skill, what it can do, or for usage instructions — in that case output USAGE.md from the skill directory instead of internal workflow details.
-version: 0.36.0
+description: 审查、修改与维护黑苹果 OpenCore（OpenCorePkg）EFI：BIOS/UEFI 设置审查、config.plist 逐键对照官方文档并用 ocvalidate 校验、ACPI/SSDT 巡检、kext 精简与更新判断、引导与内核日志取证、装不上或进不去系统的分层 debug、启动耗时分析、系统大版本升级（15→26 的版本分流）、磁盘屏蔽、从零生成基础 EFI、换机型与三码。硬件侧覆盖 NVIDIA 独显、Intel / MediaTek / 博通无线网卡、有线网卡、板载声卡 AppleALC、HiDPI、Intel 睿频与小核、内存定制、AMFI/TCC 权限修复、Gatekeeper、AirDrop / 接力、OpenCanopy 主题。触发场景：开机卡 EB、卡 ExitBootServices、卡代码、循环重启、黑屏、启动项丢失、选择器不显示、只有 HDMI 有声音、板载声卡没声音、AppleHDA 装不回来、layout-id 填多少、麦克风没权限、隐私列表里没有这个软件、双击 App 打不开、AirDrop 用不了、隔空投送找不到设备、接力不工作、Wi-Fi 连不上、网卡驱动、蓝牙不可用、睿频上不去、CPU 被限频、小核要不要关、关于本机 CPU 名不对、内存显示不对、显示不清晰、改机型、三码、序列号、ROM、iMessage 登录不了、iasl 怎么装、找不到工具、缺工具、ocvalidate 版本不对、macserial 在哪、没有 brew。内置「改 ESP 的安全流程」（备份 → 语义 diff → lint → sha 校验 → 镜像/存档 → 卸载重挂复验）。用户问「这个技能怎么用 / 使用说明 / 有哪些能力 / 能干什么」时也适用（此时输出技能目录下的 USAGE.md，不要输出内部流程）。
+description_en: Audit, edit and maintain a hackintosh OpenCore (OpenCorePkg) EFI configuration — BIOS/UEFI firmware settings, per-key verification of config.plist against the official docs plus ocvalidate, ACPI/SSDT inspection, kext trimming and update decisions, boot and kernel log forensics, layered debug for installs that fail or never reach the desktop, boot-time analysis, major OS upgrades (15 → 26 with MinKernel/MaxKernel routing), disk masking, generating a first EFI from Windows, SMBIOS model change and serials. Hardware coverage — NVIDIA GPUs, Intel / MediaTek / Broadcom WiFi, Ethernet, onboard audio via AppleALC, HiDPI, Intel Turbo and E-cores, memory injection, AMFI/TCC permission repair, Gatekeeper, AirDrop / Handoff, OpenCanopy themes. Triggers — stuck at EB, stuck at ExitBootServices, boot loop, black screen, lost boot entry, picker not showing, audio only over HDMI, no onboard audio, AppleHDA missing on macOS 26, which layout-id to use, app has no microphone permission, app missing from Privacy list, app won't open on double-click, AirDrop not working, Handoff not working, WiFi not connecting, network driver, Bluetooth unavailable, Turbo stuck low, CPU frequency capped, should I disable E-cores, wrong CPU name in About This Mac, wrong memory display, blurry display, change SMBIOS model, serials, ROM, iMessage sign-in fails, how to install iasl, missing tools, ocvalidate version mismatch. Includes the safe ESP editing flow (backup → semantic diff → lint → sha check → mirror/archive → remount and re-verify). Also applies when the user asks how to use this skill, what it can do, or for usage instructions — in that case output USAGE.md from the skill directory instead of internal workflow details.
+version: 0.37.0
 agent_created: true
 ---
 
@@ -101,6 +101,20 @@ shasum -a 256 /Volumes/EFI/EFI/OC/config.plist
 同时确认：ESP 是否已挂载（未挂载时 `PlistBuddy` 会打 `File Doesn't Exist, Will Create`，看着像损坏，其实是没挂载）；
 `config.plist` 的 mtime 是否与工作区镜像一致。
 
+### 阶段 0.1 · 工具链自检（**先确认工具在不在，再谈排查**）
+
+跑 `scripts/toolcheck.sh`：一条命令给出「① 系统自带 · ② OpenCore 官方包自带 · ③ 需自备」三层工具的现状
+（工具 / 状态 / 路径 / 版本）。
+
+- **必需项缺失 = 流程跑不完整** —— 尤其 `ocvalidate` 没有就**不能下结论**（先 `fetch-opencore-docs.sh`）
+- **按需项缺失不必全补** —— 缺 `iasl` 只影响「改 / 编译 SSDT」，**只加官方已编译的 `.aml` 不需要它**；
+  缺 `gfxutil` 可以抄现成 `DeviceProperties` 路径
+- ★★ **比「没装」更容易错的是「装错版本」**：`ocvalidate` 必须与机器上的 OpenCore 同版
+  （`nvram 4D1FDA02-…:opencore-version`）—— **校验器版本不对，结论无效**
+- ★ 官方包里**没有** `iasl` / `gfxutil`；**`acpidump` 在 macOS 上本来就没有**
+  （取表走 `Misc>Debug>SysReport` / `ACPIe` / Hackintool）
+- 获取方式（含**无 brew / 无 port 时怎么装**）、版本对齐、**缺失降级矩阵** ⇒ `references/toolchain.md`
+
 ### 阶段 0.4 · BIOS / UEFI 审查（**装机前先做，比改 config 更早**）
 
 > ★ **更早一步：配机 / 换件之前先看硬件避坑** —— `laobamac/SimpleBuyersGuide`《黑苹果硬件避坑指南》
@@ -187,7 +201,9 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 ### 阶段 5 · ACPI / SSDT 巡检
 
 用阶段 1 下到的官方 `Docs/AcpiSamples/` **逐条对照**本机实际设备，判定「还需要补哪个 SSDT」。
-对照表、设备存在性检查命令、SSDT 命名规范见 `references/acpi-ssdt.md`。
+对照表、设备存在性检查命令、SSDT 命名规范见 `references/acpi-ssdt.md`；
+★ 要**改 / 编译** SSDT ⇒ 同文件 **§6 编译与验证**（`iasl` 三个动作 · 反编译报错是正常的 · 四项验证 · 报错对照）。
+★ 只加官方 `Binaries/*.aml` 的话**不需要 `iasl`** —— 别为一个用不上的步骤去装工具。
 
 > ★★★ **热补丁样例库主参考：`5T33Z0/OC-Little-Translated`**（★745，**仍在更新**）——
 > 起于 `daliansky/OC-little` 的英译，**已远超原作**（新增第 7–20 章 + 完整附录 A–Z）；
@@ -388,7 +404,9 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 
 > 脚本统一 `set -euo pipefail`（**失败即停**，不会把半成品当成品继续跑）。
 > ★ 会改 ESP / 系统卷的三个（`oc-edit-safe.sh` · `oc-swap-build.sh` · `mask-other-disks.sh`）先 dry-run 再执行。
+> ★★ **开工先跑 `scripts/toolcheck.sh`**：缺什么、缺了怎么降级，见 `references/toolchain.md`。
 
+- `scripts/toolcheck.sh` —— **工具链自检**：三层来源（系统自带 / 官方包自带 / 需自备）逐个查「状态 · 路径 · 版本」，`--oc-dir` 顺带核对官方包、`--strict` 缺必需项即非零、`--json` 机器可读
 - `scripts/fetch-opencore-docs.sh` —— 下载同版官方包、抽取校验器与文档、建键库
 - `scripts/oc-verify.sh` —— 一键校验（ocvalidate + 引用的文件是否存在 + sha 对照）
 - `scripts/oc-swap-build.sh` —— RELEASE ↔ DEBUG 换构建（连官方同名 Drivers 一起换，保留第三方驱动，自动备份/校验/落盘）
@@ -407,11 +425,12 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 - `scripts/oc-theme-check.sh` —— **Resources 树合规检查**（必需图标 / 实际像素尺寸 / 标签 / 字体 / 音频）
 - `scripts/oc-fetch-iconset.sh` —— 从官方 OcBinaryData 取图标集 / 字体 / 标签 / 音频
 - `scripts/bios-audit.ps1` —— **Windows 侧 BIOS 审查（只读）**：判定固件类型/Secure Boot/TPM/VT-x/HT/XMP/**VMD·RST**/串口/内存槽位，判不了的明确标注
+- `references/toolchain.md` —— **工具链（装什么 / 从哪来 / 缺了怎么办）**：★ **三层来源**（① 系统自带 · ② **OpenCore 官方包 `Utilities/`** · ③ 需自备）· **每个工具的用途与陷阱**（`PlistBuddy` 不在 `PATH` · `macserial` 是目录 · **`ACPIe` 命中/未命中退出码都是 0**）· ★★ **`iasl` 三条获取路线（含 ACPICA 官方编译命令）** · **`acpidump` 在 macOS 上没有** · ★★ **`EFI/OC/Tools/` 那批 UEFI 工具**（`Sample.plist` 只注册 3 条、且全 `Enabled=false` ⇒ 要用得自己加条目） · **无 brew / 无 port 时怎么装** · **版本对齐纪律** · **缺失降级矩阵**
 - `references/official-docs-method.md` —— 文档取用方法、逐键判定法、成对关系表
 - `references/logs-and-debug.md` —— `Target`/`DisplayLevel` 位定义、日志判据、刷屏归因
 - `references/boot-entries.md` —— **固件启动项（`Boot####` / `BootOrder`）与 `Misc>Boot>LauncherOption`**：★ **「用 U 盘引导后启动项消失」的根因**、四档取值、取证命令、**ASUS 的 `Boot0000` 坑**；★★ **§7 官方修法（`bcfg` / `OpenControl` / `LauncherOption=Full` / 从系统里写 + `BootKicker`）**、**§8 从 U 盘启动改成硬盘启动**
 - `references/boot-timeline.md` —— **启动耗时/时间线分析**：三段拆解、流式过滤、停顿窗口定位、耗时来源与处置
-- `references/acpi-ssdt.md` —— ACPI/SSDT 巡检：官方 AcpiSamples 逐条适用条件 · 设备存在性检查 · 命名规范 · ★★ **`5T33Z0/OC-Little-Translated` 按需求索引表**（含本机落点）· **官方/Dortania 没有的那些**（`SSDT-ALL` 合并表 · **用 ACPI 做 USB 端口映射** · `SSDT-I225V` · `SSDT-PMCR` · `ACPIDebug` · `Fixing_Preboot`）
+- `references/acpi-ssdt.md` —— ACPI/SSDT 巡检：官方 AcpiSamples 逐条适用条件 · 设备存在性检查 · 命名规范 · ★ **§6 编译与验证（`iasl` 三个动作 / 反编译报错是正常的 / 四项验证 / 报错对照表）** · ★★ **`5T33Z0/OC-Little-Translated` 按需求索引表**（含本机落点）· **官方/Dortania 没有的那些**（`SSDT-ALL` 合并表 · **用 ACPI 做 USB 端口映射** · `SSDT-I225V` · `SSDT-PMCR` · `ACPIDebug` · `Fixing_Preboot`）
 - `references/bios-settings.md` —— **BIOS/UEFI 审查**：官方 9 条 + Dortania（Intel/AMD）+ 社区补充（**VMD**/Speed Shift）、**必须关/必须开/看情况**三类、CFG Lock 专题、**厂商命名对照表**、Windows 审查脚本用法
 - `references/disks-and-kexts.md` —— 磁盘屏蔽与 kext 精简的判据与「不能删」清单
 - `references/nvidia-driver.md` —— NullMoth NVIDIA 驱动：适用范围、安装、必需 OC 设置、恢复、故障对照

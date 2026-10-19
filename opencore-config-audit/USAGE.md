@@ -14,7 +14,8 @@
 |---|---|
 | **查 BIOS** | 「帮我审一下 BIOS 设置」「装系统找不到硬盘」「CFG Lock 要不要关」 |
 | 审配置 | 「审一下我的 OpenCore 配置」「校验一下 config.plist」 |
-| 补 SSDT | 「看日志还有没有要补的 SSDT」「ACPI 热补丁怎么做」「SSDT 样例在哪」 |
+| 补 SSDT | 「看日志还有没有要补的 SSDT」「ACPI 热补丁怎么做」「SSDT 样例在哪」「SSDT 编译报错」「iasl 怎么用」 |
+| **缺工具 / 装不上** | 「iasl 怎么装」「没有 brew 怎么办」「ocvalidate 版本不对」「macserial 在哪」「gfxutil 找不到」 |
 | **装不上 / 进不去系统** | 「装系统找不到硬盘」「卡在苹果 logo 进不去」「开机循环重启」「黑屏只剩鼠标」「装完第一次开机进不去」 |
 | 查开机慢 | 「开机很慢，分析一下时间线」「卡在苹果 logo」 |
 | **启动项没了** | 「BIOS 里看不到 OpenCore 了」「只剩 Windows」「用 U 盘引导后启动项消失」「bcfg 怎么加启动项」 |
@@ -42,10 +43,11 @@
 - **校验过的清单**：SSDT 该加哪个、kext 该删哪个，逐条给依据
 - **分析文档**：启动耗时、日志取证这类会落成文件
 
-## 配套脚本（18 个）
+## 配套脚本（19 个）
 
 | 脚本 | 作用 |
 |---|---|
+| `toolcheck.sh` | **开工前的工具链自检**（系统自带 / 官方包 / 需自备三层，查状态·路径·版本；缺什么、怎么补一目了然） |
 | `oc-nvram-bootentry.sh` | **从系统里读/写固件启动项**（`dump` / `backup` / `restore` / `add` / `del`）★ 写操作要提权，且需 `RequestBootVarRouting=false` |
 | `bios-audit.ps1` | **Windows 侧 BIOS 审查（只读）** —— 在 Windows 里先跑这个 |
 | `fetch-opencore-docs.sh` | 取同版官方包 + 建配置键库 |
@@ -65,9 +67,9 @@
 | `oc-theme-check.sh` | **Resources 树合规检查**（必需图标 / 真实像素尺寸 / 标签 / 字体 / 音频） |
 | `oc-fetch-iconset.sh` | 从官方 OcBinaryData 取图标集 / 字体 / 标签 / 音频 |
 
-## 参考文档（32 份）
+## 参考文档（33 份）
 
-按主题挑：`bios-settings.md`（BIOS）· `lifecycle.md`（全流程）· `os-upgrade-15-to-26.md`（升系统）·
+按主题挑：`toolchain.md`（**工具链：`iasl` / `gfxutil` 从哪来、缺了怎么降级**）· `bios-settings.md`（BIOS）· `lifecycle.md`（全流程）· `os-upgrade-15-to-26.md`（升系统）·
 `nvidia-driver.md` · `amfi-and-tcc.md`（**App 拿不到权限 → tcc-helper**）· `intel-wifi.md` · `mediatek-wifi.md`（**含原生 Sunrise 打包方案**） · `broadcom-wifi.md`（四类网卡/显卡）· `airdrop-handoff.md`（**AirDrop / 接力：只看 `awdl0`，与 `ROM`/`en0`/UUID 无关**）·
 `applealc-custom.md`（**声卡 / macOS 26 恢复 AppleHDA / 定制 layout 前先取 Windows 侧数据：HDAU 或 HDAudDev.dll 脚本**）· `hidpi.md`（显示）· `intel-turbo.md`（睿频）· `e-cores.md`（**开/关小核**）· `cpu-name.md`（**CPU 显示名**）· `memory-injection.md`（内存）· `boot-failure-debug.md`（**装不上/进不去系统**）· `boot-timeline.md` / `logs-and-debug.md`（日志）· `boot-entries.md`（启动项）·
 `acpi-ssdt.md`（**ACPI 热补丁样例库索引**）· `disks-and-kexts.md` · `kext-and-oc-update.md`（**更新 kext / OC**）· `official-docs-method.md` · `rapidefi-first-efi.md` ·

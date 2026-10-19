@@ -111,7 +111,55 @@ ioreg -r -c AppleSMBusController -w0 | wc -l     # 0 = 已加载但无实例 ⇒
 - 未启用的表**移进子目录**（如 `ACPI/disabled/`），`Path` 写成 `disabled/SSDT-X.aml`；这样生效目录一眼可读
   —— 一旦启用，**移回 `ACPI/` 并同步改 `Path`**（别让启用项躺在 `disabled/` 里）
 
-## 6. 排查顺序（建议）
+## 6. 编译与验证（`iasl`）
+
+> 工具从哪来（ACPICA 源码编译 / 包管理器 / 借用第三方包内二进制）⇒ `toolchain.md` §3.1。
+> ★★ **只加官方已编译的 `.aml`（`Docs/AcpiSamples/Binaries/`）根本不需要 `iasl`** —— 只有「要改」才需要。
+
+### 6.1 三个动作，别混
+
+| 要做什么 | 命令 | 产物 |
+|---|---|---|
+| `.dsl` → `.aml`（自己写的 SSDT） | `iasl -p SSDT-XXX.aml SSDT-XXX.dsl` | 与 dsl 同目录的 `.aml` |
+| `.aml` → `.dsl`（读厂商 / 别人的表） | `iasl -d SSDT-XXX.aml` | 同目录的 `.dsl` |
+| 输出到别处 | 上面任一动作加 `-p <输出前缀>` | 按前缀命名（扩展名由 `iasl` 补） |
+
+★ `-p` 是**输出前缀**，不是「输出文件路径 + 任意扩展名」；★ `-f` 是**强制出结果**（有错也写文件），
+排错时能拿到半成品，**但绝不能把带错误的产物放进 EFI**。
+
+### 6.2 反编译厂商表会报一堆错 —— 这是正常的
+
+整张 DSDT / 厂商 SSDT 引用了大量外部符号，单表反编译必然出现
+`Object does not exist (AE_NOT_FOUND)` 之类。
+
+- **只想看结构** ⇒ 报错不管，`.dsl` 照样能读
+- **要编译回去** ⇒ 补外部表：`iasl -e <外部表.aml> -d <目标.aml>`（可给多个 `-e`）
+- ★★ **更稳的做法：不改厂商表** —— 用 `ACPI>Delete` 删掉它 + 自己的 SSDT 顶替（热补丁路线，
+  本 skill 与 `OC-Little` 的一致主张）。改厂商表等于把 BIOS 的私有实现复制进 EFI，后续无法追溯。
+
+### 6.3 编译完必须做的四项验证
+
+1. **回读**：`iasl -d` 把自己编出来的 `.aml` 反编译回来，与 `.dsl` 语义对一遍
+   —— 防「编译通过但内容不对」（例如 `-f` 留下的半成品）
+2. **搜路径**：`ACPIe -f <表.aml> <路径>` 确认关键设备 / 方法真的在里面
+   （★★ **命中与未命中退出码都是 0**，只能看 stdout：`Returned offset: N` vs `EXIT: No entry found`）
+3. **落盘**：放 `EFI/OC/ACPI` + 同步 `ACPI>Add>Path` ⇒ `plutil -lint` + `ocvalidate` ⇒ 重启
+4. **生效**：引导日志看这张表有没有被加载（`OCA:` 段），再 `ioreg` / `kmutil showloaded` 看结果
+
+★ **「表加载了」≠「表生效了」**。判据永远是**系统里的可观测结果**：设备出现在 `ioreg`、
+驱动出现在 `kmutil showloaded`、内核日志 0 报错。
+
+### 6.4 常见编译错误对照
+
+| 报错 | 真相 | 处置 |
+|---|---|---|
+| `syntax error, unexpected …`，而样例是新版 | **编译器太老**（`iasl -v` 的日期串旧） | 换新 ACPICA，别去改样例 |
+| `Object does not exist (AE_NOT_FOUND)` | 引用了外部表里的符号 | 补 `-e`，或改写为自包含的 SSDT |
+| `_OFF` / `_ON` / `_STA` 重复定义 | 与厂商表里的同名对象冲突 | 先 `ACPI>Delete` 原表，再放自己的 |
+| 编译通过，但 `ocvalidate` 报 `Path` 不存在 | 文件名 / 大小写 / 子目录没对上 | 对 `ACPI>Add>Path` 逐字核 |
+| 编出来的 `.aml` 只有几十字节 | 编的是空文件 / 文件没被覆盖 | 看 `iasl` 的 `AML size` 行 |
+
+## 7. 排查顺序（建议）
 
 1. 内核日志 0 报错？→ 没有"坏 ACPI"
 2. 官方样例逐条对照本机设备存在性 → 得到"该加/不该加"清单
