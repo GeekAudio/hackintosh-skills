@@ -54,8 +54,8 @@ scutil --nwi                            # 当前主网络接口
 ## 4. 怎么把无线「钉」到 `en0`
 
 ```bash
-# ① 临时禁用有线驱动（本机 = AppleIGC.kext）
-#    OpenCore: Kernel > Add > AppleIGC.kext 的 Enabled = false
+# ① 临时禁用有线驱动（本机 = AppleIntelI210Ethernet.kext；早前是 AppleIGC.kext）
+#    OpenCore: Kernel > Add > 对应条目的 Enabled = false
 # ② 删掉接口顺序缓存
 sudo rm /Library/Preferences/SystemConfiguration/NetworkInterfaces.plist
 # ③ 重启

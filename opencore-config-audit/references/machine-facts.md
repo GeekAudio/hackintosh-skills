@@ -8,7 +8,8 @@
 
 - 主板 ASUS TUF GAMING Z690-PLUS WIFI D4；CPU i7-12700K（Alder Lake-S，`0x90672`）
 - 独显 RTX 3080 10GB（`10de:2206`，PEG1 0:1:0）；核显 UHD 770（`8086:4680`，0:2:0）
-- 网卡 I225-V（`AppleIGC.kext` 驱动）+ Broadcom BCM943602CDP（无线/BT）
+- 网卡 I225-V（**Apple 原版 I210 kext 仿冒**：`device-id=0x1533` + boot-arg `e1000=0`，跑在 1000baseT；
+  `AppleIGC.kext` 已禁用 —— 曾触发网络 panic）+ Broadcom BCM943602CDP（无线/BT）
 - 机型 **`iMac20,1`**（10-15 01:54 起；此前 10-13–10-15 是 `MacPro7,1`，更早 `iMacPro1,1`）；board-id `Mac-CFF7D910A743CAAF`
   - ★★ **10-15 03:33 已连同三码一起换**（`serial` / `MLB` / `UUID` 三处；`ROM` 未动）
     ⇒ 依据：**「关于本机」的机型名 = 序列号产品码的函数**，只换机型不换码会一直显示旧机型

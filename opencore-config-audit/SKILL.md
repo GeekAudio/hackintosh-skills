@@ -2,7 +2,7 @@
 name: opencore-config-audit
 description: 审查、修改与维护黑苹果 OpenCore（OpenCorePkg）EFI：BIOS/UEFI 设置审查、config.plist 逐键对照官方文档并用 ocvalidate 校验、ACPI/SSDT 巡检、kext 精简与更新判断、引导与内核日志取证、装不上或进不去系统的分层 debug、启动耗时分析、系统大版本升级（15→26 的版本分流）、磁盘屏蔽、从零生成基础 EFI、换机型与三码。硬件侧覆盖 NVIDIA 独显、Intel / MediaTek / 博通无线网卡、有线网卡、板载声卡 AppleALC、HiDPI、Intel 睿频与小核、内存定制、AMFI/TCC 权限修复、Gatekeeper、AirDrop / 接力、OpenCanopy 主题。触发场景：开机卡 EB、卡 ExitBootServices、卡代码、循环重启、黑屏、启动项丢失、选择器不显示、只有 HDMI 有声音、板载声卡没声音、AppleHDA 装不回来、layout-id 填多少、麦克风没权限、隐私列表里没有这个软件、双击 App 打不开、AirDrop 用不了、隔空投送找不到设备、接力不工作、Wi-Fi 连不上、网卡驱动、蓝牙不可用、睿频上不去、CPU 被限频、小核要不要关、关于本机 CPU 名不对、内存显示不对、显示不清晰、改机型、三码、序列号、ROM、iMessage 登录不了、iasl 怎么装、找不到工具、缺工具、ocvalidate 版本不对、macserial 在哪、没有 brew。内置「改 ESP 的安全流程」（备份 → 语义 diff → lint → sha 校验 → 镜像/存档 → 卸载重挂复验）。用户问「这个技能怎么用 / 使用说明 / 有哪些能力 / 能干什么」时也适用（此时输出技能目录下的 USAGE.md，不要输出内部流程）。
 description_en: Audit, edit and maintain a hackintosh OpenCore (OpenCorePkg) EFI configuration — BIOS/UEFI firmware settings, per-key verification of config.plist against the official docs plus ocvalidate, ACPI/SSDT inspection, kext trimming and update decisions, boot and kernel log forensics, layered debug for installs that fail or never reach the desktop, boot-time analysis, major OS upgrades (15 → 26 with MinKernel/MaxKernel routing), disk masking, generating a first EFI from Windows, SMBIOS model change and serials. Hardware coverage — NVIDIA GPUs, Intel / MediaTek / Broadcom WiFi, Ethernet, onboard audio via AppleALC, HiDPI, Intel Turbo and E-cores, memory injection, AMFI/TCC permission repair, Gatekeeper, AirDrop / Handoff, OpenCanopy themes. Triggers — stuck at EB, stuck at ExitBootServices, boot loop, black screen, lost boot entry, picker not showing, audio only over HDMI, no onboard audio, AppleHDA missing on macOS 26, which layout-id to use, app has no microphone permission, app missing from Privacy list, app won't open on double-click, AirDrop not working, Handoff not working, WiFi not connecting, network driver, Bluetooth unavailable, Turbo stuck low, CPU frequency capped, should I disable E-cores, wrong CPU name in About This Mac, wrong memory display, blurry display, change SMBIOS model, serials, ROM, iMessage sign-in fails, how to install iasl, missing tools, ocvalidate version mismatch. Includes the safe ESP editing flow (backup → semantic diff → lint → sha check → mirror/archive → remount and re-verify). Also applies when the user asks how to use this skill, what it can do, or for usage instructions — in that case output USAGE.md from the skill directory instead of internal workflow details.
-version: 0.38.0
+version: 0.39.0
 agent_created: true
 ---
 
@@ -298,7 +298,12 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
   `itlwm.kext` ⇒ 永远没有 `awdl0` ⇒ 必然不可用（**驱动设计层面的限制，改 config 救不回来**）；
   ★★★ **`ROM` / `en0` 归属 / 机型 / 序列号 / `SystemUUID` 与 AirDrop 无关** —— 那是 iServices（iMessage）的要求
 - **有线网卡（I225/I226 · I210/I211/I350 · RTL8125/8126）** ⇒ `references/ethernet-drivers.md`：
-  ★★ 本机板载 `I225-V` 原生不认（现用 `AppleIGC`）—— 替代 `SimpleVGBE` / `SimpleEthernet` / `SimpleRTK5`；
+  ★★ **先选路** —— **A. 原版 kext 仿冒**（Apple 原版 I210 kext + `device-id` 伪造 + `e1000=0`，
+  最多千兆但零第三方 kext）vs **B. 第三方驱动**（`SimpleVGBE` / `SimpleEthernet` / `SimpleRTK5`，能 2.5G）；
+  ★★★ **路线 A 的三件套缺一不可**，且 **`e1000=0` 是硬前提不是优化项**（dext `IOProbeScore=3000` >
+  I210 的 `1000`，且 dext 只比 vendor-id ⇒ 改 device-id 逼不退它，只能 boot-arg 禁）；
+  ★★ **I210 kext 只有 macOS 12 Monterey 里有**（Ventura 起移除，**KDK 里没有**，已实测排除）；
+  拿到后**必须验签名链**（`Software Signing` → Apple CA → Apple Root CA），别只看文件名；
   ★ **一次只换一套**（多套会互相抢设备）；★★ 换完必须复查 `en0` 归属
 - **换机型 / 三码** ⇒ `references/smbios-and-serials.md`：
   ★★★ **顺序铁律：先完善 SSDT/ACPI（在【旧机型】下验证通过）→ 再换 SMBIOS → 再重做 CPUFriend**
@@ -440,7 +445,7 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 - `references/mediatek-wifi.md` —— MediaTek 无线网卡（MT7921 / MT7922 / RZ608 / RZ717）：★★★ **macOS 26 原生 Sunrise 驱动**（`AppleSunriseWLAN/Bluetooth` dext + 自带固件 + PCIe 蓝牙 `14c3:792a`）· ★★★ **原生路线用 `GeekAudio/mediatek-sunrise-hackintosh`（MT7922 Sunrise Pack，含固件/HAL kext/免编译 device-id 伪装）** · **26.7.1 按芯片分的固件现状** · **`AppleSunrise.kext` = 内核态 HAL（必需）** · **日志判读表 / boot-args 表** · ★★ **第三方 Wi-Fi 用 `flxxxxddd/SimpleMtkWlan` fork（有 release，802.11n/ac 可用）** · **三条硬限制（无原生菜单 / 无 AirDrop / 无 HE）** · **SSDT 藏卡坑** · `mtklog.sh` 排错 · 三条路线决策树、芯片认型、第三方蓝牙 NVRAM 两坑
 - `references/applealc-custom.md` —— 板载声卡（AppleALC）：★★★ **macOS 26 的 `AppleHDA` 恢复（`perez987` 指南：USB 声卡 / **KDK + `MyKextInstaller`** / OCLP / VoodooHDA 方案对照 + 要求与验证）** · ★★ **定制走 `5T33Z0/AppleALC-Guides`**（14 章流程 · 17 个现成 dump · **`alc-verb` 运行时调音** · `MuteGPIO` 表 · **精简到 90 KB** · 回滚工作流） · ★★★ **硬约束：写 layout 前必须已有 Windows 侧取数**（用户能提供则直接进定制流程，不能才让他去取；**GUI 走 HDAU，脚本走 `HDAudDev.dll` 直连** —— 免管理员、可脚本化、产出 Linux 风格 `codec_dump.txt/.json`；dump 完用 **Windows 端点反证插孔映射**）· **AppleHDA 三条实测根因**（PathMap 同组多路径只留最后一条 / 插孔型 Mic 引脚建不出设备 / 插孔检测可能整体是死的）· **不用耳朵验证**（播放中读 `0xF07`/`0xF06` 寄存器）· Pin Config Default 字段读法 · 先搜前人经验、按 codec 定制、本地构建、测试、提 PR
 - `references/broadcom-wifi.md` —— 博通网卡（BCM43602/BCM20703）：**按 Sequoia/Tahoe 分路线**、OCLP root patch、验证判据
-- `references/ethernet-drivers.md` —— **有线网卡第三方驱动**（Intel I225/I226 · I210/I211/I350 · Realtek RTL8125/8126）：方案对照、装法、判据
+- `references/ethernet-drivers.md` —— **有线网卡驱动方案**（Intel I225/I226 · I210/I211/I350 · Realtek RTL8125/8126）：★★★ **两条路线选路**（A 原版 kext 仿冒 = I210 kext + `device-id` + `e1000=0` 三件套，含 dext 抢设备的机理与 kext 来源/验签名；B 第三方驱动对照）、装法、判据、回滚
 - `references/ecosystem-sources.md` —— ★★ **黑苹果生态：权威来源与工具索引**：Acidanthera / Dortania 官方仓库 · **corpnewt 工具链**（ProperTree / GenSMBIOS / SSDTTime / USBMap / gibMacOS / MountEFI）· `USBToolBox` · `blacktop/ipsw-diffs` · 各硬件驱动作者 · 中文资源（远景 / 黑果小兵 / OC-Little 翻译）· ★ **「做什么事信谁」对照表**
 - `references/laobamac-toolkit.md` —— **laobamac 工具与补丁索引（48 仓库全表）**：驱动 · 装机（`SimpleKaruzi`/`PVE-OpenCore`）· ★ **硬件避坑（`SimpleBuyersGuide`）** · 维护工具（`SimpleLoader`）· macOS 26 启动台 · 参考补丁（`OC-little-zh`/`non-metal-frameworks`）· AMD 平台 · fork 说明 · ★ **哪些已存档**
 - `references/network-en0-order.md` —— **`en0` 归属与网络接口顺序（通用）**：谁依赖 `en0`（ROM / iMessage / FaceTime / App Store）、**修补 Wi-Fi 后必须确认无线是 `en0`**、怎么钉住、连带影响、判据纪律。★ **AirDrop / 接力不依赖 `en0`**（见 `airdrop-handoff.md`）

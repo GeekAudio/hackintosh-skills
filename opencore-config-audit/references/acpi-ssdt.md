@@ -40,7 +40,8 @@
 - ★ **`SSDT-ALL`：把多张 SSDT 合并成一张表** —— 减少 `ACPI>Add` 条目、便于管理；
 - ★★ **`ACPI_Mapping_USB_Ports`：用 ACPI 而不是 kext 做 USB 端口映射**（`XHUB` / `XUPC` 两种方法）——
   对「USB 15 口上限」这类问题是一条**不同于 `UTBMap` 的路线**；
-- ★ **`Intel_I225-V_Fix_(SSDT-I225V)`** —— **本机板载就是 Intel I225-V**，值得对照（现用 `AppleIGC.kext`，见 `ethernet-drivers.md`）；
+- ★ **`Intel_I225-V_Fix_(SSDT-I225V)`** —— **本机板载就是 Intel I225-V**，值得对照
+  （现走「Apple 原版 I210 kext 仿冒」，见 `ethernet-drivers.md` §1）；
 - ★ **`PMCR_Support_(SSDT-PMCR)`** —— 本机 `PMCR` 计数 **0**，属于「可能该补」的一类；
 - ★ **`ACPI_Dropping_Tables` + `ACPI_Rename_Devices`** —— 本机删 `xh_adls3` 用的就是前者那套机制；
 - ★ **`GPU-BAR_Size` / `Disabling_unsupported_GPUs`** —— 与 ReBAR / 不支持显卡相关；
