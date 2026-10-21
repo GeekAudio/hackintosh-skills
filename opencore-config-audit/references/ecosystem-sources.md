@@ -63,7 +63,7 @@
 | 硬件 | 作者 / 仓库 | 详见 |
 |---|---|---|
 | **Intel 无线** | **`OpenIntelWireless`** —— `itlwm` ★7.1k · `IntelBluetoothFirmware` ★2.5k · `HeliPort` ★1.3k（原作者 **`zxystd`**） | `intel-wifi.md` |
-| **MediaTek 无线 / 蓝牙** | **`GeekAudio/mediatek-sunrise-hackintosh`（MT7922 Sunrise Pack）** —— macOS 26 原生 Sunrise 的一站式包（固件 + `AppleSunrise.kext` + SSDT + 伪装片段 + macOS 15 第三方 kext 全套）· `flxxxxddd/SimpleMtkWlan`（fork）+ `laobamac/SimpleMtkBtFw`（第三方路线） | `mediatek-wifi.md` |
+| **MediaTek 无线 / 蓝牙** | **`GeekAudio/mediatek-sunrise-hackintosh`（MT7922 Sunrise Pack）** —— macOS 26 原生 Sunrise 的一站式包（固件 + `AppleSunrise.kext` + SSDT + 伪装片段 + macOS 15 第三方 kext 全套）· ★ **`flxxxxddd/SimpleMtkWlan`（fork，v1.5.0：`AirportMtkWlan` 原生菜单 / `SimpleMtkWlan` 以太网式，二选一）** + `laobamac/SimpleMtkBtFw`（第三方路线） | `mediatek-wifi.md` |
 | **博通无线 / 蓝牙** | **Acidanthera** —— `AirportBrcmFixup` / `BrcmPatchRAM` | `broadcom-wifi.md` |
 | **MediaTek** | **`laobamac`** —— `SimpleMtkWlan` / `SimpleMtkBtFw` | `mediatek-wifi.md` |
 | **有线网卡** | **`Mieze`** —— `LucyRTL8125Ethernet` ★296 · `IntelMausiEthernet` ★413 · `RTL8111_driver_for_OS_X` ★717 · `IntelLucy` ★76 · `RTL812xLucy` ★22<br>**`Shaneee`** —— `AppleIGB` ★30<br>**`laobamac`** —— `SimpleVGBE` 等 | `ethernet-drivers.md` |

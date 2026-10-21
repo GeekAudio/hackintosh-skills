@@ -1,4 +1,4 @@
-# MediaTek 无线网卡（MT7921 / MT7922 / RZ608）在 macOS 上的支持与流程
+# MediaTek 无线网卡（MT7921 / MT7922 / RZ608 / RZ616）在 macOS 上的支持与流程
 
 > ★★★ **2026-10 重大更新：macOS 26（Tahoe）已原生内置 Apple 自己的 MediaTek 驱动**
 > （`com.apple.AppleSunriseWLAN.dext` + `com.apple.AppleSunriseBluetooth.dext`，**自带固件**）——
@@ -18,6 +18,18 @@
 > **两个版本从 KDK 原样提取的 `AppleSunrise.kext`**（26.7.1/25G241 与 26.3/25D5087f）· **`SSDT-ARPT_RP04_Mediatek.aml`** ·
 > **免编译的 `DeviceProperties` 伪装片段** · `Kernel>Add` 片段 · boot-args 清单 · macOS 15 第三方 kext 全套（含**预编译 SimpleMTK.app**）。
 > ⇒ **要用原生 Sunrise 路线，先拿这个包**，不用去翻 69 页帖子找附件。详见 §1.5。
+>
+> ★★★ **2026-10-18 起的重大变化：第三方路线也出「原生 Wi-Fi 菜单」了**
+> `flxxxxddd/SimpleMtkWlan` **v1.3.0 起**同时发布两个 kext，**同一套硬件层、只能启用一个**：
+> - **`AirportMtkWlan.kext`** —— 卡是**真正的 macOS Wi-Fi 接口**（`IO80211Family` / Skywalk：原生菜单、
+>   系统设置里能选网络、钥匙串存密码），**Tahoe 上不需要 OCLP root patch、不需要降级 `IOSkywalkFamily`**；
+> - **`SimpleMtkWlan.kext`** —— 老形态，以太网式 `enX` + `SimpleMTK` 菜单栏客户端（任何能加载的 macOS 版本）。
+>
+> ⇒ **「第三方 = 没有原生菜单」这个旧结论作废**，见 §4.1 / §4.7。
+>
+> ★★ **本文件的证据分级约定**（引用结论时请连带层级一起引用）：
+> **【源码/plist 实证】** > **【上游 README 声明】** > **【他人实测】**。
+> ★ **本机（Z690）没有 MediaTek 卡** —— 凡标【他人实测】的都**没有在本机复现过**。
 
 ## 0. ★★★ 结论先行（先看这段，能省很多时间）
 
@@ -73,25 +85,28 @@ BT_RAM_CODE_MT7922 · MT7923 · MT7923A0 · SRS_7922
   提取法：`hdiutil attach` KDK.dmg → `pkgutil --expand-full KernelDebugKit.pkg` →
   `KDK.pkg/Payload/System/Library/Extensions/AppleSunrise.kext`（x86_64+arm64e，LSMinimumSystemVersion 26.7）
 
-### 0.2 三条路线怎么选
+### 0.2 四条路线怎么选
 
 | 路线 | 蓝牙 | Wi-Fi | 前提 |
 |---|---|---|---|
 | **① 原生（Sunrise）** | ✅ **Apple 自带** | ✅ **Apple 自带** | **macOS 26+**（Sequoia 没有这两个 dext） |
 | ② 第三方 `SimpleMtkBtFw` | ✅ 有 release | — | 蓝牙走 **USB** 的老款模块 |
-| ③ 第三方 `flxxxxddd/SimpleMtkWlan` | — | ⚠️ **能用但非原生**（**有 release v1.2.0**） | 接受「以太网式接口 + 菜单栏客户端」 |
+| ③ 第三方 `SimpleMtkWlan` | — | ⚠️ **以太网式接口**（v1.5.0） | 任何能加载的版本；接受 `enX` + `SimpleMTK` 客户端 App |
+| **④ 第三方 `AirportMtkWlan`** | — | ✅ **原生 Wi-Fi 菜单**（v1.3.0+） | **macOS 26 Tahoe** + `DisableIoMapper=true` |
 
 > ★★ **先试路线 ①** —— 系统自带，**不用装任何 kext**。
-> 只有当「你的模块蓝牙走 USB（老款）」或「系统是 Sequoia」时，才退到 ②/③。
+> 只有当「你的模块蓝牙走 USB（老款）」或「系统是 Sequoia」时，才退到 ②/③/④。
+> ★ **③ 与 ④ 是同一个仓库的两种产物，二选一** —— 同时启用会抢同一块卡。
 >
 > 第三方路线的成熟度（作为对比）：
 
 | 部件 | 第三方路线状态 | 依据 |
 |---|---|---|
 | 蓝牙（USB） | 可用 | `SimpleMtkBtFw` 有 **`1.0.0`** release；issue #1 标题即 *"MT7922 bluetooth is working"*（fork：`flxxxxddd/SimpleMtkBtFw`，AirPods 音频可用） |
-| Wi-Fi（PCIe） | ★ **能用，但有硬限制**（2026-10 起） | `flxxxxddd` fork 有 **release v1.1.0 / v1.2.0**；**MT7921 / RZ608 实测能连上网**；但 **802.11ax 不支持**、**没有原生 Wi-Fi 菜单**、**AirDrop / Handoff / Continuity 不可能** ⇒ §4 |
+| Wi-Fi（PCIe）· 原生菜单 | ★ **v1.3.0 起可用** | `AirportMtkWlan`：Tahoe 上真原生接口，**不需要 OCLP 补丁**；但 **802.11ax 未支持**、**WPA3-only 不支持**、**AWDL 未实现 ⇒ 无 AirDrop** ⇒ §4.7 |
+| Wi-Fi（PCIe）· 以太网式 | ★ 能用，有硬限制 | `SimpleMtkWlan`：**MT7921 / RZ608 实测能连上网**；**无原生菜单**、**AWDL 不可能** ⇒ §4 |
 
-> **要「能日常用的 Wi-Fi」的兜底做法仍是换卡**（Broadcom 原生 / Intel `AirportItlwm` 成熟）。
+> **要「能日常用的 Wi-Fi + AirDrop」的兜底做法仍是换卡**（Broadcom 原生 / Intel `AirportItlwm` 成熟）。
 
 ### 0.3 先用三行命令判断你该走哪条
 
@@ -116,9 +131,16 @@ sw_vers -productVersion && uname -r
 |---|---|---|---|---|
 | MT7921 | — | `14c3:7961` | — | `0x7961` |
 | MT7921K | **AMD RZ608** | `14c3:0608` | — | `0x0608` / `0x7961` |
-| **MT7922** | **AMD RZ616**、MT7922A | **`14c3:7922`** | ★ **`14c3:792a`** | **`0x7922`** |
+| **MT7922** | MT7922A | **`14c3:7922`** | ★ **`14c3:792a`** | **`0x7922`** |
+| **MT7922 · AMD RZ616** | **AMD RZ616**（笔记本常见） | ★★ **`14c3:0616`** | 按 §0.3 ② 自查 | 按 §0.3 ② 自查 |
 | MT7923 | — | `14c3:7923` | `14c3:792b` | — |
 | MT7932 / MT7925 | AMD RZ717 | `14c3:7932` / `14c3:7925` | `14c3:793b` | — （Wi-Fi 6E/7，见 §5 支线） |
+
+★★ **RZ616 有两个 ID 报法，别只认一个**：`14c3:7922`（标准 MT7922）和 **`14c3:0616`**（AMD 贴牌的 RZ616 形态）。
+`ioreg` 里 `device-id` 是**小端**显示的 —— `<16060000>` = `0x0616`，`<22790000>` = `0x7922`。
+**【源码/plist 实证】** `AirportMtkWlan` v1.5.0 的 `IOPCIPrimaryMatch` 是
+`0x796114c3 0x060814c3 0x792214c3 0x061614c3` —— **`0616` 在列表里**（v1.5.0 新加）。
+★ 但 `SimpleMtkWlan` 上游 README 的 Supported Hardware 只写到 `7961 / 0608 / 7922`，**没写 0616**。
 
 ★ **同一块 MT7922 模块可能有两种形态**：新的是**蓝牙走 PCIe**（`14c3:792a`，Apple 原生驱动管），
 老的是**蓝牙走 USB**（`0x0e8d` + class `0xE0/1/1`，要靠第三方 `SimpleMtkBtFw`）。
@@ -316,7 +338,7 @@ Sequoia **没有**这两个 dext ⇒ 原生路线走不通，只能走下面的�
 
 | 项目 | 管什么 | 形态 | 有 Release？ | 现状 |
 |---|---|---|---|---|
-| ★ **`flxxxxddd/SimpleMtkWlan`**（**fork**，分支 `mt7921-fixes`） | **Wi-Fi（PCIe）** | kext | ✅ **v1.1.0 / v1.2.0**（CI 构建） | **★ 第三方路线就用它** —— MT7921/RZ608 实测能上网 |
+| ★ **`flxxxxddd/SimpleMtkWlan`**（**fork**，分支 `mt7921-fixes`） | **Wi-Fi（PCIe）** | **两个 kext**（`AirportMtkWlan` / `SimpleMtkWlan`，同一硬件层） | ✅ **v1.1.0 → v1.5.0**（CI 构建；**v1.3.0 起加 `AirportMtkWlan`**） | **★ 第三方路线就用它** —— MT7921/RZ608 实测能上网；`0616` 在 v1.5.0 匹配列表里【plist 实证】 |
 | `laobamac/SimpleMtkWlan`（**上游**） | Wi-Fi（PCIe） | kext（+ `mtk80211` 兼容层） | ❌ **无**（必须自编译） | 上游主线，bring-up 中；fork 的修复**还没回到主线** |
 | `laobamac/SimpleMtkBtFw` / fork `flxxxxddd/SimpleMtkBtFw` | **蓝牙固件加载**（firmware loader + patcher） | **两个** kext | ✅ **`1.0.0`** | 可用（fork 说明：AirPods 音频可用） |
 | `laobamac/SimpleMTKClient` | Wi-Fi 菜单栏客户端 | App（`SimpleMTK`） | ❌ **上游确无 release**（2026-10-16 API+网页双查） | **必需的** —— 见 §4.1。2026-10-16 已在本机从其源码编译出 `SimpleMTK-1.0.0.zip`（内嵌 Sparkle 2.10.0 源码构建；因本机 `sandbox-exec` 被系统禁用，需先剥离两个未用的 SPM 依赖再编 KeychainAccess/Sparkle） |
@@ -385,21 +407,43 @@ ioreg -l -p IOService | grep -i -E "FirmwareLoaded|fw_name"
 
 ## 4. 路线 B：Wi-Fi（第三方：`flxxxxddd/SimpleMtkWlan`）
 
-### 4.1 ★★ 先接受三条硬限制（决定它能不能满足你）
+### 4.1 ★★ 先选 kext，再接受对应的硬限制
 
-1. **它是「以太网式」接口（`enX`），不是原生 Wi-Fi（`IO80211Family`）**
-   ⇒ **没有 macOS 原生 Wi-Fi 菜单**，扫描 / 连网全靠 **SimpleMTK** 菜单栏客户端。
-2. **❌ AirDrop / Handoff / Continuity** —— README 原话 *"not possible with this design"*
-   ⇒ **这是设计决定的，不是 bug，别去排查**。
-3. **❌ 802.11ax（HE / Wi-Fi 6）尚未支持**；**睡眠 / 唤醒未测试**。
+**v1.3.0 起同一个 release 里有两个产物，只能启用一个**（匹配同一块卡，同时开会抢设备）：
 
-### 4.2 实测能到什么程度（README 的 Tested hardware 原表）
+| | **`AirportMtkWlan.kext`** | **`SimpleMtkWlan.kext`** |
+|---|---|---|
+| 接口形态 | **真 Wi-Fi**（`IO80211Family` / Skywalk） | 以太网式 `enX` |
+| 原生 Wi-Fi 菜单 | ✅ 有 | ❌ 靠 `SimpleMTK` 客户端 App |
+| 系统版本 | **Tahoe 26**（Sequoia 15.2+ 构建「未在硬件上测过」） | 任何能加载的版本 |
+| 额外前提 | **`DisableIoMapper=true`** | 装 `SimpleMTK` 客户端 |
+| 与 OCLP | **禁止**「Modern Wireless」补丁、**禁止**降级 `IOSkywalkFamily` | 无关 |
 
-| 卡 | PCI ID | 系统 | 结果 |
-|---|---|---|---|
-| **MT7921K（AMD RZ608）** | `14c3:0608` | 15.8.1 Sequoia，Intel 台式 | 5 GHz VHT80 **30–50 Mbit/s**（2SS、信号弱、100 M 宽带；同位置 MacBook ≈85）；2.4 GHz 可用；**开机自动加入** |
-| **MT7922** | `14c3:7922` | Tahoe（上游 PR #5） | 5 GHz 上只有 legacy 20 MHz |
-| MT7921 | `14c3:7961` | — | 与 RZ608 同芯片族，**预期可用** |
+**两者共同的三条硬限制（README Status 表）：**
+
+1. **❌ AirDrop / Handoff / Continuity（AWDL）** —— **驱动层没实现 AWDL**。
+   ★★ **归因别搞错**：不是「因为是以太网接口所以不行」（`AirportMtkWlan` 是原生接口，**一样不行**），
+   而是这个驱动根本不实现 AWDL。**设计决定，不是 bug，别去排查**。
+2. **❌ 802.11ax（HE / Wi-Fi 6）** —— 状态表写 `not yet`；但安装节又说 `itlwm_he=1` 是「实验性开关」
+   ⇒ **两处口径不一致，属未验证，别当结论**。
+3. **❌ WPA3-only（SAE）** 网络连不上。
+
+### 4.2 实测能到什么程度（README 的 Tested hardware 原表，v1.5.0）
+
+| 卡 | PCI ID | 系统 | kext | 结果 |
+|---|---|---|---|---|
+| **MT7921K（AMD RZ608）** | `14c3:0608` | **26.7.1 Tahoe**，Intel 台式 | `AirportMtkWlan` | **原生菜单**，从钥匙串直接加入，5 GHz VHT80 **50+ Mbit/s**（信号弱、100 M 宽带） |
+| MT7921K（AMD RZ608） | `14c3:0608` | 15.8.1 Sequoia | `SimpleMtkWlan` | 5 GHz VHT80 30–50 Mbit/s（同位置 MacBook ≈85）；2.4 GHz 可用；开机自动加入 |
+| **MT7922（AMD RZ616）** | ★ **`14c3:0616`** | **15.8.1 Sequoia** | ★ **`pengubow` fork**（自带 HAL） | **原生菜单** —— ★ **唯一一条 0616 的原生菜单实测，且不是本仓库的产物** |
+| **MT7922** | `14c3:7922` | Tahoe（上游 PR #5） | `SimpleMtkWlan` | 5 GHz 上**只有 legacy 20 MHz** |
+| MT7921 | `14c3:7961` | — | — | 与 RZ608 同芯片族，**预期可用** |
+
+★★★ **`0616`（RZ616）的两个空白，必须知道**：
+1. **`AirportMtkWlan` 在 Tahoe 上跑 `0616` —— 没有任何公开实测**（README 表里没有这一格）；
+2. `0616` 唯一成功的那次用的是 **`pengubow` fork**，它**有自己的 HAL**，而且**只有源码、没有 release**。
+
+⇒ 对 RZ616 的诚实结论：**匹配规则支持（plist 实证）、驱动大概率能用（同芯片同 HAL），但没有公开的 Tahoe 实测**。
+**别把它当"已验证"引用。**
 
 ### 4.3 能力矩阵（README Status 摘要）
 
@@ -452,6 +496,32 @@ ioreg -l | grep -A40 'pci14c3'   # 应看到 vendor-id = <c3140000>，而不是 
 
 **可选 boot-args**：`-novht`（关 802.11ac）、`-noht40`（关 HT40）。
 
+### 4.4.1 ★★ `AirportMtkWlan`（原生菜单）的安装 —— 和上面不是同一套
+
+选了 `AirportMtkWlan` 就**不要装 SimpleMTK 客户端**（那是给以太网式那个用的）。
+
+1. 取 **`AirportMtkWlan-Tahoe-x.y.z-RELEASE.zip`**（macOS 15.2+ 用 `-Sequoia-` 那份）
+2. `Kernel → Add` 模板同上，但两处路径换成 `AirportMtkWlan`，并且
+   ★★★ **`MinKernel` / `MaxKernel` 必须写**（Tahoe `25.0.0` / `25.99.99`；Sequoia `24.2.0` / `24.99.99`）
+   —— **每个构建只适配自己那代 `IO80211Family`，装错直接 panic**
+3. ★★★ **`Kernel → Quirks → DisableIoMapper = true`** —— 驱动还不支持 AppleVTD DMA 重映射
+   （AMD 平台本来就没有 AppleVTD，这条天然满足）
+4. ★★ **三条禁令**：不要打 OCLP「Modern Wireless」root patch · 不要 block 或替换 `IOSkywalkFamily` ·
+   不要注入 `IO80211FamilyLegacy`。**这个 kext 用的是系统自己的 Wi-Fi 栈**，照抄 Intel/博通教程会把它废掉。
+5. 确认 `SimpleMtkWlan.kext` 已 `Enabled=false`，SimpleMTK App 已退出或删除
+6. 重启 → 直接在 **Wi-Fi 菜单**里选网络
+
+**验证**：
+
+```bash
+ioreg -l -w0 | /usr/bin/grep IO80211InterfaceRole   # 应打印 Infrastructure
+networksetup -listallhardwareports                  # Wi-Fi 那一段应出现
+kmutil showloaded | /usr/bin/grep -i mtkwlan
+```
+
+**菜单里没有 Wi-Fi 时按此顺序查**：① 两个 kext 是不是都开着 → ② 有没有 OCLP 无线补丁 / `IOSkywalkFamily` 被 block
+→ ③ `DisableIoMapper` 是否 `true` → ④ 构建是否与系统版本匹配 → ⑤ 注入本身有没有成功（见 §4.9）。
+
 ### 4.5 ★ 排错（README 给的，都很实用）
 
 - **看驱动日志** —— 驱动带一个**常驻 ring buffer**，启动失败后仍在、**免 root** 可读：
@@ -494,6 +564,10 @@ ioreg -l | grep -A40 'pci14c3'   # 应看到 vendor-id = <c3140000>，而不是 
 
 ### 4.7 自己编译（只有想跟最新代码时才需要）
 
+★ **`0616`（RZ616）如果 v1.5.0 的 release 跑不起来，这里也是唯一退路** ——
+唯一有 `0616` 原生菜单实测的是 **`pengubow/SimpleMtkWlan`**，它**自带一套 HAL**、
+**只有源码没有 release**（最后 push 2026-10-14）⇒ 得自己编。编法同下（仓库换 `pengubow/SimpleMtkWlan`）。
+
 ```bash
 git clone --recurse-submodules https://github.com/flxxxxddd/SimpleMtkWlan.git
 cd SimpleMtkWlan                     # ★ 默认分支是 mt7921-fixes，不是 main
@@ -512,9 +586,51 @@ xcodebuild -project SimpleMtkWlan.xcodeproj -scheme SimpleMtkWlan \
 ### 4.8 风险与前置
 
 - 备份 EFI、备好可引导 U 盘；**禁用该 kext 即回到「无驱动」状态**
-- **它是第三方路线**：没有原生 Wi-Fi 菜单、没有 AirDrop / Continuity、不支持 802.11ax
+- **它是第三方路线**：**没有 AirDrop / Continuity（AWDL 未实现）**、不支持 802.11ax、不支持 WPA3-only
   ⇒ **要这些功能就换卡**（Broadcom / Intel），见 §6 决策树
-- ★ 装上后 **`en0` 归属可能变化**（它是以太网式接口）⇒ 参考 **`network-en0-order.md`**
+  （★ 原生 Wi-Fi 菜单 **v1.3.0 起有了**，别再按「第三方一定没有菜单」下判断，见 §4.4.1）
+- ★ 装上后 **`en0` 归属可能变化**（`SimpleMtkWlan` 是以太网式接口）⇒ 参考 **`network-en0-order.md`**
+  （`AirportMtkWlan` 走原生 Wi-Fi 栈，不会抢 `en0`）
+
+### 4.9 ★★ 注入失败怎么读日志（通用，不限 MediaTek）
+
+`Kernel → Add` 里配了却不起作用，先看 OpenCore 引导日志里的这一行：
+
+```
+OC: Prelinked injection AirportMtkWlan.kext (RZ616_______) - Invalid Parameter
+OC: Prelinked injection AirportMtkWlan.kext v1.5.0
+```
+
+**格式来自源码** `Library/OcMainLib/OpenCoreKernel.c:658-666`：
+
+```c
+"OC: %a%a injection %a (%a) - %r\n",
+PRINT_KERNEL_CACHE_TYPE (CacheType),  // "Prelinked" / "Cacheless" / "Mkext" / "Kernel"
+IsForced ? " force" : "",
+BundlePath,                           // → 实际 kext 目录名
+Comment,                              // → ★ config 里 `Kernel → Add → Comment` 字段
+Status                                // → 失败原因
+```
+
+★★ **括号里那个 `(RZ616_______)` 是你在 config 里填的 `Comment`**（定长字段未清零，补 `_`），
+**不是 kext 标识、不是版本**。看到它就说明 **OC 读到了条目**，问题在注入本身，不在路径。
+
+**`Invalid Parameter` 的三个真实来源**（grep 源码逐一确认，不是猜）：
+
+| 来源 | 含义 | 怎么查 |
+|---|---|---|
+| `CachelessContext.c:872 / 881` | `XmlDocumentParse` 失败，或 plist 顶层不是 dict ⇒ **Info.plist 不是合法 XML** | `file …/Contents/Info.plist` 必须是 `XML 1.0 … UTF-8` |
+| `CachelessContext.c:916/936/946/960` | `OSBundleLibraries` 不是 dict、`CFBundleVersion` 不是字符串 | `plutil -lint …/Contents/Info.plist` |
+| `KextPatcher.c:166` | `OCAK: … has unsupported mach-o` ⇒ **可执行文件不是合法 Mach-O** | `file …/Contents/MacOS/<名字>` |
+
+★ **注意区分**：`Not Found` = 文件缺失（路径/大小写/多套一层目录）；`Invalid Parameter` = **读到了但解析不了**。
+
+**别忽略的第二个雷**：日志里如果同时出现别的 `Airport*.kext` 也在注入
+（如 `AirportItlwm`、`AirportBrcmNIC`），说明**两套 Wi-Fi 驱动都开着** —— 匹配同一块卡，
+**必然有一个要失败**，先把不相干的那个 `Enabled=false`。
+
+★★★ **`ESP` 上的 0 字节陷阱**：FAT 写满时 `cp` 会报 `short write` 并留下 **0 字节文件**，
+`ls` 看不出来 ⇒ 注入照样报错。**必须** `find /Volumes/EFI/EFI/OC/Kexts -size 0` 查一遍。
 
 ## 5. 支线：USB 网卡 ≠ 主板上的 PCIe 卡
 
@@ -539,16 +655,21 @@ xcodebuild -project SimpleMtkWlan.xcodeproj -scheme SimpleMtkWlan \
 └─ 要 Wi-Fi
    ├─ macOS 26+ 且芯片在 7922 / 7923 / 7932 里 ─► ★ 先试原生（路线 ①）
    │
-   ├─ 要「原生 Wi-Fi 菜单 / AirDrop / Continuity / Wi-Fi 6(HE)」
-   │   └─► ✗ 第三方路线给不了（§4.1）⇒ 换卡：
+   ├─ 要「AirDrop / Continuity / Wi-Fi 6(HE)」
+   │   └─► ✗ 第三方路线给不了（AWDL 未实现、HE 未支持）⇒ 换卡：
    │        Broadcom（原生，broadcom-wifi.md）或 Intel + AirportItlwm（intel-wifi.md）
+   │
+   ├─ 要「原生 Wi-Fi 菜单」但不想动系统卷（macOS 26）
+   │   └─► ★ 路线 ④：`AirportMtkWlan`（§4.4.1）—— 原生接口，需 `DisableIoMapper=true`
+   │        ★ 0616(RZ616) 在 v1.5.0 匹配列表里【plist 实证】，但 Tahoe+0616 无公开实测
    │
    └─ 接受「以太网式接口 + 菜单栏客户端」，只要能上网
        ├─ MT7921 / MT7921K(RZ608) ─► ★ 路线 ③：flxxxxddd/SimpleMtkWlan release（§4）
        │                               实测 5 GHz VHT80 30–50 Mbit/s、开机自动加入
-       └─ MT7922 ─► 先试原生；原生不行才上 ③（fork 在 Tahoe 上只有 legacy 20 MHz）
+       └─ MT7922（7922 / 0616）─► 先试原生；原生不行才上 ③（fork 在 Tahoe 上只有 legacy 20 MHz）
                     ★ 先确认卡没被 SSDT-Disable_Network 藏起来（§4.4 第 3 步）
                     ★ 必装 SimpleMTK 客户端；测速时把它的菜单关掉
+                    ★ 注入报错先读 §4.9（`Invalid Parameter` 不等于路径错）
 ```
 ## 7. 排错
 
@@ -571,11 +692,13 @@ xcodebuild -project SimpleMtkWlan.xcodeproj -scheme SimpleMtkWlan \
 | **原生路线**：满屏 `wlanCfgSet ... no empty entry` | 缺 `wifi.cfg` —— **不致命**（观察项），但只补固件缺它仍可能收不了场 |
 | **原生路线**：device-id 伪装后仍不匹配 | ★ 三个都要查：① 有没有被 `SSDT-Disable_Network` 藏掉（`vendor-id` 变 `ffffffff`）② `device-id` 值是小端 base64（`0x7922 → InkAAA==`）③ **PXSX 下还要补 DEXT 相关属性**（§1.5） |
 | 装了蓝牙但另一套 BT 固件加载器也在 | 移除冲突项（同一条纪律见 `intel-wifi.md` §5「换网卡后要清理」） |
+| 引导日志 `OC: … injection X.kext (…) - Invalid Parameter` | ★★ 见 **§4.9**：括号里是 `Comment` 不是标识；`Invalid Parameter` = 读到了但解析不了（plist 非 XML / Mach-O 非法），**不是路径错**（那是 `Not Found`）；同时排除「两套 Wi-Fi 驱动都开着」与 `find … -size 0` |
+| `AirportMtkWlan` 装了但菜单里没 Wi-Fi | ① 两个 kext 是否都开着 ② OCLP 无线补丁 / `IOSkywalkFamily` 被 block ③ `DisableIoMapper` ④ 构建与系统版本是否匹配（§4.4.1） |
 
 ## 8. 安全提示与边界
 
 - 三个 kext 都**非 Apple 签名** ⇒ 需要 `SecureBootModel=Disabled`，SIP 视情况放宽；**只在确实要用这张卡时这么做**
-- `SimpleMtkWlan` 是 **GPLv2 的实验性项目**；`flxxxxddd` 的 fork **有 CI 构建的 release**（v1.1.0 / v1.2.0），
+- `SimpleMtkWlan` 是 **GPLv2 的实验性项目**；`flxxxxddd` 的 fork **有 CI 构建的 release**（v1.1.0 → **v1.5.0**），
   但**上游主线仍是 bring-up 状态、没有 release** ⇒ **第三方路线认准 fork 的 release**（§2 / §4）。
   从源码构建前先看清 `CREDITS.md` 与固件再分发条款（固件按 MediaTek 固件许可，同 linux-firmware）
 - ★ **fork 的 issue 是关的** ⇒ 反馈/求助回上游 `laobamac/SimpleMtkWlan`；fork 默认分支是 **`mt7921-fixes`**
@@ -586,4 +709,11 @@ xcodebuild -project SimpleMtkWlan.xcodeproj -scheme SimpleMtkWlan \
 - **本 reference 是通用流程**；本机（Z690）用的是 Broadcom `BCM943602CDP`，**没有 MT7922**。
   - **§0.1 的原生路线事实（两个 dext、`IOPCIMatch`、自带固件、`bluetoothd` 字符串）是在本机 macOS 26.7.1 上实测读出的** —— 这部分是硬证据
   - **§1.5 的「社区做法」与 §3/§4 的第三方路线**未在本机复现（没有对应硬件）—— 按 §0.3 / §1 先确认芯片与形态，再逐步验证
-  - **§4 的能力/限制/排错全部来自 fork 的 README 与 release 说明**（2026-10-13 的 v1.2.0），**不是本机实测** ⇒ 用前先看一眼仓库有没有更新
+  - **§4 的能力/限制/排错全部来自 fork 的 README 与 release 说明**（**2026-10-18 的 v1.5.0**），**不是本机实测** ⇒ 用前先看一眼仓库有没有更新
+  - ★★ **2026-10-22 追加的三条，证据层级要分清**：
+    1. **【plist 实证】** `AirportMtkWlan` v1.5.0 的 `IOPCIPrimaryMatch` = `0x796114c3 0x060814c3 0x792214c3 0x061614c3`
+       —— 拆 release 包读出来的，**`0616` 确实在列表里**；
+    2. **【上游 README 声明】** v1.3.0+ 的 `AirportMtkWlan` 在 Tahoe 上是真原生接口、需 `DisableIoMapper`、
+       不能与 OCLP 无线补丁共存 —— **未在本机复现**；
+    3. **【他人实测·未复现】** `0616` 的原生菜单只有 **Sequoia 15.8.1 + `pengubow` fork（自带 HAL）** 一条记录；
+       **`Tahoe + 0616` 没有公开实测** ⇒ 只能当「匹配规则支持」，不能当「已验证能用」

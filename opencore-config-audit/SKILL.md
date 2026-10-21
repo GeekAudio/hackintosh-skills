@@ -2,7 +2,7 @@
 name: opencore-config-audit
 description: 审查、修改与维护黑苹果 OpenCore（OpenCorePkg）EFI：BIOS/UEFI 设置审查、config.plist 逐键对照官方文档并用 ocvalidate 校验、ACPI/SSDT 巡检、kext 精简与更新判断、引导与内核日志取证、装不上或进不去系统的分层 debug、启动耗时分析、系统大版本升级（15→26 的版本分流）、磁盘屏蔽、从零生成基础 EFI、换机型与三码。硬件侧覆盖 NVIDIA 独显、Intel / MediaTek / 博通无线网卡、有线网卡、板载声卡 AppleALC、HiDPI、Intel 睿频与小核、内存定制、AMFI/TCC 权限修复、Gatekeeper、AirDrop / 接力、OpenCanopy 主题。触发场景：开机卡 EB、卡 ExitBootServices、卡代码、循环重启、黑屏、启动项丢失、选择器不显示、只有 HDMI 有声音、板载声卡没声音、AppleHDA 装不回来、layout-id 填多少、麦克风没权限、隐私列表里没有这个软件、双击 App 打不开、AirDrop 用不了、隔空投送找不到设备、接力不工作、Wi-Fi 连不上、网卡驱动、蓝牙不可用、睿频上不去、CPU 被限频、小核要不要关、关于本机 CPU 名不对、内存显示不对、显示不清晰、改机型、三码、序列号、ROM、iMessage 登录不了、iasl 怎么装、找不到工具、缺工具、ocvalidate 版本不对、macserial 在哪、没有 brew。内置「改 ESP 的安全流程」（备份 → 语义 diff → lint → sha 校验 → 镜像/存档 → 卸载重挂复验）。用户问「这个技能怎么用 / 使用说明 / 有哪些能力 / 能干什么」时也适用（此时输出技能目录下的 USAGE.md，不要输出内部流程）。
 description_en: Audit, edit and maintain a hackintosh OpenCore (OpenCorePkg) EFI configuration — BIOS/UEFI firmware settings, per-key verification of config.plist against the official docs plus ocvalidate, ACPI/SSDT inspection, kext trimming and update decisions, boot and kernel log forensics, layered debug for installs that fail or never reach the desktop, boot-time analysis, major OS upgrades (15 → 26 with MinKernel/MaxKernel routing), disk masking, generating a first EFI from Windows, SMBIOS model change and serials. Hardware coverage — NVIDIA GPUs, Intel / MediaTek / Broadcom WiFi, Ethernet, onboard audio via AppleALC, HiDPI, Intel Turbo and E-cores, memory injection, AMFI/TCC permission repair, Gatekeeper, AirDrop / Handoff, OpenCanopy themes. Triggers — stuck at EB, stuck at ExitBootServices, boot loop, black screen, lost boot entry, picker not showing, audio only over HDMI, no onboard audio, AppleHDA missing on macOS 26, which layout-id to use, app has no microphone permission, app missing from Privacy list, app won't open on double-click, AirDrop not working, Handoff not working, WiFi not connecting, network driver, Bluetooth unavailable, Turbo stuck low, CPU frequency capped, should I disable E-cores, wrong CPU name in About This Mac, wrong memory display, blurry display, change SMBIOS model, serials, ROM, iMessage sign-in fails, how to install iasl, missing tools, ocvalidate version mismatch. Includes the safe ESP editing flow (backup → semantic diff → lint → sha check → mirror/archive → remount and re-verify). Also applies when the user asks how to use this skill, what it can do, or for usage instructions — in that case output USAGE.md from the skill directory instead of internal workflow details.
-version: 0.39.0
+version: 0.40.0
 agent_created: true
 ---
 
@@ -279,14 +279,17 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 - **Intel 无线网卡** ⇒ `references/intel-wifi.md`：`AirportItlwm` vs `itlwm` 两种形态、
   ★「Sequoia 与 Tahoe 是两套 ABI 与产物 ⇒ 双系统共用配置必须用 `MinKernel`/`MaxKernel` 分开」、
   macOS 26 能力限制（**无 AWDL ⇒ 无 AirDrop**）、Intel 蓝牙要另装三件套、换卡后清理清单
-- **MediaTek 无线（MT7921 / MT7922 / RZ608 / RZ717）** ⇒ `references/mediatek-wifi.md`：
+- **MediaTek 无线（MT7921 / MT7922 / RZ608 / RZ616 / RZ717）** ⇒ `references/mediatek-wifi.md`：
   ★★★ **macOS 26 原生内置 Apple 的 MediaTek 驱动**（`AppleSunriseWLAN/Bluetooth.dext`）⇒ **首选「什么都不装」试一遍**；
   ★★ **26.7.1「自带」什么要按芯片分**（别信「升级就自带全部固件」）：蓝牙 MT7922/7923 已内置 ·
   MT7932/RZ717 的 Wi-Fi 已内置 · **MT7922/RZ616 的 Wi-Fi 仍缺**；
   ★★ 原生路线要动手 ⇒ 用 `GeekAudio/mediatek-sunrise-hackintosh`（含 `AppleSunrise.kext` —— **内核态 HAL，必需项**）；
-  ★★★ **三条硬限制**：以太网式接口无原生菜单 · **❌ AirDrop / Handoff / Continuity（设计上不可能）** · ❌ 802.11ax
-  ⇒ **要原生菜单 / AirDrop / Wi-Fi 6 就换卡，别硬啃**；
-  ★★ **最常踩的坑 = 卡被 `SSDT-Disable_Network_*.aml` 藏了**（`vendor-id=0xFFFF` ⇒ 驱动永远匹配不上）
+  ★★ **第三方路线（`flxxxxddd/SimpleMtkWlan`）v1.3.0 起有两种产物、二选一**：
+  `AirportMtkWlan`（**真原生 Wi-Fi 菜单**，Tahoe，需 `DisableIoMapper`）· `SimpleMtkWlan`（以太网式 `enX` + 客户端 App）；
+  ★★★ **共同硬限制**：**❌ AWDL ⇒ 无 AirDrop / Handoff / Continuity**（**驱动层没实现，不是接口形态导致**）· ❌ 802.11ax · ❌ WPA3-only；
+  ★★ **RZ616 有两个 ID**：`14c3:7922` 与 **`14c3:0616`**（`0616` 已在 v1.5.0 匹配列表，但 **Tahoe+0616 无公开实测**）；
+  ★★ **最常踩的坑 = 卡被 `SSDT-Disable_Network_*.aml` 藏了**（`vendor-id=0xFFFF` ⇒ 驱动永远匹配不上）；
+  ★★ 引导日志报 `injection … - Invalid Parameter` ⇒ 见该文件 §4.9（**括号里是 `Comment` 不是标识**，别按路径错去查）
 - **博通网卡（BCM943602CDP / BCM43602）** ⇒ `references/broadcom-wifi.md`：
   ★★ **必须按系统分路线** —— Sequoia 用 `IO80211FamilyLegacy`（`MaxKernel 24.99.99`）、
   Tahoe 用独立的 `AirPortBrcmNIC-Tahoe.kext`（`MinKernel 25.0.0`）⇒ **升 26 后不换会直接没 Wi-Fi**；
@@ -442,7 +445,7 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 - `references/nvidia-driver.md` —— NullMoth NVIDIA 驱动：适用范围、安装、必需 OC 设置、恢复、故障对照
 - `references/amfi-and-tcc.md` —— **AMFI ↔ TCC 冲突（App 拿不到权限）**：★ 现象三连（**第三条 = 隐私列表里没有条目**才是判据）· 根因（`amfi=0x80`）· **别的机器首选 `AMFIPass`**（本机不行，只能二选一）· ★★ **解法 `GeekAudio/tcc-helper`**（GUI + CLI、**自动授权从系统反推**、109 个服务、任意目标含裸可执行文件）· **要授权的是真正申请的 helper 而不是主 App** · `access` 表字段与 `csreq` magic `fade0c00` · **五个工程坑** · 诊断三分类 · 不持久 · **附录：Gatekeeper /「任何来源」/「无法验证开发者」（`sudo spctl --global-disable`，`--master-disable` 在 macOS 15+ 已过时；与 TCC 是两回事）**
 - `references/intel-wifi.md` —— Intel 无线网卡驱动（AirportItlwm / itlwm）：版本线、注入、蓝牙配套、排错
-- `references/mediatek-wifi.md` —— MediaTek 无线网卡（MT7921 / MT7922 / RZ608 / RZ717）：★★★ **macOS 26 原生 Sunrise 驱动**（`AppleSunriseWLAN/Bluetooth` dext + 自带固件 + PCIe 蓝牙 `14c3:792a`）· ★★★ **原生路线用 `GeekAudio/mediatek-sunrise-hackintosh`（MT7922 Sunrise Pack，含固件/HAL kext/免编译 device-id 伪装）** · **26.7.1 按芯片分的固件现状** · **`AppleSunrise.kext` = 内核态 HAL（必需）** · **日志判读表 / boot-args 表** · ★★ **第三方 Wi-Fi 用 `flxxxxddd/SimpleMtkWlan` fork（有 release，802.11n/ac 可用）** · **三条硬限制（无原生菜单 / 无 AirDrop / 无 HE）** · **SSDT 藏卡坑** · `mtklog.sh` 排错 · 三条路线决策树、芯片认型、第三方蓝牙 NVRAM 两坑
+- `references/mediatek-wifi.md` —— MediaTek 无线网卡（MT7921 / MT7922 / RZ608 / RZ616 / RZ717）：★★★ **macOS 26 原生 Sunrise 驱动**（`AppleSunriseWLAN/Bluetooth` dext + 自带固件 + PCIe 蓝牙 `14c3:792a`）· ★★★ **原生路线用 `GeekAudio/mediatek-sunrise-hackintosh`（MT7922 Sunrise Pack，含固件/HAL kext/免编译 device-id 伪装）** · **26.7.1 按芯片分的固件现状** · **`AppleSunrise.kext` = 内核态 HAL（必需）** · **日志判读表 / boot-args 表** · ★★ **第三方 Wi-Fi 用 `flxxxxddd/SimpleMtkWlan` fork（有 release，802.11n/ac 可用）** · ★★ **v1.3.0 起两个产物二选一**（`AirportMtkWlan` = 真原生菜单 / `SimpleMtkWlan` = 以太网式）· **共同硬限制（AWDL 未实现 ⇒ 无 AirDrop · 无 HE · 无 WPA3-only）** · ★★ **RZ616 双 ID（`7922` / `0616`）** · ★★ **注入报 `Invalid Parameter` 怎么读（§4.9：括号里是 `Comment`，不是标识）** · **SSDT 藏卡坑** · `mtklog.sh` 排错 · 三条路线决策树、芯片认型、第三方蓝牙 NVRAM 两坑
 - `references/applealc-custom.md` —— 板载声卡（AppleALC）：★★★ **macOS 26 的 `AppleHDA` 恢复（`perez987` 指南：USB 声卡 / **KDK + `MyKextInstaller`** / OCLP / VoodooHDA 方案对照 + 要求与验证）** · ★★ **定制走 `5T33Z0/AppleALC-Guides`**（14 章流程 · 17 个现成 dump · **`alc-verb` 运行时调音** · `MuteGPIO` 表 · **精简到 90 KB** · 回滚工作流） · ★★★ **硬约束：写 layout 前必须已有 Windows 侧取数**（用户能提供则直接进定制流程，不能才让他去取；**GUI 走 HDAU，脚本走 `HDAudDev.dll` 直连** —— 免管理员、可脚本化、产出 Linux 风格 `codec_dump.txt/.json`；dump 完用 **Windows 端点反证插孔映射**）· **AppleHDA 三条实测根因**（PathMap 同组多路径只留最后一条 / 插孔型 Mic 引脚建不出设备 / 插孔检测可能整体是死的）· **不用耳朵验证**（播放中读 `0xF07`/`0xF06` 寄存器）· Pin Config Default 字段读法 · 先搜前人经验、按 codec 定制、本地构建、测试、提 PR
 - `references/broadcom-wifi.md` —— 博通网卡（BCM43602/BCM20703）：**按 Sequoia/Tahoe 分路线**、OCLP root patch、验证判据
 - `references/ethernet-drivers.md` —— **有线网卡驱动方案**（Intel I225/I226 · I210/I211/I350 · Realtek RTL8125/8126）：★★★ **两条路线选路**（A 原版 kext 仿冒 = I210 kext + `device-id` + `e1000=0` 三件套，含 dext 抢设备的机理与 kext 来源/验签名；B 第三方驱动对照）、装法、判据、回滚
