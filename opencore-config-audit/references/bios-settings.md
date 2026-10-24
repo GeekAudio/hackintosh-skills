@@ -140,7 +140,7 @@
 
 | 设置 | 什么时候开 | 什么时候关 |
 |---|---|---|
-| **Re-Size BAR Support** | 你的驱动/卡需要大 BAR（本机 NVIDIA 驱动就是），且 `ResizeGpuBars` 已配好 | 驱动版本或卡不支持大 BAR 时；出现黑屏/起不来时先试关 |
+| **Re-Size BAR Support** | 你的驱动/卡需要大 BAR（如 NVIDIA 驱动），且 `ResizeGpuBars` 已配好 | 驱动版本或卡不支持大 BAR 时；出现黑屏/起不来时先试关 |
 | **XMP / DOCP / EXPO** | 内存超频档，**稳定就开着** | 出现内存相关不稳定、睡眠异常时关掉回 JEDEC |
 | **Internal Graphics / iGPU** | 核显有驱动、要用（如 `WhateverGreen` + 核显硬解） | 核显无驱动 ⇒ **关掉更干净**（或留开但加 `-wegnoigpu` 藏起来） |
 | **Thunderbolt** | 装好系统、TB 设备配置好之后 | 安装期（见 §3.1） |
@@ -244,7 +244,7 @@ powershell -ExecutionPolicy Bypass -File .\bios-audit.ps1 -OutFile C:\bios-audit
 | 项 | 脚本能给什么 | 还要看什么 |
 |---|---|---|
 | Above 4G Decoding | 显卡 PCI 硬件 ID + 已分配的大内存资源线索 | 用 **GPU-Z** 看 "Above 4G Decoding" / "Resizable BAR"；或 NVIDIA 控制面板 → 系统信息 |
-| Re-Size BAR | 同上 | 同上；本机以 `nvrm-bars` / 驱动日志为准 |
+| Re-Size BAR | 同上 | 同上；以 `nvrm-bars` / 驱动日志为准 |
 | Execute Disable Bit | `DataExecutionPrevention_Available` | 为 True 一般说明 XD 开着（推断，非直接读） |
 | CSM | 只能看「当前是否 UEFI 启动」 | CSM 状态**无法从 Windows 直读** ⇒ 进 BIOS 看 |
 | Fast Boot | 无 | 进 BIOS 看（Fast Boot / Ultra Fast Boot） |
@@ -288,7 +288,7 @@ powershell -ExecutionPolicy Bypass -File .\bios-audit.ps1 -OutFile C:\bios-audit
 [ ] OS Type = Windows 8.1/10 UEFI Mode（或 Other OS）
 [ ] SATA Mode = AHCI
 [ ] DVMT Pre-Allocated ≥ 64MB（有核显时）
-[ ] Intel Speed Shift Technology                ← ★ 官方没写，但本机硬前提
+[ ] Intel Speed Shift Technology                ← ★ 官方没写，但是硬前提
 [ ] Resizable BAR（按驱动需要，配 ResizeGpuBars）
 
 【看情况，别一律动】

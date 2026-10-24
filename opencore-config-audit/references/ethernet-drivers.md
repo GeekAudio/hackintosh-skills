@@ -15,9 +15,9 @@ macOS **原生不认**的板载 / 扩展有线网卡，只有两条路：
 | **A. 原版 kext 仿冒** | 用 Apple 原版 I210 kext + `device-id` 伪造 + `e1000=0` | **最多千兆**；寄存器代际不匹配，非官方支持 | 想要 **Apple 原版、原生网络栈、零第三方 kext** |
 | **B. 第三方驱动** | `SimpleVGBE` / `SimpleEthernet` / `SimpleRTK5` 等 | 非 Apple 签名；作者停更就没人修 | 要 **2.5G 速率**，或原版路线跑不起来 |
 
-> ★★ **本机（ASUS Z690）板载是 Intel `I225-V`** —— 原生不认。
-> **现行方案 = 路线 A**（原版 I210 kext 仿冒，`en0` 已恢复、跑在 1000baseT）。
-> 路线 B 的 `AppleIGC.kext` 曾用过，因 panic 已禁用（见 §2 与 `machine-facts.md`）。
+> ★★ **两条路没有普适优劣，按需求选**：要「Apple 原版 + 零第三方 kext」选 A（**必然降到千兆**）；
+> 要 2.5G 或 A 跑不起来选 B。**别默认 A 更好** —— 它是拿速率换纯度。
+> ★ 本机（I225-V）当前选的是 A，选择理由与实测结果 ⇒ `machine-facts.md`。
 > ★ **另有一条 ACPI 路线**：`5T33Z0/OC-Little-Translated` 的 **`Intel_I225-V_Fix_(SSDT-I225V)`**
 > （用 SSDT 修，而不是装 kext）—— 值得对照，见 `acpi-ssdt.md` §0.1。
 
@@ -61,8 +61,8 @@ macOS **原生不认**的板载 / 扩展有线网卡，只有两条路：
 |---|---|
 | **KDK（dortania/KdkSupportPkg）** | ❌ **只有 Ventura 13 及以后**，最老 tag `22A5295h`（13.0 beta 1），**没有 Monterey** |
 | Ventura 13.7.6 的 KDK（`22H625`，691 MB） | ❌ 实测 `pkgutil --payload-files` 里 Ethernet 只剩 Broadcom / Aquantia / Mellanox / USB / Vmxnet3，**无 I210** |
-| macOS 26 本机 `/System/Library/Extensions/` | ❌ 已移除 |
-| macOS 26 本机 `/Library/Extensions/` | ❌ 无 |
+| macOS 26（实测）`/System/Library/Extensions/` | ❌ 已移除 |
+| macOS 26（实测）`/Library/Extensions/` | ❌ 无 |
 
 ⇒ 只能从 **Monterey 12 的安装镜像 / 真机** 提取，或使用别人从 Monterey 提取的副本。
 
@@ -100,8 +100,8 @@ macOS 26 上 `IONetworkingFamily` 是 **3.4**，全部满足。
 
 ### 1.3 三件套改动
 
-**前置**：备份 `config.plist`；**同一台机器上原来的第三方有线驱动（本机是 `AppleIGC`）必须同时 `Enabled=false`**
-—— 两套驱动会抢同一块卡（见 §5 纪律）。
+**前置**：备份 `config.plist`；**这台机器上原来在用的第三方有线驱动必须同时 `Enabled=false`**
+（`AppleIGC` / `SimpleVGBE` / 你实际装的那个）—— 两套驱动会抢同一块卡（见 §5 纪律）。
 
 #### ① boot-args 末尾追加 `e1000=0`
 

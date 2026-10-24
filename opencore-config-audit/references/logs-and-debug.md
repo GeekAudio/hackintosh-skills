@@ -60,7 +60,7 @@ nvram 4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102:boot-log | awk '{gsub(/%0d%0a%00/,"")
 | `OCABC: ALRBL 1 RTDFRG 1 … WRUNPROT 1 CLRTS 0` | 各 Booter quirk 的实际生效值（ALRBL=AllowRelocationBlock、RTDFRG=AvoidRuntimeDefrag、SMSLIDE=EnableSafeModeSlide、WRUNPROT=EnableWriteUnprotector…） |
 | `OCABC: … CSLIDE 1 MSLIDE 0 … RBMAP 1 VMAP 1 RTPERMS 1 ARBAR -1` | ProvideCustomSlide / ProvideMaxSlide / RebuildAppleMemoryMap / SetupVirtualMap / SyncRuntimePermissions / ResizeAppleGpuBars |
 | `OCA: Found N ACPI tables` + 每张表的 `Detected table SIG (OEM ID) … at index N` | 固件 ACPI 全清单；OEM ID 是 8 字节十六进制（小端 ASCII） |
-| `OCA: Deleting table … with <ID> ID at index N` | `ACPI>Delete` 是否命中（本机 `xh_adls3` 就是靠这个确认的） |
+| `OCA: Deleting table … with <ID> ID at index N` | `ACPI>Delete` 是否命中（确认「删 OEM SSDT」有没有生效就靠这条） |
 | `OCA: Inserted table SSDT (OEM …) of N bytes into ACPI at index M` | `ACPI>Add` 的注入结果（能核对表身份与大小） |
 | `OCJS: APFS driver <ver>/<date> found …, required >= X/Y, allow|refuse` | `UEFI>APFS>MinDate/MinVersion` 的门槛判定 —— 改成非 `-1` 后**必须**看这一行 |
 | `OCB: Registering entry <名字> [<类型>]` | 选择器里**实际有哪些启动项**（判断"屏蔽"效果的唯一可靠依据） |
@@ -96,5 +96,5 @@ osascript -e 'do shell script "/bin/bash <脚本>" with administrator privileges
 ## 7. 常见「误判」提醒
 
 - 日志里 `Not Found` 满天飞 ≠ 有问题：NVRAM 变量、APFS preboot 分区、OpenCanopy 可选图标都会打这个。
-- 「OC 日志里某张表没出现」要先确认 `Target` 是否含 `0x40`（本机曾出现「今天几次开机都没生成日志」的怪象）。
+- 「OC 日志里某张表没出现」要先确认 `Target` 是否含 `0x40`（否则整份日志都不会生成）。
 - 看到 `X: no driver attached` 之类的驱动侧消息，先分清是 **OC 阶段** 还是 **kext 阶段**（后者在 `log show` 里，带 `(KextName)` 前缀）。

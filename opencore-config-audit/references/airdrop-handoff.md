@@ -71,7 +71,7 @@ AirDrop 的设备发现与点对点传输走 **Wi-Fi + 蓝牙**，macOS 上的�
 > **Note**: `en0` can be either Wifi, ethernet or even Thunderbolt. **The type doesn't matter**,
 > just that it's present and marked as built-in.
 
-⇒ **`en0` 是以太网完全合规**（本机 `en0` = Intel I225-V，Wi-Fi 是 `en1`）⇒ **不影响 AirDrop**。
+⇒ **`en0` 是以太网完全合规**（例：`en0` = 有线网卡，Wi-Fi 排在 `en1`）⇒ **不影响 AirDrop**。
 
 ## 2. 排查顺序（按权威依赖链，从便宜到贵）
 

@@ -169,7 +169,7 @@ strings -a /System/Volumes/Data/Library/KernelCollections/AuxiliaryKernelExtensi
 | Linux | `cat /proc/asound/card0/codec#0`（**最完整的 dump 来源**） |
 | Windows | 设备管理器 → 声音控制器 → 硬件 ID；或 AIDA64 的音频设备页 |
 | macOS | `ioreg -l \| grep -i IOHDACodecVendorID`、`ioreg -r -c IOHDACodecDevice` |
-| 找设备路径 | `gfxutil -f HDEF`（**注意本机音频设备可能叫 `HDAS`**，那就 `gfxutil -f HDAS`） |
+| 找设备路径 | `gfxutil -f HDEF`（**注意设备名可能叫 `HDAS` 而不是 `HDEF`**，那就 `gfxutil -f HDAS`） |
 
 要记下来的四项：**codec 名**（如 `ALC897`）、**`IOHDACodecRevisionID`**、**主板型号**、**目标 macOS 版本**。
 
@@ -287,7 +287,7 @@ strings -a /System/Volumes/Data/Library/KernelCollections/AuxiliaryKernelExtensi
 **前置一步：确认 codec 已启用** —— codec 被禁用时枚举不到任何接口，脚本会直接提示「没有枚举到任何接口」：
 
 ```bat
-:: ProblemCode 22 = 已禁用（InstanceId 换成本机实际值）
+:: ProblemCode 22 = 已禁用（InstanceId 换成实际值）
 pnputil /enum-devices /instanceid "HDAUDIO\FUNC_01&VEN_10EC&DEV_0897&SUBSYS_…&REV_…\4&…&0&0001"
 :: 已禁用则启用（此操作可逆）
 pnputil /enable-device "<上面的 InstanceId>"      :: 需要管理员，或在设备管理器里右键「启用设备」
@@ -727,7 +727,7 @@ xcodebuild -jobs 1 -configuration Release -arch x86_64
 | 「改了 `layoutXX.xml` / `PlatformsXX.xml`」 | 会重新生成 `kern_resources.cpp` ⇒ **二进制 sha 会变**；同时 `*.xml.zlib` 是构建时从 `.xml` 重新生成的 | 改完 XML，解压 `.zlib` 查关键字，确认改动真在里面：<br>`python3 -c "import zlib;d=zlib.decompress(open('Resources/ALC897/layout14.xml.zlib','rb').read());print(d.count(b'ExtMic'), d.count(b'<string>Mic</string>'))"` |
 | 「`.zlib` / `.md5` 是不是要提交」 | 它们是构建产物且**被 gitignore** | **PR 只需 `.xml` + 两个 `Info.plist` + `Changelog`**（§6） |
 
-## 5. 装到本机测试
+## 5. 装到目标机测试
 
 1. 把编出来的 `AppleALC.kext` 放进 `EFI/OC/Kexts/`，在 `Kernel → Add` 里加条目
 2. ★ **必须让 AppleALC 比 AppleHDA 先加载**（官方原话：*"remember to load AppleALC earlier than AppleHDA"*）；
@@ -893,7 +893,7 @@ Amp：0x02–0x05 DAC out=0x00025757 · 0x07–0x09 ADC in=0x80023F17 · 0x0b Mi
      0x0c–0x0f/0x22/0x23/0x26 mute=1 · 0x18–0x1b Pin in=0x00270300（nsteps=3 ⇒ 麦克风 boost 0–3 档）
 ```
 
-**任何时候都要守住的三条**：① 本机音频设备叫 **`HDAS`** —— 查路径用 `gfxutil -f HDAS`，
+**任何时候都要守住的三条**：① 先确认音频设备名（不少板子叫 **`HDAS`** 而不是 `HDEF`）—— 查路径用 `gfxutil -f <设备名>`，
 **官方明确禁止把它改名成 `HDEF`**（*"Do not use renaming HDAS to HDEF, B0D3 to HDAU, etc."*）；
 ② 加/删音频 kext 属于改 ESP ⇒ 走安全流程（备份 → 改 → 校验 → `sync`/卸载重挂 → 复验 sha）；
 ③ 一次只改一个变量（`alcid` / 一个引脚 / 一个分组），否则无法归因。

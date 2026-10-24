@@ -2,7 +2,7 @@
 name: opencore-config-audit
 description: 审查、修改与维护黑苹果 OpenCore（OpenCorePkg）EFI：BIOS/UEFI 设置审查、config.plist 逐键对照官方文档并用 ocvalidate 校验、ACPI/SSDT 巡检、kext 精简与更新判断、引导与内核日志取证、装不上或进不去系统的分层 debug、启动耗时分析、系统大版本升级（15→26 的版本分流）、磁盘屏蔽、从零生成基础 EFI、换机型与三码。硬件侧覆盖 NVIDIA 独显、Intel / MediaTek / 博通无线网卡、有线网卡、板载声卡 AppleALC、HiDPI、Intel 睿频与小核、内存定制、AMFI/TCC 权限修复、Gatekeeper、AirDrop / 接力、OpenCanopy 主题。触发场景：开机卡 EB、卡 ExitBootServices、卡代码、循环重启、黑屏、启动项丢失、选择器不显示、只有 HDMI 有声音、板载声卡没声音、AppleHDA 装不回来、layout-id 填多少、麦克风没权限、隐私列表里没有这个软件、双击 App 打不开、AirDrop 用不了、隔空投送找不到设备、接力不工作、Wi-Fi 连不上、网卡驱动、蓝牙不可用、睿频上不去、CPU 被限频、小核要不要关、关于本机 CPU 名不对、内存显示不对、显示不清晰、改机型、三码、序列号、ROM、iMessage 登录不了、iasl 怎么装、找不到工具、缺工具、ocvalidate 版本不对、macserial 在哪、没有 brew。内置「改 ESP 的安全流程」（备份 → 语义 diff → lint → sha 校验 → 镜像/存档 → 卸载重挂复验）。用户问「这个技能怎么用 / 使用说明 / 有哪些能力 / 能干什么」时也适用（此时输出技能目录下的 USAGE.md，不要输出内部流程）。
 description_en: Audit, edit and maintain a hackintosh OpenCore (OpenCorePkg) EFI configuration — BIOS/UEFI firmware settings, per-key verification of config.plist against the official docs plus ocvalidate, ACPI/SSDT inspection, kext trimming and update decisions, boot and kernel log forensics, layered debug for installs that fail or never reach the desktop, boot-time analysis, major OS upgrades (15 → 26 with MinKernel/MaxKernel routing), disk masking, generating a first EFI from Windows, SMBIOS model change and serials. Hardware coverage — NVIDIA GPUs, Intel / MediaTek / Broadcom WiFi, Ethernet, onboard audio via AppleALC, HiDPI, Intel Turbo and E-cores, memory injection, AMFI/TCC permission repair, Gatekeeper, AirDrop / Handoff, OpenCanopy themes. Triggers — stuck at EB, stuck at ExitBootServices, boot loop, black screen, lost boot entry, picker not showing, audio only over HDMI, no onboard audio, AppleHDA missing on macOS 26, which layout-id to use, app has no microphone permission, app missing from Privacy list, app won't open on double-click, AirDrop not working, Handoff not working, WiFi not connecting, network driver, Bluetooth unavailable, Turbo stuck low, CPU frequency capped, should I disable E-cores, wrong CPU name in About This Mac, wrong memory display, blurry display, change SMBIOS model, serials, ROM, iMessage sign-in fails, how to install iasl, missing tools, ocvalidate version mismatch. Includes the safe ESP editing flow (backup → semantic diff → lint → sha check → mirror/archive → remount and re-verify). Also applies when the user asks how to use this skill, what it can do, or for usage instructions — in that case output USAGE.md from the skill directory instead of internal workflow details.
-version: 0.41.0
+version: 0.42.0
 agent_created: true
 ---
 
@@ -52,7 +52,7 @@ agent_created: true
 5. **一次只改一项**（用户明确要求批量时除外，但报告里要逐条列出、逐条给依据）。
 6. **移走 kext 必须同时 `Enabled=false` 或删掉对应条目**，否则会因找不到文件而报错。
 7. **会话被用户中断（turn aborted）会回滚工作区文件的改动** ⇒ 中断后先复查文件是否还在（报告、脚本、备份）。
-8. **查中文/多模式字符串用 Grep 工具（ripgrep），别用 Bash `grep`**。本机 Bash `grep` 对 `\|` 交替和中文给过**假阴性**（"文件里没有" 其实有）。
+8. **查中文/多模式字符串用 Grep 工具（ripgrep），别用 Bash `grep`**。Bash `grep` 对 `\|` 交替和中文给过**假阴性**（"文件里没有" 其实有）。
 9. **改 plist 优先 `plutil`**（保持 XML、改动最小）：`plutil -replace '<keypath>' -bool|-integer|-string|-json <v> <file>`；删数组元素 `plutil -remove 'Kernel.Add.15' <file>` 有效，多条时**从高索引往低删**。
 10. **每次改完跑官方 `ocvalidate`**，且必须与机器上的 OpenCore **同版本**（否则校验结论无效）。
 11. **ESP 分区永不屏蔽**（引导在它上面，且驱动安装 App 要靠它读写 config.plist）。
@@ -63,10 +63,12 @@ agent_created: true
 16. **升级系统时不许改机型** —— `PlatformInfo` 里任何 `SystemProductName` / `BoardProduct` / 三码都不动。**机型不在新版白名单里就加 boot-arg 绕过**（`-no_compat_check` 解决「能启动」+ `revpatch=sbvmm` 解决「能更新」，两个都要），**不是换机型**。真要换机型 ⇒ 走 **阶段 8** 的「换机型 / 三码」那一节（`references/smbios-and-serials.md`），那是**独立的一次操作**，别塞进升级那一次。
 17. **BIOS 层能关的开关，不要在 OpenCore 里用 quirk 兜底** —— 优先级：**BIOS 设置 > OpenCore quirk**。典型：关不掉 CFG Lock 才用 `AppleXcpmCfgLock`（官方原话 *"should be avoided whenever possible"*）；VT-d 则可**开着 + `DisableIoMapper=true`**（官方说这是首选，因为不妨碍其它系统用 VT-d）。★ 官方与 Dortania **都没写**的两项必须自己查：**VMD 必须关**（否则装系统看不到盘）、**Intel Speed Shift 必须开**（否则 `wrmsr(0x770,1)` #GP）。详见 `references/bios-settings.md`。
 18. **不要顺手改主题** —— 用户没要求换外观时，`PickerMode` / `PickerVariant` / `PickerAttributes` / `Resources` **一律不动**。要动就先跑 `scripts/oc-theme-check.sh`（**必需图标缺一个 OpenCanopy 直接不启动**），并留一份**能用的**图标集 + 逃生口（`PickerMode=Builtin`）—— **主题换坏了会看不到选择器，最坏进不了系统**。
-19. ★★★ **改机型之前，必须先把 SSDT 完善**（**本机是特例**）—— 本机（ASUS Z690）的 BIOS 有一张
-`OEM Table ID = xh_adls3` 的 SSDT；**不先处理掉它，换机型必失败**（10-12 连败 6 次，循环重启）。
+19. ★★★ **改机型之前，必须先把 SSDT 完善** —— 不少主板的 BIOS 会塞一张**厂商自己的 OEM SSDT**
+（`OEM Table ID` 带厂商特征，如 ASUS 的 `xh_adls3`）；board-id 一变，macOS 重新解析 ACPI 表，
+这张表在新机型下解析不过（`HS06 AE_NOT_FOUND`）⇒ **循环重启**。**不先处理掉它，换机型必失败。**
 ⇒ 顺序是「**先把 ACPI/SSDT 层做干净（在旧机型下验证通过）→ 再换 SMBIOS → 再重做 CPUFriend 数据**」，
-不是「换完再补」。★ **通用化**：换机型前先审一遍 ACPI（有没有厂商 OEM SSDT、有没有 `AE_NOT_FOUND`）。详见 `references/smbios-and-serials.md` §2。
+不是「换完再补」。★ **动手前先审一遍 ACPI**：有没有厂商 OEM SSDT、日志有没有 `AE_NOT_FOUND`。
+（案例与判据见 `references/smbios-and-serials.md` §2；本机那张表叫 `xh_adls3`，见 `machine-facts.md`。）
 20. ★★★ **换机型必须连三码一起换** —— **「关于本机」的机型名不是 SMBIOS 决定的，是序列号产品码决定的**
 （本机实测：机型已改成 `iMac20,1`，序列号还是 `MacPro7,1` 的码 ⇒ 仍显示 `Mac Pro (2019)`；
 清 `com.apple.SystemProfiler.plist` 也没用，它会按同一个码推导回旧值）。**只换机型不换码 = 显示名永远停在旧机型。**
@@ -79,6 +81,35 @@ agent_created: true
 **上游逐个 404**，但全是 Dortania 构建，且被厂商安装器 `nullmoth-setup.sh` 的 `kurl()` 表**固定 + 校验 SHA-256**）
 ⇒ **把它们「更新」成上游 release = 降级**（本机做过一次，已回滚）。★ 判据四条要一起看（上游 tag / 构建元数据 / 二进制哈希 / **厂商安装器**），
 **只有第 4 条能定性**；★ **厂商钉死的东西一律不动**；★ **「统一更新一遍」这个想法本身就是错的**。详见 `references/kext-and-oc-update.md`。
+
+## ★★ 写作规范：通用指南 vs 本机事实（**改 references 前必读**）
+
+**这个 skill 是给别人用的，不是某台机器的备忘录。** 所有 `references/*.md` 默认按「**任何人照着能做**」来写。
+
+**唯一放本机事实的地方是 `references/machine-facts.md`。** 其余文件里，「本机」只允许出现在三种位置：
+
+| 允许 | 形态 | 例 |
+|---|---|---|
+| ① **证据标注** | 明确写成「本机实测 ⇒ 作为证据」，读者知道这是**论据**不是**规则** | 「本机实测：`port-count` 25 而根端口 22 ⇒ 两者不是一回事」 |
+| ② **`示例` 小节** | 单独一节，标题带「示例 / 参考值，别当模板」，数值集中放 | `usb-port-mapping.md` §9 |
+| ③ **指针** | 只写「本机现状见 `machine-facts.md`」 | 「本机控制器与端口现状 ⇒ `machine-facts.md`」 |
+
+**禁止**（这是别人用不了的主因）：
+
+- ❌ 把本机结论写进**照做步骤**：「同一台机器上原来的第三方有线驱动（**本机是 `AppleIGC`**）必须同时禁用」
+  ⇒ 别人读到会以为自己也得禁 `AppleIGC`
+- ❌ 把本机型号写进**规则句**：「本机板载 I225-V ⇒ 必须走路线 A」
+  ⇒ 型号是变量，规则不该绑定某一型号
+- ❌ 把**本机环境限制**写成通用事实：「本机 `ps` / `top` 被策略禁用」「本机 `log show` 时间过滤失效」
+  ⇒ 别人环境正常，按这条做是白费功夫
+- ❌ 把**本机数值**当默认值给：端口号、`layout-id`、`device-id`、SMBIOS 三码、boot-args 组合
+  ⇒ 必须写成「按你的机器取，示例见 §x」
+
+**改法**：把「本机」换成「你的机器 / 目标机器」，本机具体值降级到括号里的「（本机为 X，见 `machine-facts.md`）」
+或移到「示例」小节。**判据**：删掉所有「本机」字样后，这段还对任何一台 OpenCore 机器成立吗？不成立就是写错了位置。
+
+★ **这条规则已被 `tools/doc-lint.sh` 的 `G1` 自动检查**：标题里出现「本机」（除「关于本机 / 实测 / 示例 /
+速记 / 案例」）、正文出现作者机器的绝对家目录路径，都会告警。改完 references 先跑一遍 lint 再提交。
 
 ## 工作流
 
@@ -172,7 +203,7 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 **「开机很慢」要单独走时间线分析** ⇒ `references/boot-timeline.md`：
 把启动拆成 **OC 段 / 内核驱动段 / 用户态段**三段分开量（`scripts/boot-timeline.sh` 总览、
 `scripts/find-boot-gap.sh` 精查停顿窗口），先定位「卡在哪一段」再决定查哪个日志。
-★ 本机 `log show` 的时间过滤整体失效（`--start/--end` 报时钟校正、`--last` 返回整个日志库）⇒ 一律改用**流式过滤**。
+★ 某些环境里 `log show` 的时间过滤会整体失效（`--start/--end` 报时钟校正、`--last` 返回整个日志库）⇒ 改用**流式过滤**（`log stream --predicate` 或先全量导出再筛）。
 
 ### 阶段 3.5 · 装不上 / 进不去系统 —— **分层 debug 流程**
 
@@ -200,7 +231,7 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 
 ### 阶段 5 · ACPI / SSDT 巡检
 
-用阶段 1 下到的官方 `Docs/AcpiSamples/` **逐条对照**本机实际设备，判定「还需要补哪个 SSDT」。
+用阶段 1 下到的官方 `Docs/AcpiSamples/` **逐条对照**你自己机器的实际设备，判定「还需要补哪个 SSDT」。
 对照表、设备存在性检查命令、SSDT 命名规范见 `references/acpi-ssdt.md`；
 ★ 要**改 / 编译** SSDT ⇒ 同文件 **§6 编译与验证**（`iasl` 三个动作 · 反编译报错是正常的 · 四项验证 · 报错对照）。
 ★ 只加官方 `Binaries/*.aml` 的话**不需要 `iasl`** —— 别为一个用不上的步骤去装工具。
@@ -211,7 +242,7 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 > 覆盖：ACPI 基础/**删表/改名** · 加/禁设备 · CPU 电源 · 显卡（含 **GPU-BAR**）· USB（含 **用 ACPI 做端口映射**）·
 > 睡眠唤醒 · 笔记本 · CMOS · **MMIO 白名单 / AppleVTD** · 雷雳 · **boot-args / Quirks 逐项解释** · kext 顺序 ·
 > **OCLP on Wintel** · 多系统 · 虚拟机 · **自己做 ALC Layout-ID** · 排错（SysReport / **Preboot** / spindump）。
-> ⇒ **按需求找哪一章的索引表**（含**本机 Z690 的落点**）见 `references/acpi-ssdt.md` §0。
+> ⇒ **按需求找哪一章的索引表**（含**落点标注**）见 `references/acpi-ssdt.md` §0。
 > ★ 诚实提醒：英译是 AI + 人工校对、**译者不懂中文** ⇒ 关键结论仍回官方文档核。
 
 ### 阶段 6 · 磁盘屏蔽（macOS 侧）
@@ -272,7 +303,7 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
   必需 OC 设置表、恢复路径、Send logs 上报纪律
 - **AMFI ↔ TCC（App 拿不到麦克风 / 摄像头 / 屏幕录制）** ⇒ `references/amfi-and-tcc.md`：
   ★★ 判据 = 报没权限 + 不弹窗 + **隐私列表里压根没这个 App 的条目**（第三条才是判据）；
-  根因 = boot-args `amfi=0x80`；★ 别的机器首选 `AMFIPass.kext`，**本机不行**（NullMoth 要求关 AMFI）
+  根因 = boot-args `amfi=0x80`；★ 首选 `AMFIPass.kext`；**若你在跑 NullMoth 则不行**（它要求关 AMFI）
   ⇒ 只能二选一、走注入 TCC 条目；★★ 解法 `GeekAudio/tcc-helper`；
   **最容易错：要授权的是真正申请权限的 helper / 子组件，不是主 App**；
   ★ 与 Gatekeeper 是两回事（双击打不开 = Gatekeeper，见该文档附录）
@@ -331,7 +362,7 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
   「关于本机」那张 12 槽图是 **MacPro 专有**，摆位由 `Devices` 数组顺序决定
   ⇒ 校验用 `scripts/mem-check.sh`
 - **CPU 被压在低频（卡顿 / 掉帧）⇒ Intel 睿频** ⇒ `references/intel-turbo.md`：
-  ★★★ **最佳方法（已定案）：注入「本机自己那份 profile，只把 `hwp` 删掉」** —— 四点判据见文档；
+  ★★★ **推荐路径：注入「你自己机型那份 profile，只把 `hwp` 删掉」** —— 四点判据见文档；
   ★★ **`hwp` 不在 plist 里**（在向量二进制内的变量名表），禁用 = **删除该项**，判有没有作用必须逐字节比向量；
   ★★★ **反面结论：注入任何别的机型的 profile 都会压垮睿频**（实测 1.97 / 2.3 GHz）⇒ **别靠换 profile 抬上限**；
   ★★ **改完必须重启**（`kern.boottime` 早于改动时间 = 没重启 ⇒ 跑的仍是旧 profile），这是「修了没好」的头号原因；
@@ -403,7 +434,7 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 | macOS 只看到 8 核 16 线程（`hw.nperflevels=1`），但 CPU 是 12 核 20 线程 | **不是缺核、也不是驱动没加载** ⇒ E 核没喂给 macOS（BIOS 关着，或 `ProvideCurrentCpuInfo=false`）⇒ 见 `e-cores.md`；**关小核是刻意选择时别去「修」** |
 | 抄来的 `-ctrsmt` boot-arg 加了没反应 | v1.x 的 `-ctrsmt` 在 **v2.x 上不生效** ⇒ 改写成 **`ctrsmt=full`**（先看 `CFBundleVersion`）⇒ `e-cores.md` §4.2 |
 | 开小核后开机偶发失败（尤其带 `-v`） | `CpuTopologyRebuild` 官方已知问题：**与 verbose 启动冲突** ⇒ 排查期先关小核或临时去掉 `-v`（`e-cores.md` §4.3） |
-| 想靠「换成 5000 上限的机型 profile」抬睿频 | **实测反而暴跌到 ~1.97 GHz** ⇒ 所有上限 5000 的 profile 都是 **3–5 段**，多段必崩 ⇒ **只注入本机自己的 profile（删 `hwp`）**（`intel-turbo.md` §0.1 / §5） |
+| 想靠「换成 5000 上限的机型 profile」抬睿频 | **实测反而暴跌到 ~1.97 GHz** ⇒ 所有上限 5000 的 profile 都是 **3–5 段**，多段必崩 ⇒ **只注入同机型自己的 profile（删 `hwp`）**（`intel-turbo.md` §0.1 / §5） |
 | 改完 CPUFriendDataProvider 没效果 / 更慢了 | 先看 **`kern.boottime`** 是否早于改动 ⇒ **没重启**（内存里还是旧 profile）⇒ `intel-turbo.md` §7 |
 | 加了 `revcpuname` 但 CPU 名还是没变 | **`rev*` 的 NVRAM 变量优先级低于 boot-args** ⇒ **boot-args 的 `revpatch=` 里也必须含 `cpuname`**；Intel 上还要显式 `revcpu=1`（`cpu-name.md` §3） |
 | 语音/摄像头 App「没权限」，**不弹窗、隐私列表里也没这个 App** | 不是 App 坏了 ⇒ **boot-args 关了 AMFI**（`amfi=0x80` / `amfi_get_out_of_my_way=0x1`）导致 macOS **不弹窗也不生成条目** ⇒ 别的驱动可改用 `AMFIPass.kext`；本机不行 ⇒ 用 `GeekAudio/tcc-helper` 注入（`amfi-and-tcc.md`） |
@@ -449,12 +480,12 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 - `references/logs-and-debug.md` —— `Target`/`DisplayLevel` 位定义、日志判据、刷屏归因
 - `references/boot-entries.md` —— **固件启动项（`Boot####` / `BootOrder`）与 `Misc>Boot>LauncherOption`**：★ **「用 U 盘引导后启动项消失」的根因**、四档取值、取证命令、**ASUS 的 `Boot0000` 坑**；★★ **§7 官方修法（`bcfg` / `OpenControl` / `LauncherOption=Full` / 从系统里写 + `BootKicker`）**、**§8 从 U 盘启动改成硬盘启动**
 - `references/boot-timeline.md` —— **启动耗时/时间线分析**：三段拆解、流式过滤、停顿窗口定位、耗时来源与处置
-- `references/acpi-ssdt.md` —— ACPI/SSDT 巡检：官方 AcpiSamples 逐条适用条件 · 设备存在性检查 · 命名规范 · ★ **§6 编译与验证（`iasl` 三个动作 / 反编译报错是正常的 / 四项验证 / 报错对照表）** · ★★ **`5T33Z0/OC-Little-Translated` 按需求索引表**（含本机落点）· **官方/Dortania 没有的那些**（`SSDT-ALL` 合并表 · **用 ACPI 做 USB 端口映射** · `SSDT-I225V` · `SSDT-PMCR` · `ACPIDebug` · `Fixing_Preboot`）
+- `references/acpi-ssdt.md` —— ACPI/SSDT 巡检：官方 AcpiSamples 逐条适用条件 · 设备存在性检查 · 命名规范 · ★ **§6 编译与验证（`iasl` 三个动作 / 反编译报错是正常的 / 四项验证 / 报错对照表）** · ★★ **`5T33Z0/OC-Little-Translated` 按需求索引表**（含落点标注）· **官方/Dortania 没有的那些**（`SSDT-ALL` 合并表 · **用 ACPI 做 USB 端口映射** · `SSDT-I225V` · `SSDT-PMCR` · `ACPIDebug` · `Fixing_Preboot`）
 - `references/bios-settings.md` —— **BIOS/UEFI 审查**：官方 9 条 + Dortania（Intel/AMD）+ 社区补充（**VMD**/Speed Shift）、**必须关/必须开/看情况**三类、CFG Lock 专题、**厂商命名对照表**、Windows 审查脚本用法
 - `references/disks-and-kexts.md` —— 磁盘屏蔽与 kext 精简的判据与「不能删」清单
 - `references/usb-port-mapping.md` —— **USB 端口定制（macOS 26 Tahoe）**：★★★ **判据只数控制器下注册的 `AppleUSB*XHCIPort`**（kext 加载 ≠ 端口注入，hub 下游不算）· ★★★ **Tahoe 键名变更**（`usb-port-type` / `usb-port-number`，`USBToolBox.kext` ≥1.2.0）· ★★ **15 口上限可破**（OC ≥1.0.7 `XhciPortLimit`，`0F 0F 87`→`40 0F 87`，**但必须重做 map 全选**）· **采集三法**（Windows RootHub 描述符 / 临时开补丁一次扫全 / 滑动窗口）· **Connector 类型权威表（0/3/8/9/10/255）** · **`port-count` = 最大端口号不是条目数** · **SS 对应的 HS 不能全砍** · **五个已被否证的误区**（跳号必失败 / >15 必失败 / 固件有 SS10 就有口…）· 风险与两层回滚
 - `references/nvidia-driver.md` —— NullMoth NVIDIA 驱动：适用范围、安装、必需 OC 设置、恢复、故障对照
-- `references/amfi-and-tcc.md` —— **AMFI ↔ TCC 冲突（App 拿不到权限）**：★ 现象三连（**第三条 = 隐私列表里没有条目**才是判据）· 根因（`amfi=0x80`）· **别的机器首选 `AMFIPass`**（本机不行，只能二选一）· ★★ **解法 `GeekAudio/tcc-helper`**（GUI + CLI、**自动授权从系统反推**、109 个服务、任意目标含裸可执行文件）· **要授权的是真正申请的 helper 而不是主 App** · `access` 表字段与 `csreq` magic `fade0c00` · **五个工程坑** · 诊断三分类 · 不持久 · **附录：Gatekeeper /「任何来源」/「无法验证开发者」（`sudo spctl --global-disable`，`--master-disable` 在 macOS 15+ 已过时；与 TCC 是两回事）**
+- `references/amfi-and-tcc.md` —— **AMFI ↔ TCC 冲突（App 拿不到权限）**：★ 现象三连（**第三条 = 隐私列表里没有条目**才是判据）· 根因（`amfi=0x80`）· **首选 `AMFIPass`**（跑 NullMoth 时不行，只能二选一）· ★★ **解法 `GeekAudio/tcc-helper`**（GUI + CLI、**自动授权从系统反推**、109 个服务、任意目标含裸可执行文件）· **要授权的是真正申请的 helper 而不是主 App** · `access` 表字段与 `csreq` magic `fade0c00` · **五个工程坑** · 诊断三分类 · 不持久 · **附录：Gatekeeper /「任何来源」/「无法验证开发者」（`sudo spctl --global-disable`，`--master-disable` 在 macOS 15+ 已过时；与 TCC 是两回事）**
 - `references/intel-wifi.md` —— Intel 无线网卡驱动（AirportItlwm / itlwm）：版本线、注入、蓝牙配套、排错
 - `references/mediatek-wifi.md` —— MediaTek 无线网卡（MT7921 / MT7922 / RZ608 / RZ616 / RZ717）：★★★ **macOS 26 原生 Sunrise 驱动**（`AppleSunriseWLAN/Bluetooth` dext + 自带固件 + PCIe 蓝牙 `14c3:792a`）· ★★★ **原生路线用 `GeekAudio/mediatek-sunrise-hackintosh`（MT7922 Sunrise Pack，含固件/HAL kext/免编译 device-id 伪装）** · **26.7.1 按芯片分的固件现状** · **`AppleSunrise.kext` = 内核态 HAL（必需）** · **日志判读表 / boot-args 表** · ★★ **第三方 Wi-Fi 用 `flxxxxddd/SimpleMtkWlan` fork（有 release，802.11n/ac 可用）** · ★★ **v1.3.0 起两个产物二选一**（`AirportMtkWlan` = 真原生菜单 / `SimpleMtkWlan` = 以太网式）· **共同硬限制（AWDL 未实现 ⇒ 无 AirDrop · 无 HE · 无 WPA3-only）** · ★★ **RZ616 双 ID（`7922` / `0616`）** · ★★ **注入报 `Invalid Parameter` 怎么读（§4.9：括号里是 `Comment`，不是标识）** · **SSDT 藏卡坑** · `mtklog.sh` 排错 · 三条路线决策树、芯片认型、第三方蓝牙 NVRAM 两坑
 - `references/applealc-custom.md` —— 板载声卡（AppleALC）：★★★ **macOS 26 的 `AppleHDA` 恢复（`perez987` 指南：USB 声卡 / **KDK + `MyKextInstaller`** / OCLP / VoodooHDA 方案对照 + 要求与验证）** · ★★ **定制走 `5T33Z0/AppleALC-Guides`**（14 章流程 · 17 个现成 dump · **`alc-verb` 运行时调音** · `MuteGPIO` 表 · **精简到 90 KB** · 回滚工作流） · ★★★ **硬约束：写 layout 前必须已有 Windows 侧取数**（用户能提供则直接进定制流程，不能才让他去取；**GUI 走 HDAU，脚本走 `HDAudDev.dll` 直连** —— 免管理员、可脚本化、产出 Linux 风格 `codec_dump.txt/.json`；dump 完用 **Windows 端点反证插孔映射**）· **AppleHDA 三条实测根因**（PathMap 同组多路径只留最后一条 / 插孔型 Mic 引脚建不出设备 / 插孔检测可能整体是死的）· **不用耳朵验证**（播放中读 `0xF07`/`0xF06` 寄存器）· Pin Config Default 字段读法 · 先搜前人经验、按 codec 定制、本地构建、测试、提 PR
@@ -468,7 +499,7 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 - `references/intel-turbo.md` —— Intel 睿频/CPU 限频：★★★ **最佳方法定案（注入「删掉 `hwp` 的本机 profile」四点判据）** · **`hwp` 的真实位置与删法** · **76 份 profile 五族选型表** · CPU-S 验证 · **改完必须重启** · CPUFriend 修法 · BIOS 硬前提
 - `references/e-cores.md` —— **开小核 / 关小核（Intel 混合架构 P/E 核）**：★ 两种取舍 · BIOS `Active Efficient Cores`（四家厂商命名）· `ProvideCurrentCpuInfo` · **`CpuTopologyRebuild` 四取值（`ctrsmt=off` / `ctrsmt=full` / `-ctrfixcnt`）** · 判据 `hw.nperflevels` · **官方已知 `-v` 冲突** · 回滚
 - `references/kext-and-oc-update.md` —— **更新 kext 与 OpenCore**：★★★ **上游 tag 查不到 ≠ 来路不明**（Dortania `build-repo` 按 commit 构建、补丁号 +1）· **判「官方件」四条判据**（只有「厂商安装器钉没钉」能定性）· **DEBUG/RELEASE 用体积对照**· 该更新 / 不该更新的表 · **OC 本体更新（连 Drivers 一起换）** · 安全流程 9 步 · 坑
-- `references/boot-failure-debug.md` —— **装不上 / 进不去系统的分层 debug 流程**：★ **四段分层**（固件/OC 自身 · OC 引导期 · 内核早期 · 内核中后期）· ★★ **卡死 vs 循环重启** · 各段速查表（含 `no kext summary` / `X86PlatformShim` / `decmpfs` / `element modified after free` 等**本机已定性的失败族**）· 装机期专属（VMD 找不到盘等）· **救援顺序 6 步** · ACPI（`xh_adls3`）· **取证清单**
+- `references/boot-failure-debug.md` —— **装不上 / 进不去系统的分层 debug 流程**：★ **四段分层**（固件/OC 自身 · OC 引导期 · 内核早期 · 内核中后期）· ★★ **卡死 vs 循环重启** · 各段速查表（含 `no kext summary` / `X86PlatformShim` / `decmpfs` / `element modified after free` 等**已定性的失败族**）· 装机期专属（VMD 找不到盘等）· **救援顺序 6 步** · ACPI（`xh_adls3`）· **取证清单**
 
 
 - `references/cpu-name.md` —— **CPU 显示名（改名）**：★ 纯外观 · RestrictEvents 三件套（`revpatch=cpuname` / `revcpu=1` / `revcpuname`）· ★★ **NVRAM 优先级低于 boot-args** · `revcpuname` 只能放 NVRAM · `ProcessorType` 与核数配对 · **`Cpuid1Data` / `AppleSystemInfo.strings` 两条死路** · 排错

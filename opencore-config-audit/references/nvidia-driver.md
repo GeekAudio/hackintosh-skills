@@ -33,7 +33,7 @@ sudo shutdown -r now                 # 必须重启：注销不会加载驱动
 
 下载 `1401-Mac-<version>.dmg` → 打开运行 1401（驱动包就在镜像里）。它会：
 
-1. 用 NVRAM `boot-path` 找到**启动本机的那个 OpenCore**（找不到就逐分区搜，只认 SMBIOS 匹配的，避免误改救援盘）
+1. 用 NVRAM `boot-path` 找到**启动当前系统那个 OpenCore**（找不到就逐分区搜，只认 SMBIOS 匹配的，避免误改救援盘）
 2. **先试建 AuxKC**，通不过就什么都不改
 3. 备份 `config.plist`，只补第 2 节里缺的项，`plutil` 校验（失败就还原备份）
 4. 往选择器加 **`1401: Remove NVIDIA driver`**（`Misc>Tools` + `NullMothSafe.efi`）
@@ -125,7 +125,7 @@ system_profiler SPDisplaysDataType | head -20     # 应显示你的 GeForce、Me
 ## 7. 上报纪律（Send logs）
 
 - **先 Send logs 拿到 report ID，再开 issue**（官方 bug 模板把 report ID 标为必填，且禁用了空白 issue）
-- 上报前**先读本机回执**（如 `~/Library/Logs/NullMoth/Reports/report-*/upload-receipt.json`），核对 `confirmed[]` 的条数与 sha —— App 给的扁平 ID 列表可能混进**陈旧条目**
+- 上报前**先读本地回执**（如 `~/Library/Logs/NullMoth/Reports/report-*/upload-receipt.json`），核对 `confirmed[]` 的条数与 sha —— App 给的扁平 ID 列表可能混进**陈旧条目**
 - **ID 重复先怀疑「内容相同」**：服务端按内容寻址，相同内容返回同一 ID，那是去重正常工作
 - 采集器可能报 `System log collection did not complete (status 124)` —— 通常只影响**系统日志**那一路，`driver-kernel-log.txt` 照样会传上去
 - issue 正文：**一 issue 一问题**、用自己的话写几句、**不粘贴大段日志**（把日志留在 report ID 里）

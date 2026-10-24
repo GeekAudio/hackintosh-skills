@@ -11,7 +11,7 @@
 >
 > ★ **写 SSDT 之前先翻样例库**，再对照本文的官方 `AcpiSamples` 判「该不该加」。
 
-## 0. ★★ 按需求找哪一章（含**本机 Z690 / Alder Lake / iMac20,1** 的落点）
+## 0. ★★ 按需求找哪一章（含**落点标注**）
 
 | 你要做的事 | 去哪一章 |
 |---|---|
@@ -40,10 +40,11 @@
 - ★ **`SSDT-ALL`：把多张 SSDT 合并成一张表** —— 减少 `ACPI>Add` 条目、便于管理；
 - ★★ **`ACPI_Mapping_USB_Ports`：用 ACPI 而不是 kext 做 USB 端口映射**（`XHUB` / `XUPC` 两种方法）——
   对「USB 15 口上限」这类问题是一条**不同于 `UTBMap` 的路线**；
-- ★ **`Intel_I225-V_Fix_(SSDT-I225V)`** —— **本机板载就是 Intel I225-V**，值得对照
-  （现走「Apple 原版 I210 kext 仿冒」，见 `ethernet-drivers.md` §1）；
-- ★ **`PMCR_Support_(SSDT-PMCR)`** —— 本机 `PMCR` 计数 **0**，属于「可能该补」的一类；
-- ★ **`ACPI_Dropping_Tables` + `ACPI_Rename_Devices`** —— 本机删 `xh_adls3` 用的就是前者那套机制；
+- ★ **`Intel_I225-V_Fix_(SSDT-I225V)`** —— 板载是 Intel I225-V 时值得对照
+  （板载是这张卡时可改走「Apple 原版 I210 kext 仿冒」，见 `ethernet-drivers.md` §1）；
+- ★ **`PMCR_Support_(SSDT-PMCR)`** —— `ioreg` 里 `PMCR` 计数为 **0** 的机器属于「可能该补」的一类；
+- ★ **`ACPI_Dropping_Tables` + `ACPI_Rename_Devices`** —— 删主板 OEM SSDT（ASUS 的 `xh_adls3` 就是这类）
+  用的就是前者那套机制；
 - ★ **`GPU-BAR_Size` / `Disabling_unsupported_GPUs`** —— 与 ReBAR / 不支持显卡相关；
 - ★ **`ACPI_Debugging`（含 `ACPIDebug.kext`）** —— ACPI 层面的取证手段；
 - ★ **`18_Troubleshooting/Fixing_Preboot`** —— 卡在 Preboot 的专项排查（补 `boot-failure-debug.md`）。
@@ -79,7 +80,7 @@ ioreg -r -c AppleSMBusController -w0 | wc -l     # 0 = 已加载但无实例 ⇒
 ```
 
 ★ 注意 ACPI 设备名因厂商而异：ASUS 常见根设备叫 **`PC00`**（不是 `PCI0`）、音频设备叫 **`HDAS`**（不是 `HDEF`）、
-核显 ACPI 名可能是 **`GFX0`**（没有 `IGPU`）。**写 SSDT 必须按本机实际名字来**，否则表加载不了。
+核显 ACPI 名可能是 **`GFX0`**（没有 `IGPU`）。**写 SSDT 必须按你机器的实际名字来**，否则表加载不了。
 
 ## 4. 官方 AcpiSamples 逐条适用条件
 
@@ -100,7 +101,7 @@ ioreg -r -c AppleSMBusController -w0 | wc -l     # 0 = 已加载但无实例 ⇒
 | `SSDT-SBUS-MCHC` | SMBus 兼容表：给 `SBUS` 加 `BUS0`(`_CID="smbus"`) 与 `MCHC`，让 `AppleSMBusController` 挂上 | `BUS0`=0 且 `AppleSMBusController` 无实例 ⇒ **该启用** |
 
 **Dortania 常见但 OpenCore 官方样例里没有的**：`SSDT-RHUB`（USB 控制器不枚举时复位 hub）、
-`SSDT-DMAR`（屏蔽 DMAR）、`SSDT-GPRW`（秒醒）。判定同样靠"本机有没有对应的症状/方法"：
+`SSDT-DMAR`（屏蔽 DMAR）、`SSDT-GPRW`（秒醒）。判定同样靠「你的机器有没有对应的症状/方法」：
 `GPRW` 方法不存在 ⇒ 该补丁不适用；USB 全端口枚举正常 ⇒ RHUB 不需要；固件表里没有 DMAR ⇒ DMAR 补丁不需要。
 
 ## 5. 命名规范化
@@ -167,7 +168,7 @@ ioreg -r -c AppleSMBusController -w0 | wc -l     # 0 = 已加载但无实例 ⇒
 ## 7. 排查顺序（建议）
 
 1. 内核日志 0 报错？→ 没有"坏 ACPI"
-2. 官方样例逐条对照本机设备存在性 → 得到"该加/不该加"清单
+2. 官方样例逐条对照你自己机器的设备存在性 → 得到「该加/不该加」清单
 3. 检查 `ACPI>Add` 每条 `Path` 是否**真的存在**、目录里有没有**孤儿文件**
 4. 检查 `ACPI>Delete` 是否命中（看 OC 日志 `OCA: Deleting table …`）
 5. 最后才考虑"要不要补"；补的时候一次只加一张，重启后看内核日志是否仍 0 报错

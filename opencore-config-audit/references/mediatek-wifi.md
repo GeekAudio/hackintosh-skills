@@ -29,7 +29,7 @@
 >
 > ★★ **本文件的证据分级约定**（引用结论时请连带层级一起引用）：
 > **【源码/plist 实证】** > **【上游 README 声明】** > **【他人实测】**。
-> ★ **本机（Z690）没有 MediaTek 卡** —— 凡标【他人实测】的都**没有在本机复现过**。
+> ★ **本文作者手上没有 MediaTek 卡** —— 凡标【他人实测】的都没有在作者机器上复现过。
 
 ## 0. ★★★ 结论先行（先看这段，能省很多时间）
 
@@ -151,7 +151,7 @@ sw_vers -productVersion && uname -r
   （`idVendor = 3725 (0x0E8D)` + `bDeviceClass 0xE0 / SubClass 1 / Protocol 1`）；
   **但运行时固件流程只接受内部设备 ID `0x7961` / `0x7922`** —— 认错型号 = 固件不加载。
 
-**先查本机到底有没有这张卡：**
+**先查自己的机器到底有没有这张卡：**
 
 ```bash
 # PCIe 侧（Wi-Fi）
@@ -186,7 +186,7 @@ ioreg -l -p IODeviceTree | grep -i "14c3"
 
 4. **能认 ⇒ 到此结束**，不用装第三方 kext、不用改 config。
 
-### 社区做法（2026-01 调试全程，已从帖子全文还原；未在本机复现）
+### 社区做法（2026-01 调试全程，已从帖子全文还原；未在作者机器上复现）
 
 tonymacx86 帖子 *"Wifi 6(E) & Bluetooth 5.x MEDIATEK chipset on **native** Sequoia & Tahoe"*
 （楼主 **Elias64Fr**，CaseySJ / Sn0wMan / f10 等参与实测；**全帖 69+ 页**，帖子 ID 332855）
@@ -326,7 +326,7 @@ DEXT 的 `Info.plist` **只匹配 `0x7922`**（另 7923 / 7932），而 **RZ616 
 1. 改回 **RELEASE** 版 OpenCore、删掉 `wlan.debug.enable=0x1` 等 boot-arg、禁用 SSDT / `Kernel>Add` 条目 ⇒ 回到原状
 2. 系统卷改动：**启用 SIP + authenticated-root 重启即自动清理**，无需手动还原
 
-> ⚠️ **保留**：**本机（Z690）没有 MediaTek 卡，以上均未复现**。
+> ⚠️ **保留**：**作者机器没有 MediaTek 卡，以上均未复现**。
 > `wlan.debug.enable=0x1` 是**调试开关不是启用开关**；26.0–26.2 这套手动注入流程
 > **已被 Apple 后续更新取代**（现在先试「什么都不装」，§1.5 步骤 1–4）。
 
@@ -341,7 +341,7 @@ Sequoia **没有**这两个 dext ⇒ 原生路线走不通，只能走下面的�
 | ★ **`flxxxxddd/SimpleMtkWlan`**（**fork**，分支 `mt7921-fixes`） | **Wi-Fi（PCIe）** | **两个 kext**（`AirportMtkWlan` / `SimpleMtkWlan`，同一硬件层） | ✅ **v1.1.0 → v1.5.0**（CI 构建；**v1.3.0 起加 `AirportMtkWlan`**） | **★ 第三方路线就用它** —— MT7921/RZ608 实测能上网；`0616` 在 v1.5.0 匹配列表里【plist 实证】 |
 | `laobamac/SimpleMtkWlan`（**上游**） | Wi-Fi（PCIe） | kext（+ `mtk80211` 兼容层） | ❌ **无**（必须自编译） | 上游主线，bring-up 中；fork 的修复**还没回到主线** |
 | `laobamac/SimpleMtkBtFw` / fork `flxxxxddd/SimpleMtkBtFw` | **蓝牙固件加载**（firmware loader + patcher） | **两个** kext | ✅ **`1.0.0`** | 可用（fork 说明：AirPods 音频可用） |
-| `laobamac/SimpleMTKClient` | Wi-Fi 菜单栏客户端 | App（`SimpleMTK`） | ❌ **上游确无 release**（2026-10-16 API+网页双查） | **必需的** —— 见 §4.1。2026-10-16 已在本机从其源码编译出 `SimpleMTK-1.0.0.zip`（内嵌 Sparkle 2.10.0 源码构建；因本机 `sandbox-exec` 被系统禁用，需先剥离两个未用的 SPM 依赖再编 KeychainAccess/Sparkle） |
+| `laobamac/SimpleMTKClient` | Wi-Fi 菜单栏客户端 | App（`SimpleMTK`） | ❌ **上游确无 release**（2026-10-16 API+网页双查） | **必需的** —— 见 §4.1。2026-10-16 已在本机从其源码编译出 `SimpleMTK-1.0.0.zip`（内嵌 Sparkle 2.10.0 源码构建；因 `sandbox-exec` 被系统策略禁用，需先剥离两个未用的 SPM 依赖再编 KeychainAccess/Sparkle） |
 | ★ **`GeekAudio/mediatek-sunrise-hackintosh`**（**MT7922 Sunrise Pack**，2026-10-16 新建） | **原生路线的一站式包**：Wi-Fi 固件（linux-firmware + SHA）· 两个版本的 `AppleSunrise.kext` · SSDT · `DeviceProperties` 伪装 · `Kernel>Add` 片段 · boot-args 清单 · macOS 15 第三方 kext 全套（含**预编译 SimpleMTK.app**） | 文件集合 | 无 release（直接 clone） | **要走原生 Sunrise 先拿这个**，不用翻 69 页帖子找附件 |
 
 > **fork 与上游的关系**：`flxxxxddd/SimpleMtkWlan` fork 自 `laobamac/SimpleMtkWlan`，

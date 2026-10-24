@@ -58,7 +58,7 @@
 | 在 **ASUS** 板上手工建 `Boot0000` | 源码注释：ASUS 把 `Boot0000` 当「已删除」处理 | **别用 `Boot0000`** —— 会导致条目重复、甚至 BIOS 变砖 |
 | `nvram -p` 里看不到 `Boot####`，以为没有启动项 | `nvram -p` **不列出** `Boot####` | 按 `GUID:名字` 单独读：`nvram 8BE4DF61-93CA-11D2-AA0D-00E098032B8C:BootOrder` |
 | 把「BIOS 启动菜单里的项」和「OpenCore 选择器里的项」当成一回事 | 前者是**固件 NVRAM**（`Boot####`），后者是 OpenCore 扫出来的 | 少显示系统用 `ScanPolicy`/`HideAuxiliary`；启动项丢失看 `boot-entries.md` |
-| 在 macOS 里 `nvram <GUID>:Boot0001=…` 报 **`(iokit/common) general error`** | ★ 不是重定向，是**没提权** —— 本机实测：未提权连**普通变量**都写不进去 | 走 Terminal + `sudo`，或提权 AppleScript（`do shell script "…" with administrator privileges`）。★ `dump`/`backup` 不需要提权 |
+| 在 macOS 里 `nvram <GUID>:Boot0001=…` 报 **`(iokit/common) general error`** | ★ 不是重定向，是**没提权** —— 实测：未提权连**普通变量**都写不进去 | 走 Terminal + `sudo`，或提权 AppleScript（`do shell script "…" with administrator privileges`）。★ `dump`/`backup` 不需要提权 |
 | 把 `nvram` **回读一致**当成「启动项写进固件了」 | `RequestBootVarRouting=true` 会把 `Boot*` 重定向到 `OC_VENDOR:OCBt*`，**读写都走同一条重定向** ⇒ 回读一致证明不了落固件 | **验收只看重启后的 BIOS**（或引导日志 `OCB:` 行）。要确定落固件 ⇒ 让 OpenCore 自己写（`LauncherOption=Full`） |
 | 把 `nvram` 读出来的值**原样写回去**却失败 | macOS 输出里的 **`0x20` 是字面空格**，而 `nvram` 把值里的字面空格当**参数分隔符** | 写之前**统一重新编码**（每个字节写成 `%XX`），别照抄 `nvram` 的输出 |
 

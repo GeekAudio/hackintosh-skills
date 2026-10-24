@@ -2,8 +2,8 @@
 
 > 工具：**`xzhih/one-key-hidpi`**（脚本，一键给非 Retina 屏模拟 macOS HiDPI）。
 > 依据：该仓库 README + `hidpi.sh` 实现（写入路径/选项/恢复方式）。
-> ★ **本机特别注意**：显示驱动是 NullMoth 的 NVIDIA 驱动（**自述未完善**），
-> HiDPI 恰好踩在「显示模式 / 缩放 / 元数据」这条它最容易出问题的路径上 ⇒ 见 §5 的风险与前置动作。
+> ★ **如果你在用 NullMoth 的 NVIDIA 驱动**（自述未完善）：HiDPI 恰好踩在「显示模式 / 缩放 / 元数据」
+> 这条它最容易出问题的路径上 ⇒ 先看 §5 的风险与前置动作再动手。
 
 ## 1. 什么时候需要
 
@@ -57,7 +57,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/xzhih/one-key-hidpi/mast
 | **进不去系统** | 进 **macOS Recovery** 的「终端」：<br>`ls /Volumes/` → `cd /Volumes/<系统盘>/Users/<用户名>` → `./.hidpi-disable` |
 | Recovery 里手动清 | `rm -rf "/Volumes/<系统盘>/Library/Displays/Contents/Resources/Overrides"`（删掉整个 Overrides，或只删注入的 `DisplayVendorID-<VID>`） |
 
-## 5. ★★ 与 NVIDIA（NullMoth）驱动的风险 —— 本机尤其要小心
+## 5. ★★ 与 NVIDIA（NullMoth）驱动的风险 —— 用这个驱动时要格外小心
 
 HiDPI 要求驱动正确处理**「非面板原生分辨率的模式 + 缩放 + 模式元数据」**，而这正是这个驱动已知薄弱的地方：
 
@@ -93,7 +93,7 @@ HiDPI 要求驱动正确处理**「非面板原生分辨率的模式 + 缩放 + 
 
 两者**互相独立**，可以只开一个。
 
-## 7. 本机速记
+## 7. 速记（本机取值，仅作参考）
 
 - 显示路径：RTX 3080（`10de:2206`）→ NVRMFB；驱动包 1.15.0；`ResizeGpuBars=13` + `ResizeAppleGpuBars=-1`
 - 已知显示侧历史：显示器尺寸报错（已修）、无 HDMI/DP 音频、雷电 eGPU 无显示

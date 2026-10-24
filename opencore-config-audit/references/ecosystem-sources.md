@@ -48,7 +48,7 @@
 | **`GenSMBIOS`** | 2.0k | 用官方 `macserial` 生成 SMBIOS 三码 → `smbios-and-serials.md` |
 | **`SSDTTime`** | 1.3k | **自动生成常用 SSDT**（DSDT 热补丁） |
 | **`USBMap`** | 1.3k | 在 macOS 里**映射 USB 端口**并生成 kext |
-| **`MountEFI`** | 1.2k | 挂载 EFI 分区（★ 本机 macOS 26 需提权，见 `pitfalls.md`） |
+| **`MountEFI`** | 1.2k | 挂载 EFI 分区（★ macOS 26 上需提权，见 `pitfalls.md`） |
 
 ### 其它工具
 
@@ -110,7 +110,7 @@
 | `GeekAudio/mediatek-sunrise-hackintosh` | ★★ **MT7922 Sunrise Pack**：把 tonymacx86 帖子 332855 的附件收齐成包（固件 + 两个版本 KDK 提取的 `AppleSunrise.kext` + SSDT + 免编译 `DeviceProperties` 伪装 + boot-args + macOS 15 第三方 kext 全套含预编译 SimpleMTK）—— 原生 Sunrise 路线的**主参考** |
 | `GeekAudio/tcc-helper` | ★★ **macOS 权限工具（TCC）**：直接往 TCC 数据库写「已授权」条目，绕过弹窗；**自动从 `Info.plist` + launchd 后台组件反推谁需要什么权限**；GUI + CLI |
 | `GeekAudio/hackintosh-skills` | 本 skill 的公开仓库（opencore-config-audit） |
-| `GeekAudio/i7-12700K-RTX3080-OpenCore-Hackintosh` | 本机 EFI 的脱敏发布仓库 |
+| `GeekAudio/i7-12700K-RTX3080-OpenCore-Hackintosh` | 一份可参考的脱敏 EFI 发布仓库（i7-12700K + RTX 3080） |
 
 ## 7. 怎么用这份索引
 

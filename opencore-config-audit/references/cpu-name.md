@@ -1,6 +1,6 @@
 # CPU 显示名（「关于本机」的处理器名称）—— 改名方法
 
-> 依据：**RestrictEvents 官方 `README.md`**（逐条引用，见 §9）+ 本机 10-13 的完整闭环
+> 依据：**RestrictEvents 官方 `README.md`**（逐条引用，见 §9）+ 一次完整实操闭环
 > （现象 → 定位 → 修复 → 重启验证）。
 > ★ **先定性**：这是**纯外观问题**，不影响性能 / 功能 / 指令集。
 > ⇒ **改之前先想清楚值不值得**：名字不对通常只是「机型映射的名字 ≠ 真实型号」。
@@ -23,7 +23,7 @@ sysctl -n hw.model                      # 当前机型
 
 **判据**：`Processor Name` 与 `machdep.cpu.brand_string` **不一致** ⇒ 就是本文档的问题。
 
-> 本机实例：`Processor Name: 8-Core Intel Xeon W`（`MacPro7,1` 的映射），
+> 实例：`Processor Name: 8-Core Intel Xeon W`（`MacPro7,1` 的映射），
 > 而真实 CPU 是 `12th Gen Intel(R) Core(TM) i7-12700K`；
 > 其余项（3.6 GHz / 8 核 / L2 1.3 MB / L3 25 MB）**全对** ⇒ 只有显示名错。
 
@@ -48,7 +48,7 @@ sysctl -n hw.model                      # 当前机型
 
 ⇒ **只在 NVRAM 里写 `cpuname` 是没用的** —— 只要 boot-args 里也有 `revpatch=...`，就**以 boot-args 为准**。
 
-**本机实测踩过**：NVRAM 里 `revpatch='sbvmm,cpuname'`、boot-args 里 `revpatch=sbvmm`
+**踩过**：NVRAM 里 `revpatch='sbvmm,cpuname'`、boot-args 里 `revpatch=sbvmm`
 ⇒ 生效的是 boot-args（**没有 `cpuname`**）⇒ **名字一直没改过来**。
 **修法 = boot-args 里的 `revpatch=` 也要带上 `cpuname`**（如 `revpatch=sbvmm,cpuname`）。
 
@@ -58,7 +58,7 @@ boot-args **按空格分词** ⇒ `revcpuname=8-Core Intel Core i7-12700K` 会�
 
 ⇒ **分工**：**`revcpuname` 写 NVRAM**（`NVRAM > Add > 4D1FDA02-…`），**`revpatch` / `revcpu` 写 boot-args**。
 
-## 4. 完整改法（本机验证过）
+## 4. 完整改法（已验证）
 
 1. **`NVRAM > Add > 4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102`**
    - `revcpuname` = 字符串，如 `8-Core Intel Core i7-12700K`
@@ -77,12 +77,12 @@ boot-args **按空格分词** ⇒ `revcpuname=8-Core Intel Core i7-12700K` 会�
 > This is the default in OpenCore for non-natively supported CPUs."*
 
 - **位置：`PlatformInfo > Generic > ProcessorType`**（★ 在 `Generic` 里，**不是** `PlatformInfo` 顶层）
-- 本机 = **`3841` = `0x0F01`**（8 核以上）✓ **不要动**
+- 8 核及以上 ⇒ **`0x0F01`**（十进制 `3841`）✓ **不要动**；1/2/4/6 核 ⇒ `0x0601`
 - 写错的症状：**CPU 图标不对 / 核数显示异常**（不是名字问题）
 
 ## 6. 名字怎么起（经验）
 
-- **Apple 风格**：`<N>-Core Intel Core i7-12700K`（本机采用，27 字符）
+- **Apple 风格**：`<N>-Core Intel Core i7-12700K`（27 字符）
 - 上限 **48**、建议 **≤20** ⇒ 名字太长可能被截断
 - ★ **不要**把带空格的 `revcpuname` 写进 boot-args（§3.1）
 - 想更保险：`revcpuname` 只写型号（`Intel Core i7-12700K`），核数让系统自己拼

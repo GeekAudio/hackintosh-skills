@@ -31,11 +31,11 @@ sudo bash scripts/find-boot-gap.sh --kernel # 只抓内核，快很多
 
 两个脚本都**只读**，不改任何东西。输出写到 `$SUDO_USER` 的家目录（用 `dscl` 查，不写死路径）。
 
-### 1.1 ★★ 本机（及很多机器）`log show` 的时间过滤整体失效
+### 1.1 ★★ `log show` 的时间过滤在很多机器上整体失效
 
-这是本机踩得最深的一个坑，**换机器也要先验证**：
+这是踩得最深的一个坑，**先验证再信**：
 
-| 你以为能用的写法 | 实际行为（本机实测） |
+| 你以为能用的写法 | 实际行为（实测） |
 |---|---|
 | `log show --start "<t>" --end "<t>"` | 报 `Wall Clock adjustment detected`（开机时系统时钟被校正），返回**整个日志库**（≈3 GB / 2000 万行） |
 | `log show --last 30m` | **同样返回整个日志库**（不按时间裁） |
@@ -97,7 +97,7 @@ for s in WindowServer loginwindow Dock Finder coreservicesd; do
 done
 ```
 
-## 3. ★ 本机实测案例（可直接当模板）
+## 3. ★ 实测案例（可当模板）
 
 ### 3.1 「每次开机固定多等 ~102 秒」（驱动 bug，B 段）
 
@@ -121,10 +121,11 @@ fAutoGoSettleMs = bar1Placed ? 500 : 100000;   // BAR1 未放置 ⇒ 盲睡 100 
 → boot hold 期间 registry busy → WindowServer 的 `IOKitWaitQuiet` 被挡 ~106 s → 桌面推迟到 `+197s`。
 
 **解法**：boot-args 加 **`nvrmsettle=<ms>`**。同机前后实测 **`+197 s → +94 s`，省 103 秒**；
-`5000` 就够（本机用 `1500`）。上游 issue **#23**（closed/DONE）。
+`5000` 就够（更低也行，如 `1500`）。上游 issue **#23**（closed/DONE）。
 
 > ★ **1.14 起安装器会自动加 `nvrmsettle=10000`，但只对 Turing 卡**（`case "$NVDEV" in 1[eEfF]??|21[89a-fA-F]?)`）——
-> **Ampere（如本机 `10de:2206`）不在范围 ⇒ 必须手工保留**。且 `100000` 这个默认值在 1.15.0 里**原封不动**。
+> **Ampere 及更新的卡（如 `10de:2206`）不在范围 ⇒ 必须手工保留**。且 `100000` 这个默认值在 1.15.0 里**原封不动**。
+> 判断你的卡在不在范围内：`device-id` 首位是 `1E`/`1F`/`21`（Turing）才被覆盖，其余一律手工加。
 
 ### 3.2 「剩下的 ~60 秒」（无驱动 iGPU 拖累 `IOGraphicsFamily`，B 段）
 

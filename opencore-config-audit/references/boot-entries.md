@@ -16,7 +16,7 @@
 ⇒ 于是**从 U 盘（或任何别的盘）引导一次，它就会把硬盘那条同后缀的项「就地重指」到引导介质**；
 介质一拔，那条项指向不存在的设备 ⇒ **固件把它清理掉** ⇒ 启动菜单里只剩 Windows。
 
-## 1. 症状与根因（本机 2026-10-15 实录）
+## 1. 症状与根因（一次实录）
 
 ### 1.1 症状
 
@@ -92,7 +92,7 @@ OCB: Moving boot option to the front from N position
 | `Short` | 建「短」启动项（只含硬盘节点） | 给 Insyde 等**处理不了完整设备路径**的老固件 |
 | `System` | **不建项**，假设自定义项已被 `bless` | 配合 `ForceBooterSignature`；靠 `bless` 工具管路径 |
 
-> ★ **`Disabled` 是官方默认值** —— 也就是说本机原先的 `Full` 本身就是**偏离 Failsafe** 的一项。
+> ★ **`Disabled` 是官方默认值** —— 也就是说把 `Full` 当默认值用，本身就是**偏离 Failsafe** 的一项。
 > ★ `LauncherPath` 只在 `Full`/`Short`/`System` 下有意义；`Disabled` 时源码会把它强制回 `Default`。
 
 ## 3. 解决方法
@@ -101,7 +101,7 @@ OCB: Moving boot option to the front from N position
 
 | 组合 | 结果 | 评价 |
 |---|---|---|
-| **硬盘 `Full` + U 盘 `Disabled`** | 从硬盘启动时 OpenCore 自建/置顶并**自愈**；U 盘只读不写 NVRAM | ★ **本机 10-15 02:41 定案** |
+| **硬盘 `Full` + U 盘 `Disabled`** | 从硬盘启动时 OpenCore 自建/置顶并**自愈**；U 盘只读不写 NVRAM | ★ **推荐**：定案快、U 盘不会再改写 NVRAM |
 | **两个都 `Disabled`** | OpenCore 不再碰 NVRAM —— **但也就没人建启动项了** | 只有「已经有能用的项、且不打算让 OpenCore 管」时才合适 |
 | 两个都 `Full` | 互相改写（见 §1） | ✗ 正是这个坑的成因 |
 
@@ -109,7 +109,7 @@ OCB: Moving boot option to the front from N position
 > 要让入口**存在且排第一**，就必须有人去写它 —— 要么让 OpenCore 写（`Full`，见 §3.1），
 > 要么人工写（§7）。**「都设 Disabled 就没事了」是错的。**
 
-### 3.1 本机定案：硬盘 `Full` / U 盘那份 `Disabled`
+### 3.1 推荐定案：硬盘 `Full` / U 盘那份 `Disabled`
 
 ```text
 硬盘 ESP 的 config：Misc > Boot > LauncherOption = Full        （LauncherPath = Default）
@@ -127,7 +127,7 @@ U 盘那份设 `Disabled` 后**不再改写 NVRAM** ⇒ 不会再把硬盘项搬
 
 ### 3.2 兜底：`\EFI\BOOT\BOOTx64.efi`
 
-**两个 ESP 都保留 `\EFI\BOOT\BOOTx64.efi`**（本机 53,248 B，另有 `bootx64.efi.win` 备用）。
+**两个 ESP 都保留 `\EFI\BOOT\BOOTx64.efi`**（OpenCore 发布包里那份，改名前可另存为 `bootx64.efi.win` 备用）。
 `LauncherOption=Disabled` 时它**重新参与引导**（官方原文：*"The BOOTx64.efi file is no longer used for
 bootstrapping OpenCore **if a custom option is created**."*）
 ⇒ 启动项真丢了，也能从 **BIOS 启动菜单直接选那块硬盘**启动，进去后再把项加回来（§7）。
@@ -157,11 +157,11 @@ nvram $G:Boot0000
 nvram $G:Boot0080
 ```
 
-> ⚠️ **`nvram -p` 不会列出 `Boot####`**（本机实测只出 19 个变量，全是 Apple/工具侧变量）。
+> ⚠️ **`nvram -p` 不会列出 `Boot####`**（实测只输出 Apple/工具侧变量，一个 `Boot####` 都没有）。
 > **必须按 `GUID:名字` 单独读**。读不到的编号会报 `(iokit/common) data was not found`。
 > ★ 想让输出可读，用 `scripts/oc-nvram-bootentry.sh dump`（会解析出名字 / 设备路径 / 文件路径）。
 
-### 4.2 本机实测快照
+### 4.2 实测快照（示例，数值随机器不同）
 
 **（a）`LauncherOption=Disabled` 期间（10-15 02:20–02:41）**
 
@@ -201,9 +201,9 @@ grep -E "OCB: (Have existing option|Creating boot option|Moving boot option)" \
 
 | 项 | 内容 |
 |---|---|
-| ★ **官方警告** | *"When `LauncherOption` is not enabled, **other operating systems may overwrite OpenCore settings**"* ⇒ 多系统时**官方建议开启**。本机缓解 = `\EFI\BOOT\BOOTx64.efi` 兜底 + 随时可重加 |
+| ★ **官方警告** | *"When `LauncherOption` is not enabled, **other operating systems may overwrite OpenCore settings**"* ⇒ 多系统时**官方建议开启**。缓解 = `\EFI\BOOT\BOOTx64.efi` 兜底 + 随时可重加 |
 | **官方 Note** | **在 OpenCore 之前执行 NVRAM reset 会抹掉这条项**（OpenCore 内部执行的 reset 一般不会）⇒ 刷 BIOS / 清 NVRAM 后要重加 |
-| **官方 Note 3（Intel Visual BIOS）** | Intel NUC 等固件的 bug：**只要有一条指向 USB 设备的启动项，之后插任何 U 盘都只显示那一条**。官方建议：**任何会从 U 盘启动的 OpenCore 都设 `Disabled` 或 `System`**。本机是 ASUS 不是 Intel NUC，**只是同类现象** |
+| **官方 Note 3（Intel Visual BIOS）** | Intel NUC 等固件的 bug：**只要有一条指向 USB 设备的启动项，之后插任何 U 盘都只显示那一条**。官方建议：**任何会从 U 盘启动的 OpenCore 都设 `Disabled` 或 `System`**。非 Intel NUC 的板子也可能撞上同类现象 |
 | ★★ **ASUS / AMI 专属坑（有源码依据）** | `Platform/OpenRuntime/UefiRuntimeServices.c` 注释：*"Many modern AMI BIOSes (e.g. **ASUS ROG STRIX Z370-F GAMING**) have bugs in AMI Post Manager protocol … `GetNextVariableName` … matches every `Boot####` variable as a potential boot option **regardless of the GUID namespace** … the boot option list on most ASUS firmware … is **corrupted (e.g. duplicated options) if `Boot####` variables are present outside `gEfiGlobalVariableGuid`**."* ⇒ **这正是 OpenCore 把 `Boot*` 重定向到 `OC_VENDOR`（改名前缀 `OCBt`）的原因** |
 | ★★ **同一注释里的另一条** | *"**`Boot0000` is reserved on ASUS boards** and is treated like a deleted entry. Setting `Boot0000` will essentially cause entries to **duplicate and eventual BIOS brick**."* ⇒ **ASUS 上绝对不要手工创建 `Boot0000`** |
 | **固件兼容性** | 官方 Note 1：部分固件 NVRAM 实现有缺陷（Haswell 等）⇒ `LauncherOption` **只应在已知兼容的板子上用**（`acidanthera/bugtracker#1222`） |
@@ -343,16 +343,16 @@ grep -E "OCB: (Have existing option|Creating boot option|Moving boot option)" \
 
 ## 8. ★ 从「U 盘启动」改成「硬盘启动」
 
-> **本机现状**（`nvram 4D1FDA02-…:boot-path`）：
-> 10-15 02:55 = `…/USB(0x18,0x0)/…/\EFI\OC\OpenCore.efi` ⇒ 当时**从 U 盘**引导（`REL-108`）；
-> **10-15 03:40 = `PciRoot(0x0)/Pci(0x6,0x0)/Pci(0x0,0x0)/NVMe(0x1,…)/HD(1,GPT,…)/\EFI\OC\OPENCORE.EFI`**
-> ⇒ ★★ **已经改成从内置硬盘引导**（OC = `DBG-108`）—— 也就是说**下面这套步骤本机已经走通了**，
-> 留作流程参考。
+> **怎么判断当前是从哪引导的**（`nvram 4D1FDA02-…:boot-path`）：
+> - 含 **`…/USB(0x18,0x0)/…/\EFI\OC\OpenCore.efi`** ⇒ 从 **U 盘**引导
+> - 含 **`PciRoot(0x0)/Pci(0x…,0x…)/…/NVMe(0x1,…)/HD(1,GPT,…)/\EFI\OC\OPENCORE.EFI`** ⇒ 从**内置盘**引导
+>
+> 本机当初就是从前者切到后者，**下面这套步骤已经走通**，留作流程参考。
 
 ### 8.1 为什么要换
 
 - U 盘不在就**进不了系统**（U 盘成了单点依赖）
-- U 盘那份可能是**救援配置**（本机 U 盘是 `iMacPro1,1` 的 FALLBACK 配置），与硬盘那份不是同一套
+- U 盘那份可能是**救援配置**（旧机型 / FALLBACK 配置），与硬盘那份不是同一套
 - `LauncherOption` 两边都 `Full` 时会互相改写（§1）
 
 ### 8.2 步骤
@@ -381,7 +381,7 @@ grep -E "OCB: (Have existing option|Creating boot option|Moving boot option)" \
 ### 8.3 注意
 
 - ★ **换的不只是启动介质，还是「哪一份 config」** —— 硬盘那份可能是**调试态**
-  （本机硬盘 = `DBG-108`，U 盘 = `REL-108`）。**要不要顺手换回 RELEASE / 关掉 debug 日志，是独立决定，先问用户。**
+  （DEBUG 与 RELEASE 构建的 `OpenCore.efi` 大小、日志行为都不同）。**要不要顺手换回 RELEASE / 关掉 debug 日志，是独立决定，先问用户。**
 - ★ **别用 `ScanPolicy` 去做「少显示」**（那是安全策略，见 `pitfalls.md` §A）。
 - ★ 换完**复查 `en0` 归属**（换引导介质不影响网卡，但如果你同时动了别的，见 `network-en0-order.md`）。
 - ★ 每次改完 ESP 都**同步工作区镜像 + 版本存档**，否则下次分不清哪份是哪份。

@@ -49,7 +49,7 @@ amfi=0x80
 被 `NDSecurityState.m` 列进「不安全覆盖」名单的是 **`-amfipass*` 这个 boot-arg**。
 
 ⇒ **别的机器**：优先用 `AMFIPass.kext` 顶替 AMFI 参数（**保留 AMFI** ⇒ TCC 弹窗正常，**根本不会有本文档这个问题**）。
-⇒ **本机**：上游把「AMFI 参数 **+** AMFIPass」**两个并列列为必需** ⇒ **只能二选一**，见 §3。
+⇒ **需要关 AMFI 的场景**（如 NullMoth 驱动）：上游把「AMFI 参数 **+** AMFIPass」**两个并列列为必需** ⇒ **只能二选一**，见 §3。
 
 ## 3. 结论：只能二选一
 

@@ -14,7 +14,7 @@ nvram 4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102:opencore-version
 
 **必须用同版本**：`ocvalidate` 会拒绝校验不同版本的 config；文档里键的 Failsafe 也可能随版本变。
 
-判断本机 OpenCore.efi 到底是 DEBUG 还是 RELEASE（逐字节）：
+判断你手上那个 OpenCore.efi 到底是 DEBUG 还是 RELEASE（逐字节）：
 
 ```bash
 shasum -a 256 /Volumes/EFI/EFI/OC/OpenCore.efi
@@ -53,7 +53,7 @@ shasum -a 256 /Volumes/EFI/EFI/OC/OpenCore.efi
 
 ## 4. 判定分类（把偏离分成三类）
 
-1. **有依据的正确偏离** —— 文档里有明确适用条件，本机正好符合。例：
+1. **有依据的正确偏离** —— 文档里有明确适用条件，你的机器正好符合。例：
    - `Kernel>Emulate>Cpuid1Data = 55 06 0A 00…`：文档原文给出的「Alder Lake (0x090672) → Comet Lake (0x0A0655)」推荐值
    - `FixupAppleEfiImages=true`：文档说 `SecureBootModel=Disabled` 时对较新 macOS **必需**
    - `ProvideCustomSlide=true`：文档说必要性由日志 `OCABC: Only N/256 slide values are usable!` 判定
@@ -85,6 +85,6 @@ shasum -a 256 /Volumes/EFI/EFI/OC/OpenCore.efi
 ## 6. 报告格式建议
 
 - 开头给「**ocvalidate 结论**」+「**与 Failsafe 的偏离总数/分类计数**」
-- 逐键表：`键 | 本机值 | 文档 Failsafe | 判定 | 文档原话(截断)`
+- 逐键表：`键 | 当前值 | 文档 Failsafe | 判定 | 文档原话(截断)`
 - 「建议修改」按风险排序，每条注明**依据 + 回滚方式**
 - 附一节「**明确不动**」并写理由 —— 避免下次有人把这些"改回默认"改坏

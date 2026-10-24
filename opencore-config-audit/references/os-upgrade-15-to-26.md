@@ -6,7 +6,7 @@
 
 > 本文是**大版本升级**的专用流程（不是装机流程；装机见 `lifecycle.md`）。
 > 核心命题：**同一份 OpenCore 配置要同时服务两个 Darwin 大版本 ⇒ 必须用 `MinKernel` / `MaxKernel` 把按版本分构建的 kext 分流**。
-> 本机实测基线：macOS **26.7.1 (25G241)** / Darwin **25.6.0**，机型 `MacPro7,1`，网卡 BCM943602CDP。
+> 实测基线（本文的升级终点）：macOS **26.7.1 (25G241)** / Darwin **25.6.0**、机型 `MacPro7,1`、博通 BCM943602CDP。
 
 ## ★★ 两条硬约束（先读这两条，再往下）
 
@@ -40,7 +40,7 @@ macOS 的「大版本」在内核里是 **Darwin 主版本号**，`Kernel > Add/
 | 14 Sonoma | 23.x | `23.0.0` |
 | **15 Sequoia** | **24.x** | `24.0.0` / 上限 `24.99.99` |
 | **26 Tahoe** | **25.x** | **`25.0.0`** |
-| （查本机） | — | `uname -r` |
+| （查自己的机器） | — | `uname -r` |
 
 ### 1.2 ★ `24.99.99` 这个写法是什么意思
 
@@ -67,7 +67,7 @@ MinKernel = 25.0.0     ⇒ 只在 Darwin 25 起生效
 | **`MinKernel`** | **`25.0.0`** | ★ 版本分流 |
 | **`MaxKernel`** | **`24.99.99`** | ★ 版本分流 |
 
-**★ plugin 的写法**（本机实例：博通卡驱动是 `IO80211FamilyLegacy.kext` 里的一个 plugin）：
+**★ plugin 的写法**（实例：博通卡驱动是 `IO80211FamilyLegacy.kext` 里的一个 plugin）：
 
 ```
 BundlePath     = IO80211FamilyLegacy.kext/Contents/PlugIns/AirPortBrcmNIC.kext
@@ -97,7 +97,7 @@ MaxKernel      = 24.99.99
 | **Intel** | `AirportItlwm-Sequoia`（`Min 24.2.0` / `Max 24.99.99`） | `AirportItlwm-Tahoe`（`Min 25.0.0`） | `intel-wifi.md` |
 | **MediaTek MT792x** | 无版本分流（本来就都实验性） | 同左 | `mediatek-wifi.md` |
 
-> ★★ **博通这条是本机踩过的坑**：`AirPortBrcmNIC.kext` 的 `MaxKernel=24.99.99` 是 **OCLP 2.5.1 写死的**，
+> ★★ **博通这条是踩过的坑**：`AirPortBrcmNIC.kext` 的 `MaxKernel=24.99.99` 是 **OCLP 2.5.1 写死的**，
 > 而 **OCLP 2.5.1 根本没有 Tahoe 支持** ⇒ 升到 26 后 Wi-Fi 直接消失。
 > **必须换 OCLP 3.0.0-rc.3+**（它的 `payloads/Config/config.plist` 里才有 `AirPortBrcmNIC-Tahoe.kext` 那条）。
 > 三条条目的正确形态（对照 OCLP 官方配置）：
@@ -124,7 +124,7 @@ MaxKernel      = 24.99.99
 |---|---|
 | **NVIDIA（NullMoth 驱动）** | **不用 `MinKernel`** —— 它装在 `/Library/Extensions` 从 AuxKC 加载，**不在 EFI 里**。<br>升级靠**换文件**：`/Library/NullMoth/kexts/26/NVAccel.kext` 覆盖 `26` 版，再 `kmutil create` 重建 AuxKC |
 | Lilu / VirtualSMC / WhateverGreen / RestrictEvents / NVMeFix / USBToolBox / XHCI-unsupported / UTBMap / AMFIPass | 留空（通用）。**但要用「支持新系统」的新版本**——升级时顺手更新到最新 |
-| `BlueToolFixup` | 本机写 `Min 21.0.0`（跨版本通用，不需要分流） |
+| `BlueToolFixup` | 写 `Min 21.0.0`（跨版本通用，不需要分流） |
 
 ---
 
@@ -182,7 +182,7 @@ MaxKernel      = 24.99.99
 
 | 键 | 升级 / 安装期 | 升级后（日常） |
 |---|---|---|
-| `UEFI > Quirks > ResizeGpuBars` | **`-1`**（交给固件，不 resize） | 按需（本机 `13` = 8 GB） |
+| `UEFI > Quirks > ResizeGpuBars` | **`-1`**（交给固件，不 resize） | 按需（例：`13` = 8 GB） |
 | `Booter > Quirks > ResizeAppleGpuBars` | **`0`**（安装器用小 BAR） | **`-1`**（日常） |
 
 **为什么**：安装器跑在固件 framebuffer 上，大 BAR 会让它卡在 PCI configuration。
@@ -192,7 +192,7 @@ MaxKernel      = 24.99.99
 | 键 | 值 | 说明 |
 |---|---|---|
 | `Misc > Security > SecureBootModel` | **`Disabled`** | 第三方 kext 非 Apple 签名，必须 |
-| `csr-active-config` | 按需放宽 | 本机实测 `430A0000`（≈ `0x0A43`：UNTRUSTED_KEXTS + UNRESTRICTED_FS + KERNEL_DEBUGGER + UNRESTRICTED_NVRAM + UNAPPROVED_KEXTS + UNAUTHENTICATED_ROOT）。**OCLP 与第三方驱动都要求它非 0** |
+| `csr-active-config` | 按需放宽 | 实测可用 `430A0000`（≈ `0x0A43`：UNTRUSTED_KEXTS + UNRESTRICTED_FS + KERNEL_DEBUGGER + UNRESTRICTED_NVRAM + UNAPPROVED_KEXTS + UNAUTHENTICATED_ROOT）。**OCLP 与第三方驱动都要求它非 0** |
 
 ### 4.5 `Kernel > Patch` —— OCLP 的 FileVault 补丁（按需）
 
@@ -212,7 +212,7 @@ Count / Skip / Limit = 0
 |---|---|
 | **`-no_compat_check`** | ★ **机型不在新版白名单里时必需**（见 §5）—— 解决「能不能启动」 |
 | **`revpatch=sbvmm`** | ★ **同上，解决「能不能收到/安装系统更新」**（见 §5.3）—— 这个容易被漏掉 |
-| `revpatch=cpuname` + `revcpu=1` + `revcpuname=<名字>` | CPU 名称显示（本机 `revcpu=1`） |
+| `revpatch=cpuname` + `revcpu=1` + `revcpuname=<名字>` | CPU 名称显示（如 `revcpu=1`） |
 | `-wegnoigpu` | 藏掉无驱动的核显（否则 `IOGraphicsFamily` bring-up 会等它，实测慢 ~60 s） |
 | `-v` | **偏好项，必须问客户**（见 `lifecycle.md` §6.3） |
 
@@ -241,8 +241,8 @@ Count / Skip / Limit = 0
 
 | 连带影响 | 后果 |
 |---|---|
-| **board-id 变 ⇒ ACPI 表重新解析** | ★ 本机真因：BIOS 里那张 **`OEM Table ID = xh_adls3`** 的 SSDT 解析不过（**`HS06 AE_NOT_FOUND`**）⇒ 循环重启。**不是 USB 图**（见 `smbios-and-serials.md` §2） |
-| **board-id 变了** | 触发**系统卷重建 / 校验** ⇒ 若 OCLP 已破封印，**可能卡住**（本机 10-12 就踩过） |
+| **board-id 变 ⇒ ACPI 表重新解析** | ★ 已知真因（案例）：BIOS 里那张 **`OEM Table ID = xh_adls3`** 的 SSDT 解析不过（**`HS06 AE_NOT_FOUND`**）⇒ 循环重启。**不是 USB 图**（见 `smbios-and-serials.md` §2） |
+| **board-id 变了** | 触发**系统卷重建 / 校验** ⇒ 若 OCLP 已破封印，**可能卡住**（踩过） |
 | XCPM profile 跟着换 | CPU 频率行为变化（`MacPro7,1` 强制 `hwp=on` ⇒ 必须重做 CPUFriend 数据） |
 | AGDC 路径、ByHost 偏好 | 显示/服务行为漂移，排查面变大 |
 
@@ -280,9 +280,9 @@ iMac20,1   iMac20,2   MacPro7,1   MacBookPro16,1   MacBookPro16,2   MacBookPro16
 
 | 不要做 | 为什么 |
 |---|---|
-| 改任何一处 `SystemProductName` | 违反约束；且 board-id 变会触发 **ACPI 重新解析**（本机 `xh_adls3` 会炸）+ 系统卷重建（§5.2） |
+| 改任何一处 `SystemProductName` | 违反约束；且 board-id 变会触发 **ACPI 重新解析**（ASUS 的 `xh_adls3` 这类表会炸）+ 系统卷重建（§5.2） |
 | 改 `BoardProduct`（board-id） | 触发系统卷重建，与 OCLP 冲突 |
-| **跑 `nullmoth-setup.sh --update prepare --pkg <包>`** | ★ **最隐蔽的陷阱**：它会**自动**把机型改成 `MacPro7,1`、board-id 改成 `Mac-27AD2F918AE68F61`、补 `RestrictEvents.kext`。**这条路径与约束正面冲突，必须避开。**<br>（正常点按钮 / 正常更新驱动**不会**触发它 —— 该按钮在 1.0.15 起已从 App UI 移除，只剩脚本能力；本机实测 `PlatformInfo` 仍是原机型） |
+| **跑 `nullmoth-setup.sh --update prepare --pkg <包>`** | ★ **最隐蔽的陷阱**：它会**自动**把机型改成 `MacPro7,1`、board-id 改成 `Mac-27AD2F918AE68F61`、补 `RestrictEvents.kext`。**这条路径与约束正面冲突，必须避开。**<br>（正常点按钮 / 正常更新驱动**不会**触发它 —— 该按钮在 1.0.15 起已从 App UI 移除，只剩脚本能力；实测该脚本跑完后 `PlatformInfo` 仍是原机型） |
 | 用 OCLP 的 "Build and Install OpenCore" | 会重写整个 EFI，冲掉调好的 boot-args / SMBIOS / DeviceProperties |
 
 ### 5.6 约束的代价（要如实告知）
@@ -389,7 +389,7 @@ ls -lt /Volumes/EFI/opencore-*.txt | head
 | 打补丁时 NVIDIA kext 不见了 | 没跑 §3 的前置保护脚本。去 `/Library/Relocated Extensions` 找回来 |
 | **机型不被支持、开不了机** | 加 `-no_compat_check`（**别去换机型**，§5.3） |
 | **能开机但收不到系统更新** | 漏了 **`revpatch=sbvmm`**（§5.3）—— `-no_compat_check` 不解决这个问题 |
-| 开不了机（**如果**你换了机型） | **主板 OEM SSDT 解析不过**（本机 `xh_adls3` ⇒ `HS06 AE_NOT_FOUND`，见 `smbios-and-serials.md` §2）；用 U 盘 EFI 启动并回退。**这也是「升级时不许改机型」这条约束的原因** |
+| 开不了机（**如果**你换了机型） | **主板 OEM SSDT 解析不过**（ASUS 的 `xh_adls3` 这类表 ⇒ `HS06 AE_NOT_FOUND`，见 `smbios-and-serials.md` §2）；用 U 盘 EFI 启动并回退。**这也是「升级时不许改机型」这条约束的原因** |
 | 发现机型被改了 | 大概率跑过 `nullmoth-setup.sh --update prepare --pkg`（§5.5）。用升级前的 EFI 备份还原 `PlatformInfo` |
 | EFI 挂不上 | 见 §7：要提权；或先 `diskutil repairVolume` |
 | 升级后开机很慢 | 见 `boot-timeline.md`（`nvrmsettle` / `-wegnoigpu` 两类已知固定延迟） |

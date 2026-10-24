@@ -58,7 +58,7 @@ ls -1 /Volumes            # 屏蔽生效后应只剩 Macintosh HD（+ 需要时�
 
 - 驱动对应的**硬件已经换了**（例：Intel 无线/蓝牙驱动，但机器已换成 Broadcom 网卡）
 - 功能**已被其它开关覆盖**（例：`CpuTopologyRebuild` vs `Kernel>Quirks>ProvideCurrentCpuInfo=true`）
-- 相关功能**本机不用**（例：`AppleALC` 但用外置声卡、且没注入 layout-id）
+- 相关功能**你的配置不用**（例：`AppleALC` 但用外置声卡、且没注入 layout-id）
 - 长期 `Enabled=false` 且注释写着"for isolation / for comparison"的临时项
 
 ### 2.3 「不能删」清单（判断时对照）

@@ -2,7 +2,7 @@
 
 > 本文件只回答三件事：**这套流程要用哪些工具** · **每个从哪来** · **缺了怎么降级**。
 > 上游项目 / 作者 / 「做某件事该信谁」⇒ `ecosystem-sources.md`；具体硬件的专用工具 ⇒ 对应硬件文档。
-> **先跑 `scripts/toolcheck.sh` 拿到本机现状**，再回来只看缺的那几项。
+> **先跑 `scripts/toolcheck.sh` 拿到当前机器的现状**，再回来只看缺的那几项。
 
 ## 0. ★★ 三层来源（先分层，再谈装）
 
@@ -33,17 +33,17 @@
 | `diskutil` | 列盘、挂载 ESP、`repairVolume` | ★ 挂载**常报 failed 但其实已挂载** ⇒ 用 `mount \| grep -i efi` 判断 |
 | `shasum` | sha256 对照 | — |
 | `sysctl` | `hw.nperflevels` / `machdep.cpu.*` / `kern.boottime` | ★ `kern.boottime` 早于改动时间 = **没重启**（改 CPUFriend 后必查） |
-| `log` | 内核日志 | ★★ 本机 `--start/--end` 整体失效、`--last` 返回整个日志库 ⇒ **只能流式过滤**（`boot-timeline.md`） |
+| `log` | 内核日志 | ★★ 某些环境里 `--start/--end` 整体失效、`--last` 返回整个日志库 ⇒ **只能流式过滤**（`boot-timeline.md`） |
 | `pmset` | 睡眠 / 唤醒取证 | `pmset -g log` 才是时间线，`pmset -g` 只是当前设置 |
 | `spindump` | 用户态卡顿取证 | 要 root；产物很大 |
-| `codesign` / `stapler` | 签名与公证验证 | ★ 本机 `spctl -a` 对第三方公证应用**一律 rejected**（SIP Custom Config ⇒ 联网评估失败）⇒ 改用 `codesign --verify --deep --strict` |
+| `codesign` / `stapler` | 签名与公证验证 | ★ 开了 SIP Custom Config 时 `spctl -a` 对第三方公证应用会**一律 rejected**（联网评估失败）⇒ 改用 `codesign --verify --deep --strict` |
 | `spctl` / `csrutil` / `tccutil` | Gatekeeper / SIP / TCC | Gatekeeper 与 TCC **是两件事**（`amfi-and-tcc.md` 附录） |
 | `nm` `otool` `size` `lipo` | Mach-O 分析 | ★ 需要 **Xcode CLT 且已同意 license**；被拦时用工作区 `工具/macho_symtab.py` / `macho_deps.py` / `macho_disasm.py` |
 | `xxd` | 二进制取证（`configdata`、`MuteGPIO`） | 大端/小端要自己数，别照抄别人结论 |
 | `ditto` / `rsync` | 复制（保留元数据 / 资源分支） | ★ `rsync -a --delete` 会让目标与源**完全一致**，别用于「只该多几个文件」的场景 |
 | `hdiutil` | 挂载 dmg（KDK、工具包） | macOS 26 上部分 dmg 需先 `hdiutil verify` |
 | `defaults` / `launchctl` | 偏好 / 重载守护进程（如 `tccd`） | `launchctl kickstart -k gui/$(id -u)/<label>` 才是重载 |
-| `python3` | 本 skill 所有脚本的解析层 | ★ `/usr/bin/python3`（3.9.6）；**本机 bash 3.2 没有 `mapfile`**，脚本一律 `while read` |
+| `python3` | 本 skill 所有脚本的解析层 | ★ `/usr/bin/python3`（3.9.6）；**macOS 自带 bash 3.2 没有 `mapfile`**，脚本一律 `while read` |
 | `curl` | 下官方包 / 图标集 | ★ 大文件用 `curl -C -` 续传（官方 zip 常 10 MB 级） |
 | `git` | 本仓库与 skill 同步 | Apple Git 2.50+；★ 无 `gh` 时走 API + 钥匙串 token |
 | `unzip` / `zip` | 官方包解压 | — |
@@ -220,7 +220,7 @@ iasl -v        # 期望：Intel ACPI Component Architecture … Compiler version
 | `MountEFI` | 挂 ESP | ★ macOS 26 上需提权（`/Volumes` 归 `root:wheel`） |
 | `GenSMBIOS` | 三码生成（封装官方 `macserial`） | 已有官方包里的 `macserial` 时可直接用，不必再装 |
 | `gibMacOS` | 下载 macOS 组件（做装机盘） | 也可用官方 `macrecovery` |
-| `USBMap` / `USBToolBox` | USB 端口映射 | ★ 本机 UTBMap **缺 SS 端口**（`disks-and-kexts.md`） |
+| `USBMap` / `USBToolBox` | USB 端口映射 | ★ UTBMap 生成后可能**缺 SS 端口**（`disks-and-kexts.md`） |
 | `OCLP` | 根补丁（Wi-Fi / 声卡 / 老显卡） | ★★ **只服务真 Mac**，黑苹果出问题别指望它 |
 | `ipsw` / `ipsw-diffs` | 解析 ipsw、比内核与 kext 版本差异 | ★ 发现「macOS 26 自带 MediaTek 驱动」就靠它 |
 
@@ -228,7 +228,7 @@ iasl -v        # 期望：Intel ACPI Component Architecture … Compiler version
 
 ---
 
-## 4. 没有包管理器怎么装（**本机实测：无 brew、无 port**）
+## 4. 没有包管理器怎么装（**macOS 自带无 brew、无 port**）
 
 macOS 上新装工具，按可靠性排：
 

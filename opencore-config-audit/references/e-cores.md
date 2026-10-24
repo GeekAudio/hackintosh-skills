@@ -9,7 +9,7 @@
 ## 0. 术语与机制
 
 - **小核 = E-core（Efficient Core）**，大核 = **P-core（Performance Core）**。Intel 12 代（Alder Lake）起引入。
-- 本机 **i7-12700K = 8 P + 4 E**，P 核带超线程 ⇒ 满配 **12 核 20 线程**。
+- 例：**i7-12700K = 8 P + 4 E**，P 核带超线程 ⇒ 满配 **12 核 20 线程**。
 - **macOS 对混合架构支持不完整**，三步走：
   1. 靠 **`Kernel > Quirks > ProvideCurrentCpuInfo = true`** 才能把 E 核「喂」给内核
      （官方 README 原话：*"OpenCore's `ProvideCurrentCpuInfo` quirk enables Alder Lake's both P-Cores and E-Cores,
@@ -26,8 +26,8 @@
 ```bash
 sysctl -n hw.ncpu hw.physicalcpu hw.logicalcpu        # 16 = 只有 P 核；20 = P+E 都暴露
 sysctl -n hw.nperflevels                              # 1 = 只有一种核；2 = P/E 两级都识别
-sysctl -n hw.perflevel0.physicalcpu                   # P 核数（本机 8）
-sysctl -n hw.perflevel1.physicalcpu                   # E 核数（本机 4；关小核时该键不存在）
+sysctl -n hw.perflevel0.physicalcpu                   # P 核数（示例：8）
+sysctl -n hw.perflevel1.physicalcpu                   # E 核数（示例：4；关小核时该键不存在）
 sysctl -n machdep.cpu.core_count                      # 见 §4.2 的 -ctrfixcnt
 ```
 
@@ -38,7 +38,7 @@ sysctl -n machdep.cpu.core_count                      # 见 §4.2 的 -ctrfixcnt
 | **1** | 16 | macOS 只看到一种核 ⇒ **E 核没暴露**（BIOS 关着，或 `ProvideCurrentCpuInfo=false`） |
 | 2 | 20 | P / E 两级都识别 ⇒ **小核已开**（再往下看拓扑重建成什么样） |
 
-★ **`hw.nperflevels=1` 时不要去「修」** —— 见 §7，那可能是本机刻意选的稳定态。
+★ **`hw.nperflevels=1` 时不要急着「修」** —— 见 §7，那可能是**刻意选的稳定态**（本机就选了这一档）。
 
 ## 2. 关小核（推荐给「求稳 / 不想折腾」）
 
@@ -46,7 +46,7 @@ sysctl -n machdep.cpu.core_count                      # 见 §4.2 的 -ctrfixcnt
 
 | 厂商 | 位置 / 名字 |
 |---|---|
-| **ASUS**（本机） | `Advanced > CPU Configuration > **Active Efficient Cores**` → 设 **`0`** |
+| **ASUS** | `Advanced > CPU Configuration > **Active Efficient Cores**` → 设 **`0`** |
 | MSI | `OC → Advanced CPU Configuration → **E-Core Count**`（或 `Active E-Cores`）→ `0` |
 | Gigabyte | `Settings > Advanced CPU Settings → **E-Core Count**` → `0` |
 | ASRock | `Advanced → CPU Configuration → **Active E Cores**` → `0` |
@@ -94,7 +94,7 @@ NVRAM 域 = **`4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102`**（OpenCore 的 `NVRAM > A
 
 > ★★ **语法坑**：**v2.x 是 `ctrsmt=off` / `ctrsmt=full`（等号形式）**，
 > 而 **v1.x 的 `-ctrsmt` 是另一回事**（等价于 v2.x 的 `ctrsmt=full`）。抄旧帖的 `-ctrsmt` 到 v2.x 上不会报错，但**不生效**。
-> ⇒ **先看自己装的 kext 版本号**（`CFBundleVersion`，本机 = **2.0.2**）。
+> ⇒ **先看自己装的 kext 版本号**（`CFBundleVersion`；本文写作时为 **2.0.2**）。
 
 ### 4.3 ★★ 已知冲突：与 `-v` 冲突
 
@@ -102,8 +102,8 @@ NVRAM 域 = **`4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102`**（OpenCore 的 `NVRAM > A
 
 > *"May cause random boot failure with verbose (`-v`) boot"*
 
-⇒ **开小核 + `-v` 有概率随机启动失败**。本机 debug 流程是**必须开 `-v`** 的（铁律 13）
-⇒ **排查阶段要么先关小核，要么临时去掉 `-v`**，别把随机失败误判成配置坏了。
+⇒ **开小核 + `-v` 有概率随机启动失败**。而排查阶段通常**必须开 `-v`**（否则看不见卡在哪）
+⇒ **要么先关小核，要么临时去掉 `-v`**，别把随机失败误判成配置坏了。
 （另注：`ProvideCurrentCpuInfo` 本身在 High Sierra 及更早无效，那时用官方的 `patches_legacy.plist` 替代。）
 
 ### 4.4 拓扑对照（官方 README 原表，摘 12700K）
@@ -133,7 +133,7 @@ NVRAM 域 = **`4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102`**（OpenCore 的 `NVRAM > A
 2. **只想去掉 kext**：`CpuTopologyRebuild` 条目设 **`Enabled=false`**（或删条目 + 移走 kext，见铁律 6）。
 3. **起不来**：拷回备份的 config（`scripts/oc-edit-safe.sh` 的存档）+ U 盘 EFI 救援。
 
-## 7. 本机实测与取舍（10-15）
+## 7. 实测与取舍
 
 ### 7.1 关小核时的现状（实测）
 
@@ -164,7 +164,7 @@ Geekbench 7 官网同 CPU（i7-12700K，`Family 6 Model 151 Stepping 2`）榜：
   （Windows 那条是 DDR5 四通道，本机 DDR4 双通道）⇒ **只作方向性参考，最终以本机 A/B 为准**。
 - ★ 这条数据**推翻了早先「小核已关 ⇒ `CpuTopologyRebuild` 是 no-op」的推论**（当时无实测）。
 
-### 7.4 本机「开小核」的落地状态（10-15 05:06）
+### 7.4 「开小核」的落地状态（示例）
 
 - 已做：从 `_kexts-removed-20261014/` 拷回 `CpuTopologyRebuild.kext`（v2.0.2）到 `EFI/OC/Kexts/`；
   `Kernel>Add` 插入条目 `Enabled=true`、**紧跟 Lilu**（index 1）；`ProvideCurrentCpuInfo` 保持 `true`。

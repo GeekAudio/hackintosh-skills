@@ -1,6 +1,6 @@
 # 博通网卡（BCM943602CDP / BCM43602）配置流程
 
-> 依据：本机（ASUS Z690 / macOS 15.8.1 → 26.7.1）的实战记录 +
+> 依据：一次 15.8.1 → 26.7.1 的实战记录（本机 ASUS Z690，见 `machine-facts.md`）+
 > OCLP 的 `efi_builder/networking/wireless.py`（Modern Wireless 分支）逐字对齐的写法。
 > **★ 本流程必须按 macOS 版本分开走** —— 苹果从 Sequoia 起把 Broadcom Wi-Fi 驱动删了，
 > 而 Sequoia 与 Tahoe 的补法**不是同一套**。
@@ -17,7 +17,7 @@
 
 - ★ **蓝牙不走 PCIe**：卡上那条 9-pin 内部 USB 线不接就只有 Wi-Fi、没有蓝牙
 - ★ **BCM20703 固件在卡上** ⇒ 一般**不需要** `BrcmPatchRAM3` / `BrcmFirmwareData`（那是给非原厂博通卡的）
-- ★ 拔掉/屏蔽**原来的 Intel 网卡**（本机是 AX201，蓝牙 `8087:0026`）：两个蓝牙控制器会让 macOS 犯迷糊
+- ★ 拔掉/屏蔽**原来的 Intel 网卡**（例：AX201，蓝牙 `8087:0026`）：两个蓝牙控制器会让 macOS 犯迷糊
 
 ## 1. ★★ 按系统分路线（核心）
 
@@ -30,8 +30,9 @@
 | 用户态（root patch） | **必须**打 OCLP root patch | **同样需要**（用 OCLP 3.0.0+ 打） |
 | 双系统共用一个配置 | 两条都留着，**靠 `MinKernel`/`MaxKernel` 各管一段**：Sequoia 条目 `MaxKernel 24.99.99`，Tahoe 条目 `MinKernel 25.0.0` | 同左 |
 
-> 本机现状就是「两条并存」：plugin 版 `AirPortBrcmNIC.kext` = **禁用**（注释 Sequoia only），
-> `AirPortBrcmNIC-Tahoe.kext` = **启用**（注释 Tahoe / Darwin 25+）。
+> **双系统共用一份配置时的典型做法是「两条并存」**：plugin 版 `AirPortBrcmNIC.kext` 给 Sequoia 段用，
+> `AirPortBrcmNIC-Tahoe.kext` 给 Tahoe 段用。**只装 Tahoe 一台机器就只留后者**，plugin 版可以直接删掉
+> （不必为了「保留」而留一个被 `MaxKernel` 挡掉的死条目）。
 
 ## 2. 两版都要做的部分
 
@@ -80,8 +81,8 @@ bluetoothInternalControllerInfo = 000000000000000089653a552efd
 
 用 `USBToolBox.kext` + `UTBMap.kext` 时，**没写进映射表的端口会被直接禁用**：
 
-- 蓝牙所在端口（本机 **HS11**）的 `UsbConnector` 设为 **`255` (Internal)**
-- **移除原 Intel 蓝牙端口**（本机 HS14）；`port-count` 相应减 1
+- 蓝牙所在端口（按自己 `ioreg` 实读，例：**HS11**）的 `UsbConnector` 设为 **`255`** (Internal)
+- **移除原 Intel 蓝牙端口**（例：HS14）；`port-count` 相应减 1
 - 验证（读的是**端口对象上的实际值**，不是只看配置文件）：
   ```bash
   ioreg -p IOUSB -w0 -l | grep -i -A3 "bluetooth"     # 应见 Bluetooth USB Host Controller / BCM20703
@@ -172,7 +173,7 @@ ls -1 "/Library/Relocated Extensions" 2>/dev/null # 应该为空/不存在
 |---|---|
 | 系统已自动协商出正确的 `IO80211CountryCode`（本机 = `CN`，信道表 1–13 / 36–64 / 149–165 与中国划分完全吻合） | **不要动**（人工干预只会帮倒忙） |
 | AP 用了 **100–140（DFS）** 信道，或要突破发射功率 | 才需要 `AirportBrcmFixup.kext` + `brcmfx-country=US`（或 HK/KR） |
-| 速率不到理论值 | 先查 AP 的空间流数：BCM43602 是 **3×3**，若 AP 只有 2×2 就只能 2 流（本机 867 Mbps 属正常） |
+| 速率不到理论值 | 先查 AP 的空间流数：BCM43602 是 **3×3**，若 AP 只有 2×2 就只能 2 流（3×3 卡配 2×2 AP，867 Mbps 属正常） |
 
 ## 6. 代价与回滚
 
@@ -181,9 +182,9 @@ ls -1 "/Library/Relocated Extensions" 2>/dev/null # 应该为空/不存在
 | OCLP 换掉 `IOSkywalkFamily` | **所有 DriverKit 网卡驱动失效** ⇒ Intel i225/i226 必须改用 `AppleIGC.kext`（IOKit 驱动） |
 | OCLP root patch | **不能用增量 OTA**；**每次系统更新后都要重打**（且每次都要先跑 §3.1 的保护脚本） |
 | 加回蓝牙/Wi-Fi kext | 启动会变慢一些（当初屏蔽蓝牙/Wi-Fi 换来 137 s→91 s，现在要还一部分） |
-| 回滚 | 改 config + 换 kext 之前先备份；本机的做法是「脚本 + `--revert`」+ ESP/工作区双备份 |
+| 回滚 | 改 config + 换 kext 之前先备份；稳妥做法是「脚本 + `--revert`」+ ESP/工作区双备份 |
 
-## 7. 本机实测事实（可直接引用）
+## 7. 实测事实（可作参考值）
 
 | 项 | 值 |
 |---|---|
@@ -197,7 +198,7 @@ ls -1 "/Library/Relocated Extensions" 2>/dev/null # 应该为空/不存在
 
 ### 踩过的环境坑
 
-1. **本机 zsh 没有 `timeout`**（没装 coreutils）⇒ 脚本里 `timeout N cmd` 会**静默失败**，
+1. **macOS 自带 zsh 没有 `timeout`**（没装 coreutils）⇒ 脚本里 `timeout N cmd` 会**静默失败**，
    会让「蓝牙探针 0 秒返回」变成**假结果**。写验证脚本时要自带 bash 版 timeout 兼容层。
 2. **`log show` 在沙箱里永远跑不了**（`log: Cannot run while sandboxed`）⇒ 日志类诊断得走提权 AppleScript 或让用户手动跑。
 3. **Wi-Fi 的设备节点名不是 `ARPT`**，是 `AirPort_BrcmNIC` / `en1`；`ioreg -l -w0` 不加过滤会输出几百 KB。

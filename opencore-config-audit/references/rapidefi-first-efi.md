@@ -70,7 +70,7 @@
    `ResizeGpuBars`/`ResizeAppleGpuBars`、`NVRAM>Add` 的键是否都在 `Delete` 里
 2. **USB 端口映射**：不要靠 `Kernel>Quirks>XhciPortLimit`（文档明确「should be avoided」）——
    用 USB 端口图（如 USBToolBox + `UTBMap.kext`）把端口限制在 15 个以内
-3. **平台相关 SSDT**：按官方 `Docs/AcpiSamples/` 逐条对照本机设备再决定加不加（见 `acpi-ssdt.md`）
+3. **平台相关 SSDT**：按官方 `Docs/AcpiSamples/` 逐条对照你机器的设备再决定加不加（见 `acpi-ssdt.md`）
 4. **显卡**：
    - NVIDIA **Turing 及更新** ⇒ 按 `nvidia-driver.md` 补它要求的设置（`nvfb/nvaccel` boot-args、`ResizeGpuBars`、`IONDRVSupport` 屏蔽等）
    - AMD/Intel 核显 ⇒ 按 Dortania 对应页面处理（本 skill 不覆盖）

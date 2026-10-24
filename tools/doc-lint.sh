@@ -213,6 +213,53 @@ PY
   [ $? -ne 0 ] && ERRORS=$((ERRORS + 1))
 }
 
+# 规则 G1：通用性 —— 别人拿到这个 skill 要能用，不能是某台机器的备忘录
+#   允许的三种位置（见 SKILL.md「写作规范」）：① 证据标注（含「实测 / 曾 / 踩过 / 案例」）
+#   ② 「示例 / 速记」小节 ③ 指针（指向 machine-facts.md）。其余「本机」视为把特例写成了规则。
+#   `machine-facts.md` 本身是唯一放本机事实的地方，整份豁免。
+rule_generality() {
+  hdr "G1  通用性：本机特例没被写成通用规则"
+  local hit=0 f n line
+  for f in "$SKILL"/references/*.md "$SKILL"/SKILL.md; do
+    case "$(basename "$f")" in machine-facts.md) continue ;; esac
+    # (a) 标题里出现「本机」，但不是「关于本机」/「实测」/「示例」/「速记」/「案例」/「写作规范」
+    n=0
+    while IFS= read -r line; do
+      n=$((n + 1))
+      case "$line" in
+        \#*) ;;
+        *) continue ;;
+      esac
+      case "$line" in
+        *本机*) ;;
+        *) continue ;;
+      esac
+      case "$line" in
+        *关于本机*|*实测*|*示例*|*速记*|*案例*|*写作规范*) continue ;;
+      esac
+      bad "$(basename "$f"):$n 标题里写「本机」⇒ 改成通用表述（本机值放正文括号或 machine-facts.md）"
+      echo "      $line"
+      hit=$((hit + 1))
+    done < "$f"
+    # (b) 正文里出现作者机器的绝对路径
+    n=0
+    while IFS= read -r line; do
+      n=$((n + 1))
+      case "$line" in
+        *"/Users/"*) ;;
+        *) continue ;;
+      esac
+      case "$line" in
+        *"/Users/<"*|*"/Users/x/"*) continue ;;
+      esac
+      bad "$(basename "$f"):$n 出现本机绝对路径 ⇒ 换成占位符或相对路径"
+      echo "      $line"
+      hit=$((hit + 1))
+    done < "$f"
+  done
+  [ "$hit" -eq 0 ] && echo "   ✓ 无命中"
+}
+
 echo "══════════════════════════════════════════════════════════"
 echo "  doc-lint · $(basename "$ROOT")"
 echo "  扫描 $(( ${#DOCS[@]} )) 份文档"
@@ -223,6 +270,7 @@ rule_itlwm_airdrop
 rule_rom_airdrop
 rule_index
 rule_version
+rule_generality
 
 if [ "${1:-}" = "--with-redact" ]; then
   hdr "D1  发布前脱敏检查"

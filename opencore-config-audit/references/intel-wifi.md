@@ -1,7 +1,7 @@
 # Intel 无线网卡驱动安装方法（AirportItlwm / itlwm）
 
 > 上游：`OpenIntelWireless/itlwm`（zxystd 等）。
-> 本机参考的 fork：**`laobamac/itlwm`**（<https://github.com/laobamac/itlwm>）——
+> 实践中用得较多的 fork：**`laobamac/itlwm`**（<https://github.com/laobamac/itlwm>）——
 > 它为 **macOS Sequoia 15.2+** 与 **macOS 26 Tahoe** 分别提供 `AirportItlwm` 构建。
 > 下文「官方口径」= 该 fork README 原文，「通用做法」= OpenCore 注入的常规步骤。
 
