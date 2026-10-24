@@ -99,6 +99,16 @@ AMFIPass、IOSkywalkFamily、IO80211FamilyLegacy、AirPortBrcmNIC-Tahoe、**Nvid
 
 `Kernel>Block` 2 条：`IONDRVFramebuffer`（抢 NVRMFB 的 index 0）、`Allow IOSkywalk Downgrade`（OCLP Modern Wireless）
 
+## USB 端口现状（★ 2026-10-25 起）
+
+- 控制器 **`AppleUSBXHCISPT`**；`Kernel>Quirks>XhciPortLimit` **= true**（OC 1.0.8 含 1.0.7 的 Tahoe 修复）
+- **注册根端口 13 HS + 9 SS = 22 个**，唯一 `locationID` 22 个；`port-count = 25`（端口号 1–13 + 17–25，**有缺口**）
+- SS09 挂板载 ASM107x hub（`174c:3074`），**5 Gbps** 链路已建立；蓝牙在 HS11、Fireface 在 HS04、键鼠在 HS06 的 USB2 hub 树
+- 固件 RHUB 列了 SS01–SS10，但 Windows RootHub 描述符 `bNumberOfPorts=25`、USB3 只有 17–25 共 9 个
+  ⇒ **SS10 是模板多列，不是硬件缺失**
+- ★ **尚未逐口验证**：物理位置、Type-C 正反插（`9` vs `10` 未定）、USB 存储吞吐、睡眠唤醒、长期稳定性
+- 方法与判据 ⇒ `usb-port-mapping.md`；回滚脚本在 `EFI/OC/Rollback-USB22-Evidence02.nsh`
+
 已删除（备份在工作区 `_kexts-removed-20261014/`）：`itlwm`、`IntelBluetoothFirmware`、`IntelBTPatcher`
 
 **板载音频现状**：`AppleHDA.kext` 600.2 装在 **`/System/Library/Extensions`**（来自 KDK 15.8.1 build 24H32，macOS 26 必装回）；

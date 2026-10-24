@@ -2,7 +2,7 @@
 name: opencore-config-audit
 description: 审查、修改与维护黑苹果 OpenCore（OpenCorePkg）EFI：BIOS/UEFI 设置审查、config.plist 逐键对照官方文档并用 ocvalidate 校验、ACPI/SSDT 巡检、kext 精简与更新判断、引导与内核日志取证、装不上或进不去系统的分层 debug、启动耗时分析、系统大版本升级（15→26 的版本分流）、磁盘屏蔽、从零生成基础 EFI、换机型与三码。硬件侧覆盖 NVIDIA 独显、Intel / MediaTek / 博通无线网卡、有线网卡、板载声卡 AppleALC、HiDPI、Intel 睿频与小核、内存定制、AMFI/TCC 权限修复、Gatekeeper、AirDrop / 接力、OpenCanopy 主题。触发场景：开机卡 EB、卡 ExitBootServices、卡代码、循环重启、黑屏、启动项丢失、选择器不显示、只有 HDMI 有声音、板载声卡没声音、AppleHDA 装不回来、layout-id 填多少、麦克风没权限、隐私列表里没有这个软件、双击 App 打不开、AirDrop 用不了、隔空投送找不到设备、接力不工作、Wi-Fi 连不上、网卡驱动、蓝牙不可用、睿频上不去、CPU 被限频、小核要不要关、关于本机 CPU 名不对、内存显示不对、显示不清晰、改机型、三码、序列号、ROM、iMessage 登录不了、iasl 怎么装、找不到工具、缺工具、ocvalidate 版本不对、macserial 在哪、没有 brew。内置「改 ESP 的安全流程」（备份 → 语义 diff → lint → sha 校验 → 镜像/存档 → 卸载重挂复验）。用户问「这个技能怎么用 / 使用说明 / 有哪些能力 / 能干什么」时也适用（此时输出技能目录下的 USAGE.md，不要输出内部流程）。
 description_en: Audit, edit and maintain a hackintosh OpenCore (OpenCorePkg) EFI configuration — BIOS/UEFI firmware settings, per-key verification of config.plist against the official docs plus ocvalidate, ACPI/SSDT inspection, kext trimming and update decisions, boot and kernel log forensics, layered debug for installs that fail or never reach the desktop, boot-time analysis, major OS upgrades (15 → 26 with MinKernel/MaxKernel routing), disk masking, generating a first EFI from Windows, SMBIOS model change and serials. Hardware coverage — NVIDIA GPUs, Intel / MediaTek / Broadcom WiFi, Ethernet, onboard audio via AppleALC, HiDPI, Intel Turbo and E-cores, memory injection, AMFI/TCC permission repair, Gatekeeper, AirDrop / Handoff, OpenCanopy themes. Triggers — stuck at EB, stuck at ExitBootServices, boot loop, black screen, lost boot entry, picker not showing, audio only over HDMI, no onboard audio, AppleHDA missing on macOS 26, which layout-id to use, app has no microphone permission, app missing from Privacy list, app won't open on double-click, AirDrop not working, Handoff not working, WiFi not connecting, network driver, Bluetooth unavailable, Turbo stuck low, CPU frequency capped, should I disable E-cores, wrong CPU name in About This Mac, wrong memory display, blurry display, change SMBIOS model, serials, ROM, iMessage sign-in fails, how to install iasl, missing tools, ocvalidate version mismatch. Includes the safe ESP editing flow (backup → semantic diff → lint → sha check → mirror/archive → remount and re-verify). Also applies when the user asks how to use this skill, what it can do, or for usage instructions — in that case output USAGE.md from the skill directory instead of internal workflow details.
-version: 0.40.0
+version: 0.41.0
 agent_created: true
 ---
 
@@ -308,6 +308,16 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
   ★★ **I210 kext 只有 macOS 12 Monterey 里有**（Ventura 起移除，**KDK 里没有**，已实测排除）；
   拿到后**必须验签名链**（`Software Signing` → Apple CA → Apple Root CA），别只看文件名；
   ★ **一次只换一套**（多套会互相抢设备）；★★ 换完必须复查 `en0` 归属
+- **USB 端口定制（某些口没反应 / USB3 只跑 480 / 蓝牙时好时坏 / 睡眠即醒）** ⇒ `references/usb-port-mapping.md`：
+  ★★★ **判据只看「控制器下真的注册了几个 `AppleUSB*XHCIPort` 子服务」** —— kext 加载成功 ≠ 端口注入成功，
+  且**只数控制器直接子服务**（hub 下游端口不算）；
+  ★★★ **macOS 26 变了两个键名**：`UsbConnector`→**`usb-port-type`**、`port`→**`usb-port-number`**
+  ⇒ 旧 map 在 Tahoe 上就是不生效，`USBToolBox.kext` 必须 **≥1.2.0**；
+  ★★ **15 口上限在 Tahoe 上能破**（OC **≥1.0.7** 的 `XhciPortLimit`，`0F 0F 87`→`40 0F 87`），
+  **但必须重做 map 并全选端口**，旧 map 不动 = 白开；官方仍写 `should be avoided`；
+  ★★ **`port-count` = 最大端口号，不是条目数**；**一个 USB3 口 = HS + SS 两个端口号**；
+  ★★ **SS 对应的 HS 不能全砍**（USB2 设备插 USB3 口走的是 HS）；★ Type-C 的 `9`/`10` **只能靠正反插实测**；
+  ★ 端口号**不要求连续**、「超过 15 必失败」都已被实测否证（见该文件 §7）
 - **换机型 / 三码** ⇒ `references/smbios-and-serials.md`：
   ★★★ **顺序铁律：先完善 SSDT/ACPI（在【旧机型】下验证通过）→ 再换 SMBIOS → 再重做 CPUFriend**
   —— 不先处理 ASUS 的 `xh_adls3` OEM SSDT，换机型**必循环重启**（不是卡死 ⇒「多等一会儿」无效）；
@@ -442,6 +452,7 @@ OpenCore 官方文档 + Dortania）在 Windows 上「刷新硬件信息 → 自�
 - `references/acpi-ssdt.md` —— ACPI/SSDT 巡检：官方 AcpiSamples 逐条适用条件 · 设备存在性检查 · 命名规范 · ★ **§6 编译与验证（`iasl` 三个动作 / 反编译报错是正常的 / 四项验证 / 报错对照表）** · ★★ **`5T33Z0/OC-Little-Translated` 按需求索引表**（含本机落点）· **官方/Dortania 没有的那些**（`SSDT-ALL` 合并表 · **用 ACPI 做 USB 端口映射** · `SSDT-I225V` · `SSDT-PMCR` · `ACPIDebug` · `Fixing_Preboot`）
 - `references/bios-settings.md` —— **BIOS/UEFI 审查**：官方 9 条 + Dortania（Intel/AMD）+ 社区补充（**VMD**/Speed Shift）、**必须关/必须开/看情况**三类、CFG Lock 专题、**厂商命名对照表**、Windows 审查脚本用法
 - `references/disks-and-kexts.md` —— 磁盘屏蔽与 kext 精简的判据与「不能删」清单
+- `references/usb-port-mapping.md` —— **USB 端口定制（macOS 26 Tahoe）**：★★★ **判据只数控制器下注册的 `AppleUSB*XHCIPort`**（kext 加载 ≠ 端口注入，hub 下游不算）· ★★★ **Tahoe 键名变更**（`usb-port-type` / `usb-port-number`，`USBToolBox.kext` ≥1.2.0）· ★★ **15 口上限可破**（OC ≥1.0.7 `XhciPortLimit`，`0F 0F 87`→`40 0F 87`，**但必须重做 map 全选**）· **采集三法**（Windows RootHub 描述符 / 临时开补丁一次扫全 / 滑动窗口）· **Connector 类型权威表（0/3/8/9/10/255）** · **`port-count` = 最大端口号不是条目数** · **SS 对应的 HS 不能全砍** · **五个已被否证的误区**（跳号必失败 / >15 必失败 / 固件有 SS10 就有口…）· 风险与两层回滚
 - `references/nvidia-driver.md` —— NullMoth NVIDIA 驱动：适用范围、安装、必需 OC 设置、恢复、故障对照
 - `references/amfi-and-tcc.md` —— **AMFI ↔ TCC 冲突（App 拿不到权限）**：★ 现象三连（**第三条 = 隐私列表里没有条目**才是判据）· 根因（`amfi=0x80`）· **别的机器首选 `AMFIPass`**（本机不行，只能二选一）· ★★ **解法 `GeekAudio/tcc-helper`**（GUI + CLI、**自动授权从系统反推**、109 个服务、任意目标含裸可执行文件）· **要授权的是真正申请的 helper 而不是主 App** · `access` 表字段与 `csreq` magic `fade0c00` · **五个工程坑** · 诊断三分类 · 不持久 · **附录：Gatekeeper /「任何来源」/「无法验证开发者」（`sudo spctl --global-disable`，`--master-disable` 在 macOS 15+ 已过时；与 TCC 是两回事）**
 - `references/intel-wifi.md` —— Intel 无线网卡驱动（AirportItlwm / itlwm）：版本线、注入、蓝牙配套、排错

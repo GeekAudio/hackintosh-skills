@@ -227,6 +227,7 @@ hackintosh-skills/
 | `acpi-ssdt.md` | ACPI/SSDT 巡检：官方 AcpiSamples 逐条适用条件 · 设备存在性检查 · 命名规范 · ★★ **`5T33Z0/OC-Little-Translated` 按需求索引表**（含本机落点）· **官方/Dortania 没有的那些**（`SSDT-ALL` 合并表 · **用 ACPI 做 USB 端口映射** · `SSDT-I225V` · `SSDT-PMCR` · `ACPIDebug` · `Fixing_Preboot`） |
 | `bios-settings.md` | **BIOS/UEFI 审查**：官方 9 条 + Dortania + 社区补充（**VMD**/Speed Shift）、**必须关/必须开/看情况**三类、CFG Lock 专题、**厂商命名对照表** |
 | `disks-and-kexts.md` | 磁盘屏蔽与 kext 精简的判据与「不能删」清单 |
+| `usb-port-mapping.md` | **USB 端口定制（macOS 26）**：★★★ **判据只数控制器下注册的 `AppleUSB*XHCIPort`**（kext 加载 ≠ 端口注入）· ★★★ **Tahoe 键名变更**（`usb-port-type`/`usb-port-number`，`USBToolBox.kext` ≥1.2.0）· ★★ **15 口上限可破**（OC ≥1.0.7，但必须重做 map 全选）· 采集三法 · **Connector 类型表** · `port-count` 不是条目数 · SS 对应的 HS 不能全砍 · **五个已被否证的误区** · 两层回滚 |
 | `kext-and-oc-update.md` | **更新 kext 与 OpenCore**：★★★ **上游 tag 查不到 ≠ 来路不明**（Dortania `build-repo` 按 commit 构建、补丁号 +1）· **判「官方件」四条判据**（只有「厂商安装器钉没钉」能定性）· **DEBUG/RELEASE 用体积对照** · 该更新/不该更新的表 · **OC 本体更新（连 Drivers 一起换）** · 安全流程 9 步 · 坑 |
 | `rapidefi-first-efi.md` | 从零：Windows 上用 RapidEFI 生成基础 EFI 及收尾 |
 | `nvidia-driver.md` | NullMoth NVIDIA 驱动：适用范围、安装、必需 OC 设置、恢复、故障对照 |
