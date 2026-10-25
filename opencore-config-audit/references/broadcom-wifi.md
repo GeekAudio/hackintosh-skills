@@ -116,17 +116,11 @@ DeviceProperties → Add →
 3) 打开 OpenCore-Patcher.app → Post-Install Root Patch → Start Root Patching
    应看到 "Networking: Modern Wireless"（OCLP 按 PCI 的 0x43BA 识别，在官方支持列表里）
 4) 重建 dyld shared cache 可能要 10–30 分钟，别中断 → 重启
-5) ★★ 重启后确认 **Wi-Fi 是 `en0`**（打补丁会改变驱动挂载顺序，可能把无线挤到 `en1`）
+5) 重启后记录 Wi-Fi 的实际 `enX` 并检查联网；核对 `en0` 是否存在且 built-in，不要求 Wi-Fi 必须为 `en0`
    ⇒ 见 `network-en0-order.md`
 ```
 
-> ★★ **为什么这一步不能省**：`en0` 是 Apple **iServices** 认定的「主网卡」——
-> `ROM`、iMessage / FaceTime / App Store 都挂在它上面。
-> 打补丁 / 换卡后 `en0` 换人 ⇒ 这些会**静默失效**。查法与「钉住」方法见 **`network-en0-order.md`**。
->
-> ★ **AirDrop / 接力 / 连续互通不在这个清单里** —— 它只要求「有 `awdl0`（Broadcom 原生栈）+ 蓝牙 BLE」，
-> 与 `en0` / `ROM` / 序列号 / UUID **都无关**。别为了 AirDrop 去改 `ROM`。
-> 排查顺序与权威依据见 **`airdrop-handoff.md`**。
+> 网卡与补丁变化后分别验证联网、iServices 与所需连续互通功能。接口编号变化不等于故障，正常有线 `en0` 与无线 `en1` 可以并存；不要为 AirDrop 重排接口或改 ROM。见 [接口顺序](network-en0-order.md) 与 [连续互通](airdrop-handoff.md)。
 
 ### 3.1 ★★ 打补丁前必须先跑保护脚本（否则 NVIDIA 驱动会失效）
 

@@ -1,91 +1,36 @@
 # `en0` 归属与网络接口顺序
 
-> ★ **本文是通用规则**，被 `broadcom-wifi.md` / `intel-wifi.md` / `mediatek-wifi.md` /
-> `os-upgrade-15-to-26.md` / `smbios-and-serials.md` 引用。
-> **凡是要动网卡驱动 / 打 Wi-Fi 补丁 / 换网卡之前，先读这里。**
+网卡驱动或硬件变化后，记录接口编号、MAC、built-in 与联网状态。不要因为 Wi-Fi 被编号为 `en1` 就重建网络设置。
 
-## 0. 一句话
+## 1. iServices 与 Wi-Fi 分别检查
 
-**`en0` 是 Apple 服务认定的「主网卡」。**
-内核按**驱动挂载先后**给 `en` 编号 —— **与 PCI 地址序无关**。
-所以**装 / 删网卡驱动、打 Wi-Fi 补丁、换网卡**之后，`en0` 可能**换人**，凡是依赖它的东西都跟着受影响。
+[Dortania 的 iServices 指南](https://dortania.github.io/OpenCore-Post-Install/universal/iservices.html#fixing-en0) 要求检查 `en0` 是否存在且标记为 built-in；它可以是有线、Wi-Fi 或 Thunderbolt，类型不是判据。同一指南的 ROM 小节讨论网卡 MAC 转为 ROM 值的方法。
 
-## 1. 谁依赖 `en0`
+因此，有线为 `en0`、无线为 `en1` 是可用的组合。换网卡或补丁后先检查实际状态，不能把接口编号变化直接判成 iServices 或 Wi-Fi 故障。AirDrop / Handoff 的驱动能力另见 [连续互通排障](airdrop-handoff.md)。
 
-| 依赖项 | 说明 |
-|---|---|
-| **`PlatformInfo > Generic > ROM`** | Dortania 要求填 **`en0` 的真实 MAC** ⇒ `en0` 换人后 ROM 就不一致了（见 `smbios-and-serials.md` §5.3 / §6.1） |
-| **iMessage / FaceTime / App Store** | 按 `en0` 判机器身份；`en0` 不对会「登录不了 / 掉线」 |
-| **Wi-Fi 本体** | 见 §2 —— 打补丁 / 换卡之后要确认无线是不是 `en0` |
-
-> ★★ **不依赖 `en0` 的：AirDrop / 接力 / Handoff / 连续互通。**
-> 它只取决于「有没有 `awdl0`」（= 无线是否跑 Broadcom 原生 `IO80211Family` 栈）+ 蓝牙 BLE 服务，
-> 与 `en0` / `ROM` / 序列号 / UUID **都无关**。
-> 早前本文把 `Continuity / AirDrop` 列进「依赖 `en0`」是**错的** —— 那是把 Dortania 的
-> **iServices**（iMessage）要求错误扩展到了 AirDrop（Dortania 原文：*"The type doesn't matter"*，
-> 且通篇不提 AirDrop；Apple 官方对连续互通只要求「同一 Apple ID + Wi-Fi + 蓝牙」）。
-> ⇒ **排查 AirDrop 请走 `airdrop-handoff.md`，不要在这里找。**
-
-## 2. ★★ 为什么「修补 Wi-Fi」之后必须确认 `en0`
-
-打 **OCLP root patch**、**换网卡**、**增删网卡 kext** 都会改变**驱动挂载顺序** ⇒
-**无线可能从 `en0` 掉到 `en1`（或有线抢走 `en0`）**。后果：
-
-- `ROM` 与 `en0` 不一致 ⇒ **iMessage / FaceTime / App Store 可能异常**
-- 依赖「主网卡」的服务表现异常
-
-> ★ **AirDrop / 接力不会因此失效** —— 那是 `awdl0` 的事（见 `airdrop-handoff.md`）。
-> 别把「换完卡 AirDrop 坏了」归因到 `en0` 换人上。
-
-⇒ **所以 Wi-Fi 修补流程（`broadcom-wifi.md` §3 / `os-upgrade-15-to-26.md` 升级后）里必须加一步：
-确认 `en0` 是不是无线。**
-
-## 3. 怎么查
+## 2. 只读检查
 
 ```bash
-networksetup -listallhardwareports      # 看 Wi-Fi 对应哪个 en
-ifconfig en0 | head -3                  # en0 的 MAC 与状态
-ioreg -l -w0 | grep -i "IOBuiltin"      # built-in 标记
-scutil --nwi                            # 当前主网络接口
+networksetup -listallhardwareports      # 将 Wi-Fi / Ethernet 对应到实际 enX
+ifconfig en0                           # en0 的 MAC 与状态
+ioreg -l -w0 | grep -i IOBuiltin       # 结合控制器路径确认 built-in，不能只看任意一处命中
+scutil --nwi                           # 当前网络状态
 ```
 
-**判据**：`networksetup -listallhardwareports` 里 **Wi-Fi 那一段显示的 Device 就是 `en0`**（而不是 `en1`）。
+对 Wi-Fi 使用第一条命令查出的实际接口名检查 `ifconfig`，不要固定写 `en0` 或 `en1`。联网验证结合关联、IP、DHCP 与实际连接测试；仅有接口或驱动加载记录不足以证明功能正常。
 
-## 4. 怎么把无线「钉」到 `en0`
+## 3. 什么时候需要修复顺序
 
-```bash
-# ① 临时禁用有线驱动（换成你实际在用的那个：AppleIntelI210Ethernet / AppleIGC / …）
-#    OpenCore: Kernel > Add > 对应条目的 Enabled = false
-# ② 删掉接口顺序缓存
-sudo rm /Library/Preferences/SystemConfiguration/NetworkInterfaces.plist
-# ③ 重启
-# ④ 起来后确认 Wi-Fi = en0
-networksetup -listallhardwareports
-# ⑤ 需要时再把有线驱动加回来（编号已固定，不会再抢）
-```
+只有缺少 `en0`、built-in 不正确，或有明确的接口相关故障时，才按 Dortania 对应章节处理。已有正常 built-in `en0` 时，保留接口顺序。
 
-★ **重启后无线可能先锁在 2.4 GHz** ⇒ 复位一下：
+重建网络设置会影响网络服务与偏好，执行前备份 `/Library/Preferences/SystemConfiguration/` 下相关文件，并准备本地访问和恢复路径。不要把删除 `NetworkInterfaces.plist`、禁用有线驱动当成修补 Wi-Fi 后的例行步骤；远程排障尤其不能先切断唯一可用连接。
 
-```bash
-networksetup -setairportpower en0 off
-networksetup -setairportpower en0 on
-```
+## 4. ROM 与身份信息
 
-## 5. 连带影响：`ROM` 要不要跟着改
+记录 ROM 与目标网卡的关系，按 [SMBIOS 与身份信息](smbios-and-serials.md) 判断是否需要修改。接口编号改变不自动授权重写 ROM；不要为了排查 AirDrop 顺手换 ROM、UUID 或三码。MAC 与身份信息只留在用户的本地记录，不进入公开报告。
 
-`en0` 换人之后，`ROM`（= 原 `en0` 的 MAC）就与当前 `en0` 不一致了。
+## 5. 修改网卡后的验收
 
-- **改** ⇒ 又要付一次「重建 `ByHost` + 重新认证」的代价
-- **不改** ⇒ 多数情况下仍能用，但不合 Dortania 规范
-
-⇒ 这是个**需要自己拍板**的取舍（详见 `smbios-and-serials.md` §6.1）。
-**换之前把两边的 MAC 都记下来**（记在本地，别进仓库）。
-
-## 6. 判据纪律
-
-- ★ **看 `ifconfig`，别只看 `system_profiler`** —— 重启后驱动要读卡、关联、DHCP，**十几秒才起来**，
-  期间 `system_profiler` 返回空 ⇒ 容易误判成「失败」（见 `broadcom-wifi.md` §4）
-- 无线是否真的活：`ifconfig en0`（或 `en1`）要有 **`inet` + `status: active`**
-- **`awdl0` 存在** ⇒ AirDrop / 接力**有戏**（完整判据见 `airdrop-handoff.md`：
-  还要 `llw0` + 蓝牙 `LEA`/`AACP`/`GATT`）
-- 换网卡后**同一台机器不要同时注入多套网卡驱动**（`intel-wifi.md` §5）
+- 按实际 `enX` 验证有线 / 无线的联网功能。
+- 检查原本可用的 iServices 是否仍正常；异常时沿 iServices 指南逐项取证。
+- AirDrop 与 Handoff 分别验证，不能以 `en0` 类型或 `awdl0` 是否存在代替完整功能测试。

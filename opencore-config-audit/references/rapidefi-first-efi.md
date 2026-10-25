@@ -20,7 +20,7 @@
 - 「输出 EFI 后建议**先使用备用 U 盘测试启动，不要直接覆盖正在稳定使用的 EFI**。」
 - 「黑苹果安装和调试存在硬件差异，请务必**提前备份重要数据**。」
 - 工具**完全免费、离线、无广告**；核心能力内置，不依赖网络（连不上 GitHub 也能跑完）
-- ⇒ 结论：**它产出的是一份「可用的起点」，不是终点**。收尾仍然按本 skill 的阶段 1–2 用官方文档逐键复核
+- ⇒ 结论：**它产出的是一份「可用的起点」，不是终点**。收尾仍然按 [官方文档方法](official-docs-method.md) 逐键复核
 
 ## 2. 平台与版本要求
 
@@ -61,7 +61,7 @@
 
 工具给的是基础配置，下面这些**一定要自己过一遍**（本 skill 的脚本正好干这个）：
 
-1. **官方校验 + 逐键复核**（阶段 1–2）
+1. **官方校验 + 逐键复核**（见 [官方文档方法](official-docs-method.md)）
    ```bash
    scripts/fetch-opencore-docs.sh <机器上的 OpenCore 版本>   # 取同版官方文档与 ocvalidate
    scripts/oc-verify.sh <EFI/OC/config.plist> ./_oc-docs-audit
@@ -82,7 +82,7 @@
 Windows 上生成基础 EFI（本文档）
       ↓ 拷到 U 盘，先在备用 U 盘上试启动（不要覆盖在用 EFI）
       ↓ 能进安装器 / 能进系统
-挂载 ESP → scripts/oc-verify.sh 校验 → 阶段 2 逐键对照官方文档
+确认目标 ESP → scripts/oc-verify.sh 校验 → 按官方文档逐键对照
       ↓ 每改一项：scripts/oc-edit-safe.sh begin / finish（备份 + 语义 diff + sha + 重挂复验）
       ↓ 日志取证（scripts/grab-logs.sh）：0 ACPI 报错、选择器项正确、无 OC WARN/ERROR
 完成

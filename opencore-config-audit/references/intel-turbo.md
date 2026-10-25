@@ -1,16 +1,17 @@
-# Intel 睿频（Turbo Boost）—— 从「被压在低频」到最佳定案
+# Intel 睿频（Turbo Boost）诊断与调优案例
 
 > 依据：一次完整实战闭环（**诊断 → 排除 → CPUFriend 修复 → 全量机型 profile 对比 →
 > iMac19,1 实验翻车回滚 → 最终定案**）+ CPUFriend 官方 `Instructions.md` / `Tools/ResourceConverter.sh`
 > + `X86PlatformPlugin` 全部 76 份 `Mac-*.plist` 的实测解码。
-> ★ **验证工具用 CPU-S**（用户指定），配合 Intel Power Gadget 与自写探针交叉印证。
+> 案例使用 CPU-S、Intel Power Gadget 与自写探针交叉印证；工具选择按目标 CPU、系统支持和用户偏好决定。
 
-## 0. ★★★ 推荐路径（先看这个）
+## 0. 先诊断，再评估是否需要 CPUFriend
 
-**不要试图「换个机型 profile 来抬频率上限」** —— 这条路**已实测走不通**。
-**正确做法 = 注入「你自己机型那份 profile，只把 `hwp` 删掉」**，强制 macOS 走传统 XCPM P-state。
+[CPUFriend 官方说明](https://github.com/acidanthera/CPUFriend/blob/master/Instructions.md) 提醒：不清楚是否需要时通常无需使用 CPUFriend，原生电源数据多能工作。先按 §1–2 确认限频现象、温度、功耗及当前注入，再评估是否修改。
 
-| 项 | 定案值 |
+下面是参考机器对自有 profile 删除 `hwp` 的一次实验结果，不是所有 CPU / SMBIOS 的推荐配置；不要直接套用数值或删除该项。
+
+| 项 | 该案例的值 |
 |---|---|
 | 注入的数据 | **你自己机型那份 profile**（例：`iMac20,1` ⇒ `Mac-CFF7D910A743CAAF.plist`），**只把 `hwp` 一项删掉** |
 | `FrequencyVectors` 段数 | **1 段**（每段恒 7668 B） |
@@ -19,11 +20,11 @@
 | **`hwp`** | **已删除** ← ★★ **最关键的一项** |
 | 实测频率 | 单线程 **4.28–4.35 GHz**；8 线程 **4.29–4.35 GHz**，八核一致、无振荡 |
 
-⇒ **四点全中才算「最佳」，缺一项就退步或翻车**（§5 给判据）。
+这些参数只说明该案例如何验收。目标机器应以自身基线、稳定性、负载频率与功耗验证，不能用这组参数定义通用「最佳」。
 
-### 0.1 ★★ 反面结论（别再试，已付过学费）
+### 0.1 跨机型 profile 的实验结果（示例）
 
-**注入任何别的机型的 profile 都会把睿频压垮**：
+参考机器测试了以下两份其他机型的 profile，均出现性能下降；不能据此推断所有跨机型 profile 都有相同结果：
 
 | 试过的 | 结果 |
 |---|---|
@@ -167,7 +168,7 @@ profile 来自 **`X86PlatformPlugin.kext/Contents/Resources/Mac-<board-id>.plist
   修复后 **8 核一致**，振荡消失 —— **这才是「卡顿 / 掉帧」的直接来源**
 - 同时复查：机型没变、`Processor Name` 正确、`CPUFriend (1.3.0)` 已加载且在 Lilu 之后、**无新 panic**、
   `machdep.xcpm.mode=1`、`hard_plimit_max=49`
-- **换了机型 ⇒ 必须重做 DataProvider**（`Frequencies` / 段数 / `CPUFloor` 都随机型变）
+- **换了机型且已使用 DataProvider ⇒ 重新核对其来源与适用性**；需要时重建，未使用 CPUFriend 的机器不因此新增它
 
 ## 9. 还想追满频（4.3 → 5.0 GHz）？
 
@@ -197,7 +198,7 @@ HWP 不可用 ⇒ wrmsr(0x770,1) 触发 #GP ⇒ xcpm_hwp_enable 崩（panic type
 
 ## 11. 现状与回退
 
-- **现行（最佳，不要换）**：`CPUFriend 1.3.0` + `CPUFriendDataProvider`
+- **该案例最终保留的配置**：`CPUFriend 1.3.0` + `CPUFriendDataProvider`
   （数据 = **`iMac20,1` 自己的 profile 且已删 `hwp`**），**sha `5952ea56…`**；
   现用备份 `_CPUFriendDataProvider-最佳-iMac20,1-已去hwp-20261015-172126/`
 - **备用（免手工编辑）**：`iMacPro1,1` **原生无 `hwp`**（A 族），实测同样 4.28–4.35 GHz，

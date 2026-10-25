@@ -172,7 +172,7 @@ diff "EFI存档/config.plist.bak-*-before-i210" /Volumes/EFI/EFI/OC/config.plist
 `diff` **应该只有三处**：boot-args 末尾、新增 kext 条目、新增 DeviceProperties 段。
 多于三处 ⇒ 说明改到了别的东西，回滚重来。
 
-ESP 写盘纪律：`sync && sleep 8` 再重启（FAT 缓存未落盘会卡死），另见 `SKILL.md` 的「改 ESP 的安全流程」。
+ESP 写盘后执行 `sync`、卸载、重挂与 sha 复验，再安排重启；固定等待若干秒不能代替验证。见 [修改与复验](../SKILL.md#修改与复验)。
 
 ### 1.5 重启后判据
 

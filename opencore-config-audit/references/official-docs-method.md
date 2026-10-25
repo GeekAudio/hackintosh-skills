@@ -6,13 +6,15 @@
 
 ## 1. 先确定「用哪一版文档」
 
+先确定目标是离线副本还是本机 live EFI。离线审查从用户提供的 `OpenCore.efi`、原始包、哈希与目标日志核对版本；不能用宿主 NVRAM 代替副本的版本，也无需挂载宿主 ESP。下列 NVRAM 命令只适用于已确认就是目标机器的当前启动环境。路径示例必须替换为实际审查对象。
+
 ```bash
 nvram 4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102:opencore-version
 # DBG-108-2026-09-27 → OpenCore 1.0.8 的 DEBUG 构建（DBG- 前缀 = DEBUG）
 # 形如 1.0.8-2026-09-27 → RELEASE
 ```
 
-**必须用同版本**：`ocvalidate` 会拒绝校验不同版本的 config；文档里键的 Failsafe 也可能随版本变。
+**必须用同版本**：校验器与文档按目标 OpenCore 版本选择，不能把一次通过当成已证明版本匹配。文档里的键与 Failsafe 可能随版本变化。
 
 判断你手上那个 OpenCore.efi 到底是 DEBUG 还是 RELEASE（逐字节）：
 
@@ -45,9 +47,9 @@ shasum -a 256 /Volumes/EFI/EFI/OC/OpenCore.efi
 
 | 输入 | 作用 |
 |---|---|
-| 官方 `Sample.plist` | 官方默认值（Failsafe 的实例）；与 live config 做**语义 diff** |
+| 官方 `Sample.plist` | 官方参考配置；与目标 config 做**语义 diff**，具体 Failsafe 仍查文档 |
 | `oc-doc-keys.json` | 每个键的**官方说明**，用来判定「这个偏离是有意为之还是错的」 |
-| live `config.plist` | 机器实际配置 |
+| 目标 `config.plist` | 用户提供的副本，或已确认目标的 live 配置；报告中注明来源 |
 
 语义 diff 要按 plist 结构递归（dict 按 key、list 比长度/元素），不要按文本 diff —— `plutil`/手工编辑会重排格式。
 
@@ -76,7 +78,7 @@ shasum -a 256 /Volumes/EFI/EFI/OC/OpenCore.efi
 | `UEFI>Output>TextRenderer=System*` ↔ `ClearScreenOnModeSwitch` / `IgnoreTextInGraphics` | 这两个开关「only applies to System renderer」—— 换 Builtin 就失效 |
 | `UEFI>Output>ProvideConsoleGop=true` ↔ `Resolution=Max` | Builtin 渲染器「necessary to enable ProvideConsoleGop and set Resolution to Max」 |
 | `Kernel>Block` 的 `com.apple.iokit.IONDRVSupport` | 否则固件 framebuffer 会抢走 display index 0 |
-| `NVRAM>Add` 的每个键 ↔ 同名 `NVRAM>Delete` 条目 | 「Variables will only be set if not present or deleted」 |
+| 覆盖已有 `NVRAM>Add` 变量时 ↔ 同名 `NVRAM>Delete` 条目 | 「Variables will only be set if not present or deleted」 |
 
 > ★ **注意**：`LauncherOption` 的**官方 Failsafe 是 `Disabled`**，不是 `Full` —— 也就是说 `Full` 属于「偏离默认」。
 > 它并非越多越好：`Full` 会让 OpenCore 每次开机改写固件启动项，**从 U 盘引导时会把硬盘那条重指过去**

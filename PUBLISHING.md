@@ -128,12 +128,15 @@ python3 <skill-creator>/scripts/quick_validate.py opencore-config-audit
 bash tools/doc-lint.sh
 # 发布前连脱敏一起跑：
 bash tools/doc-lint.sh --with-redact
+# ⑤ 文档结构与脚本行为回归（临时夹具，不写真实 EFI）
+python3 tools/test-doc-lint.py
+python3 tools/test_script_safety.py
 ```
 
 > **④ 为什么值得跑**：references 互相引用，一处结论写错会顺着引用链传染 ——
 > 本 skill 就栽过一次（把 Dortania 的 **iServices** 要求错误扩展成了 AirDrop 依赖 `en0`，
 > 结果 5 个文件全线写错）。`doc-lint.sh` 把那类「已知错误说法」写成了规则，
-> 并会检查每个 reference / script 有没有在 `SKILL.md` 里被索引（漏索引 = 模型永远读不到）。
+> 并会检查每个 reference / script 是否能从 `SKILL.md` 经本地引用发现。版本同步使用技能的 `metadata.version`、插件 `version` 与市场条目的 `version`。
 > 退出码 0 = 干净，1 = 有告警。
 
 ### A.6 常见问题

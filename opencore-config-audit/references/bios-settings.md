@@ -343,4 +343,4 @@ powershell -ExecutionPolicy Bypass -File .\bios-audit.ps1 -OutFile C:\bios-audit
 - **NVIDIA 大 BAR 与 ReBAR** → `nvidia-driver.md`
 - **核显 / iGPU** → 见 §3.3 与 `boot-timeline.md` 的 `-wegnoigpu`
 - **内存条与插槽核对** → `memory-injection.md`（脚本的 §6.2 顺带输出槽位）
-- **改 ESP 的安全流程** → `SKILL.md` 铁律 1–16 + `scripts/oc-edit-safe.sh`
+- **改 ESP 的安全流程** → [技能入口的修改与复验](../SKILL.md#修改与复验) + `scripts/oc-edit-safe.sh`

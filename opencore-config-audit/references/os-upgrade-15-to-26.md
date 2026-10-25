@@ -8,13 +8,12 @@
 > 核心命题：**同一份 OpenCore 配置要同时服务两个 Darwin 大版本 ⇒ 必须用 `MinKernel` / `MaxKernel` 把按版本分构建的 kext 分流**。
 > 实测基线（本文的升级终点）：macOS **26.7.1 (25G241)** / Darwin **25.6.0**、机型 `MacPro7,1`、博通 BCM943602CDP。
 
-## ★★ 两条硬约束（先读这两条，再往下）
+## 升级前先确定范围
 
-1. **升级时不许改机型** —— `PlatformInfo` 里任何 `SystemProductName` / `BoardProduct` / 三码都不动。
-   **机型不在新版白名单里 ⇒ 加 boot-arg 绕过**（`-no_compat_check` + `revpatch=sbvmm`），**不是换机型**。详见 §5。
+1. **默认保留机型与身份信息**，将系统升级与 SMBIOS 迁移分别评估。若用户已要求组合迁移，按 [SMBIOS 专题](smbios-and-serials.md) 制定分步验证方案。兼容性绕过也须核实目标系统，不能自动套一组参数，见 §5。
 2. **按版本分构建的 kext 必须做版本分流** —— 用 `MinKernel` / `MaxKernel`。详见 §1、§2。
 
-## 0. 结论先行：升级会「必然」打断什么
+## 0. 升级前核对哪些依赖会受影响
 
 | 会被打断的 | 为什么 | 是不是「配置坏了」 |
 |---|---|---|
@@ -23,7 +22,7 @@
 | **FileVault 挡住 OCLP** | OCLP 的 Post-Install 拒绝在 FileVault 开启时打补丁 | 不是 |
 | **`/Library/Extensions` 里的第三方 kext 被搬走** | OCLP 打补丁前会清理 **mtime < 2021-10-01** 的 kext，搬到 `/Library/Relocated Extensions`（NVIDIA 那批的时间戳是 `1970-01-01`） | 不是 |
 
-> ★★ **先记住这句**：**升级后 Wi-Fi 必死、root patch 必丢 —— 这是设计使然，不是你把配置改坏了。**
+> 表中问题取决于当前驱动、补丁与版本范围；未使用这些依赖的机器不一定受影响。升级前记录适用项，升级后按实际加载与功能验证，不把单机升级结果当作必然现象。
 > 所以升级流程的重点不是「排查」，而是**按顺序做那几件必做的事**（§3）。
 
 ---
@@ -214,96 +213,38 @@ Count / Skip / Limit = 0
 | **`revpatch=sbvmm`** | ★ **同上，解决「能不能收到/安装系统更新」**（见 §5.3）—— 这个容易被漏掉 |
 | `revpatch=cpuname` + `revcpu=1` + `revcpuname=<名字>` | CPU 名称显示（如 `revcpu=1`） |
 | `-wegnoigpu` | 藏掉无驱动的核显（否则 `IOGraphicsFamily` bring-up 会等它，实测慢 ~60 s） |
-| `-v` | **偏好项，必须问客户**（见 `lifecycle.md` §6.3） |
+| `-v` | **按用户已有偏好执行，未要求调整时保留**（见 `lifecycle.md` §6.3） |
 
 > 用 `revpatch=` / `revcpu=` 需要 **`RestrictEvents.kext`**（Lilu 插件）。
 
 ---
 
-## 5. ★★ 硬约束：升级时不改机型，用参数绕过
+## 5. 机型兼容性与身份信息单独决策
 
-### 5.1 约束
+### 5.1 默认保留稳定身份
 
-> **升级系统时，`PlatformInfo` 的机型相关字段一个都不动。**
-> **机型不在新版白名单里 ⇒ 加 boot-arg 绕过，不是换机型。**
+仅请求系统升级时保留现有 `SystemProductName`、board-id、serial、MLB、UUID 和 ROM。若用户明确要求迁移机型，先核对目标系统支持范围与收益，再按 [SMBIOS 专题](smbios-and-serials.md) 分步验证；不重复索取已有授权。
 
-具体「不许动」的：
+### 5.2 核对当前配置的依赖
 
-- `PlatformInfo > Generic > SystemProductName`
-- `PlatformInfo > SMBIOS > SystemProductName`
-- `PlatformInfo > DataHub > SystemProductName`
-- `PlatformInfo > SMBIOS > BoardProduct`（board-id）
-- 序列号 / MLB / UUID（三码）
-
-### 5.2 为什么这是硬约束，而不是「两种路线可选」
-
-换机型**不是一个孤立改动，而是一次耦合改动**：
-
-| 连带影响 | 后果 |
+| 项目 | 核对什么 |
 |---|---|
-| **board-id 变 ⇒ ACPI 表重新解析** | ★ 已知真因（案例）：BIOS 里那张 **`OEM Table ID = xh_adls3`** 的 SSDT 解析不过（**`HS06 AE_NOT_FOUND`**）⇒ 循环重启。**不是 USB 图**（见 `smbios-and-serials.md` §2） |
-| **board-id 变了** | 触发**系统卷重建 / 校验** ⇒ 若 OCLP 已破封印，**可能卡住**（踩过） |
-| XCPM profile 跟着换 | CPU 频率行为变化（`MacPro7,1` 强制 `hwp=on` ⇒ 必须重做 CPUFriend 数据） |
-| AGDC 路径、ByHost 偏好 | 显示/服务行为漂移，排查面变大 |
+| ACPI / SSDT | 当前表是否含机型匹配条件或已有错误；参考机器的 `xh_adls3` 案例不代表其他主板也要修补 |
+| CPUFriend | 仅对已注入数据的机器检查适用性，必要时重建或回退 |
+| 内存、USB、显卡及系统补丁 | 核对已有注入 / 补丁与目标机型、系统的匹配条件 |
+| 身份信息与服务 | 保留稳定值，需变更的字段按任务范围核对，不自动重置网络、账号或 ByHost 偏好 |
 
-⇒ **升级本身已经是高风险操作，不要在同一轮里叠加第二个耦合改动。**
-机型该不该换是**独立的决策**（换机型见 **`smbios-and-serials.md`**），跟升级解耦。
+### 5.3 支持范围与兼容性参数
 
-### 5.3 绕过用什么参数（两个都要，别只加一个）
+执行时对照目标 macOS 的机型支持信息和相关驱动作者文档。若保留不在支持范围内的 SMBIOS，分别评估安装、启动和 OTA 更新；三者不能以一次启动成功互相证明。
 
-| 参数 | 解决什么 | 不加的后果 |
-|---|---|---|
-| **`-no_compat_check`** | **能不能启动** —— 关掉对机型的兼容性检查 | 直接拒绝启动 |
-| **`revpatch=sbvmm`** | **能不能更新** —— 强制 VMM SB 机型，*"allowing OTA updates for unsupported models on macOS 11.3 or newer"*（RestrictEvents 原文） | 能开机，但**收不到 / 装不上系统更新** |
-| `revpatch=cpuname` + `revcpu=1` + `revcpuname=<名字>` | CPU 名称显示 | 「关于本机」里 CPU 名字不对 |
-| `revpatch=pci` / `revblock=pci` | 屏蔽 `MacPro7,1` 机型的 PCI / RAM 配置警告 | 弹配置警告（机型是 MacPro7,1 但硬件不匹配时） |
+`-no_compat_check` 与 RestrictEvents 的 `revpatch=sbvmm` 是既有方案中使用过的参数，须核对其在目标系统和具体驱动版本中的作用，不能作为所有升级的默认组合。参考 [RestrictEvents 官方说明](https://github.com/acidanthera/RestrictEvents)。CPU 显示名、PCI / RAM 警告属于其他需求，不随升级自动添加对应参数。
 
-**★ 最容易漏的是 `revpatch=sbvmm`** —— 很多人只加 `-no_compat_check`，能开机就以为完事了，
-结果到了下次系统更新才发现「收不到更新」。**两个是不同层次的问题。**
+### 5.4 检查安装器的隐含修改
 
-### 5.4 白名单（**只用来判断「需不需要绕过」**）
+运行厂商升级脚本前读取当前版本的参数与实际修改范围。若脚本会重写机型、身份信息或整份 EFI，而这些不属于本次任务，就选择保留现值的受支持路径，或先制作候选差异再处理。
 
-macOS 26 大幅削减了 Intel 机型支持。参考上游脚本的判定，白名单是：
-
-```
-iMac20,1   iMac20,2   MacPro7,1   MacBookPro16,1   MacBookPro16,2   MacBookPro16,4
-```
-
-**`iMacPro1,1` 被剔除了** —— 它正是 Sequoia 时代最常用的 Intel 机型。
-
-| 机型在不在白名单 | 该怎么做 |
-|---|---|
-| **在** | 什么都不用加 |
-| **不在** | **加 `-no_compat_check` + `revpatch=sbvmm`**，机型保持不变 |
-
-### 5.5 ★ 明确不要做的事
-
-| 不要做 | 为什么 |
-|---|---|
-| 改任何一处 `SystemProductName` | 违反约束；且 board-id 变会触发 **ACPI 重新解析**（ASUS 的 `xh_adls3` 这类表会炸）+ 系统卷重建（§5.2） |
-| 改 `BoardProduct`（board-id） | 触发系统卷重建，与 OCLP 冲突 |
-| **跑 `nullmoth-setup.sh --update prepare --pkg <包>`** | ★ **最隐蔽的陷阱**：它会**自动**把机型改成 `MacPro7,1`、board-id 改成 `Mac-27AD2F918AE68F61`、补 `RestrictEvents.kext`。**这条路径与约束正面冲突，必须避开。**<br>（正常点按钮 / 正常更新驱动**不会**触发它 —— 该按钮在 1.0.15 起已从 App UI 移除，只剩脚本能力；实测该脚本跑完后 `PlatformInfo` 仍是原机型） |
-| 用 OCLP 的 "Build and Install OpenCore" | 会重写整个 EFI，冲掉调好的 boot-args / SMBIOS / DeviceProperties |
-
-### 5.6 约束的代价（要如实告知）
-
-保留原机型 = **放弃新版专属的机型界面**。例如 `PlatformInfo > Memory` 的 `Devices` 数组
-**只在 MacPro 机型上**才会画出那张 12 槽内存图（见 `memory-injection.md`）——
-机型不是 MacPro 就做不出来，**没有 boot-arg 能替代**。
-
-所以取舍是：
-
-| | 保留原机型 + 参数绕过（**约束默认**） | 换机型 |
-|---|---|---|
-| 能开机 / 能更新 | ✅（靠 `-no_compat_check` + `revpatch=sbvmm`） | ✅ |
-| 升级风险 | **低**（只动 boot-args） | 高（ACPI/SSDT + board-id + CPUFriend + 三码 一起动） |
-| 机型专属界面 | ❌ 拿不到 | ✅ |
-| 与升级是否解耦 | ✅ **解耦** | ❌ 耦合 |
-
-⇒ **默认走左边。** 真想要机型专属功能时，**单独一次**做机型切换（走 **`smbios-and-serials.md`** 的完整流程），
-**不要**把它塞进升级那一次。
-
----
+历史版本 `nullmoth-setup.sh --update prepare` 曾包含机型修改，OCLP 的构建安装操作也与单纯 root patch 不同；这些是需要核实的副作用示例，不假定任何当前版本仍完全相同。
 
 ## 6. 验证判据
 
@@ -315,7 +256,7 @@ uname -r                              # 期望 25.x
 kmutil showloaded --list-only | grep -E "IOSkywalkFamily|IO80211FamilyLegacy|AirPort.BrcmNIC|corecapture"
 
 # ③ ★ Wi-Fi 死活看 en1，别只看 system_profiler
-#    ★★ 并确认「无线 = en0」（打补丁/换卡会改变驱动挂载顺序）⇒ network-en0-order.md
+#    ★★ 核对实际无线接口及 en0 的 built-in 状态（不要求无线必须是 en0）⇒ network-en0-order.md
 networksetup -listallhardwareports
 ifconfig en1                          # 期望有 inet + status: active
 ifconfig awdl0                        # 在 = AirDrop / 接力可用
@@ -399,7 +340,7 @@ ls -lt /Volumes/EFI/opencore-*.txt | head
 ## 11. 与其它 reference 的关系
 
 - **网卡细节** → `broadcom-wifi.md`（博通，按系统分路线）、`intel-wifi.md`（Intel，Sequoia/Tahoe 两套 ABI）、`mediatek-wifi.md`（MediaTek）
-- **机型与三码**（**独立决策，不跟升级混在一起做**）→ **`smbios-and-serials.md`**（主板 OEM SSDT、顺序铁律、**换机型必须换码**、CPUFriend 重做、连带项清单）
-- **安全改 ESP 的流程** → `SKILL.md` 铁律 1–16 + `scripts/oc-edit-safe.sh`
+- **机型与三码**（**独立决策，不跟升级混在一起做**）→ **`smbios-and-serials.md`**（ACPI 依赖、身份一致性、CPUFriend 与内存配置的条件检查）
+- **安全改 ESP 的流程** → [技能入口的修改与复验](../SKILL.md#修改与复验) + `scripts/oc-edit-safe.sh`
 - **日志判读** → `logs-and-debug.md`；**耗时分析** → `boot-timeline.md`
 - **装机六阶段** → `lifecycle.md`（本文是它的「大版本升级」补充）

@@ -53,7 +53,7 @@ xcodebuild -project itlwm.xcodeproj -scheme AirportItlwm-Sequoia \
 2. 在 `Kernel → Add` 加条目，**必须排在 `Lilu.kext` 之后**（Lilu 是宿主）
 3. **用 `MinKernel` / `MaxKernel` 限定 Darwin 版本**（见 §1）：Sequoia 那份填 `MinKernel=24.2.0` / `MaxKernel=24.99.99`；Tahoe 那份填 `MinKernel=25.0.0`。用 `uname -r` 查当前 Darwin 版本
 4. 需要 Wi-Fi 6 时，boot-args 加 `itlwm_he=1`
-5. `Misc → Security → SecureBootModel = Disabled`（第三方 kext 非 Apple 签名）；SIP 按需放宽
+5. 按该构建作者对目标系统的要求核对 `SecureBootModel` 与 SIP；第三方 kext 的签名本身不足以推出应关闭这些保护，已有设置可用时保留
 6. 重启后验证：
 
 ```bash
@@ -81,7 +81,8 @@ Intel 无线网卡上的**蓝牙**不由 itlwm 负责，需要：
 | Wi-Fi 完全不出现在系统里 | `Lilu` 是否加载、`Kernel → Add` 顺序是否 Lilu 在前、kext 是否与当前 macOS **ABI 匹配**（Sequoia/Tahoe 别装错） |
 | kext 加载了但没有接口 | `MinKernel`/`MaxKernel` 是否把当前 Darwin 排除掉了（`uname -r`）；`system_profiler SPAirPortDataType` 里有没有接口 |
 | 能连 2.4G 连不上 5G / 连上很慢 | HE 是否开了（`itlwm_he=1`）、信道/加密方式是否在支持列表内（WPA3-only 与强制 PMF **不支持**） |
-| AirDrop / 接力不可用 | **已知不支持，不要当故障查**。官方 FAQ 原文：*"Only **Handoff** and **Universal Clipboard** works with AirportItlwm, **other features are not supported**"*；`itlwm.kext` 更彻底 —— 走 `IOEthernetController` 而非 `IO80211Family` ⇒ **没有 `awdl0`**。完整依据见 `airdrop-handoff.md` §1.2 |
+| AirDrop 不可用 | [上游 FAQ](https://openintelwireless.github.io/itlwm/FAQ.html) 未将 AirDrop 列入 AirportItlwm 的支持功能；先核对具体 fork 与版本的能力，见 [连续互通排查](airdrop-handoff.md) |
+| Handoff / 通用剪贴板不可用 | 上游 AirportItlwm 支持这两项，不能与 AirDrop 一并判为不支持。核对当前构建、蓝牙、账号与功能开关，见 [连续互通排查](airdrop-handoff.md) |
 | 装完蓝牙坏 | 蓝牙是另一组 kext（§3），先确认那三个的状态 |
 
 ## 5. 与「换网卡」的关系（重要）
@@ -91,12 +92,12 @@ Intel 无线网卡上的**蓝牙**不由 itlwm 负责，需要：
 - **必须**把 Intel 无线/蓝牙那三个 kext 从 `Kernel → Add` 里**禁用或删除**，并把 `EFI/OC/Kexts/` 下的文件删掉 —— 否则它们仍会尝试匹配不存在的设备（白加载、日志噪音，某些版本还可能干扰 Bluetooth 栈）
 - 删除前先把原件备份出来；判断「是否真的不用」见 `disks-and-kexts.md` 的删除判据
 - ★★ **换卡后要确认 `en0` 归属** —— 内核按**驱动挂载先后**给 `en` 编号（与 PCI 顺序无关），
-  换卡 / 增删驱动会让 `en0` 换人 ⇒ **详见 `network-en0-order.md`**（含「怎么把无线钉到 `en0`」与连带影响）
+  换卡 / 增删驱动会让 `en0` 换人 ⇒ **详见 `network-en0-order.md`**（有线可以是 `en0`，不要求无线必须排第一）
 
 > **同一台机器不要同时注入多套网卡驱动**。除 Intel / Broadcom 之外，MediaTek（MT7921 / MT7922 / RZ608）见
 > `mediatek-wifi.md` —— 那里的结论是「**蓝牙可用、Wi-Fi 仍实验性**，要稳定就换卡」。
 
 ## 6. 安全提示
 
-- 第三方 kext（非 Apple 签名）⇒ 需要 `SecureBootModel=Disabled`，SIP 视情况放宽。**只在你确实要用这张网卡时这么做**
+- 放宽 `SecureBootModel` / SIP 前，核实具体构建、目标系统与当前故障确实需要，说明恢复路径；不能把所有第三方 kext 都归为同一安全设置需求
 - 从 fork 的 Releases 下载时，注意核对来源仓库与文件哈希；上游是 `OpenIntelWireless/itlwm`，本 fork 是个人维护的分支，**Tahoe 支持仍属「需要逐网卡验证」的状态**

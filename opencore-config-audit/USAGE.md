@@ -4,9 +4,9 @@
 
 ## 怎么用
 
-**直接用自然语言说需求就行**，不用记技能名、不用记命令。系统会自己挑到它。
+安装后直接用自然语言描述 OpenCore / 黑苹果需求；也可通过客户端支持的手动技能入口选择它。
 
-也可以手动指定：输入框打 **`/`** → 选 `opencore-config-audit`；或点输入框左下角 **`+` → 技能**。
+客户端的菜单、自动发现与重新加载方式以该客户端为准。普通 macOS 应用问题仅在证据指向 EFI、驱动或 AMFI 时进入本技能。
 
 ## 说这些话就会触发
 
@@ -38,10 +38,10 @@
 
 ## 你会拿到什么
 
-- **审查报告**：每个结论都对着官方文档 / 官方校验器，不是「经验之谈」
+- **审查报告**：区分官方依据、机器实测与待验证推测；写清校验结果和证据限制
 - **可回滚的改动**：改之前备份、改完算 sha、卸载重挂复验 —— 出问题能退回
 - **校验过的清单**：SSDT 该加哪个、kext 该删哪个，逐条给依据
-- **分析文档**：启动耗时、日志取证这类会落成文件
+- **分析结果**：按任务提供启动耗时、日志取证及后续验证步骤；需要留档时保存文件
 
 ## 配套脚本（20 个）
 
@@ -54,14 +54,14 @@
 | `fetch-opencore-docs.sh` | 取同版官方包 + 建配置键库 |
 | `oc-verify.sh` | 一键校验（`plutil` + `ocvalidate` + 引用完整性 + sha） |
 | `oc-swap-build.sh` | RELEASE ↔ DEBUG 换构建 |
-| `oc-edit-safe.sh` | 安全改 config（备份 / 校验 / 存档 / 重挂复验） |
+| `oc-edit-safe.sh` | `begin` / `finish` 备份与复验；`OC_DOCS_DIR` 指定唯一版本包，`OC_ARCHIVE_DIR` 指定存档目录 |
 | `grab-logs.sh` | 抓引导日志与内核日志 |
 | `boot-timeline.sh` | 启动耗时总览 |
 | `find-boot-gap.sh` | 启动停顿窗口精查 |
 | `mask-other-disks.sh` | 按 UUID 屏蔽非系统卷 |
 | `cpu-freq-probe.sh` | CPU 实际频率探针 |
 | `e-cores-check.sh` | **小核（E 核）体检**（拓扑 / 频率 / `CpuTopologyRebuild` 加载 + 判读） |
-| `kext-inventory.sh` | **kext 清单体检**（版本 / `DTXcode` / sha256 / config 引用核对 / OC 本体版本） |
+| `kext-inventory.sh` | **kext 清单体检**（版本 / 构建元数据 / sha256 / 启用引用；`--save` 保存报告，`--host-nvram` 才另读宿主版本） |
 | `cpu-name-check.sh` | **CPU 显示名体检**（名字对照 / `rev*` 参数 / `RestrictEvents` / `ProcessorType`） |
 | `mem-check.sh` | 校验内存注入摆位 |
 | `redact-check.sh` | **发布前脱敏自检**（扫三码 / MAC / 密钥等） |
@@ -76,8 +76,10 @@
 `acpi-ssdt.md`（**ACPI 热补丁样例库索引**）· `disks-and-kexts.md` · `kext-and-oc-update.md`（**更新 kext / OC**）· `official-docs-method.md` · `rapidefi-first-efi.md` ·
 `smbios-and-serials.md`（换机型 + 三码）· `network-en0-order.md`（`en0` 归属）· `ethernet-drivers.md`（有线网卡）· `ecosystem-sources.md`（**权威来源与工具索引**）· `laobamac-toolkit.md`（工具索引）· `pitfalls.md`（踩过的坑）· `theme-opencanopy.md`（选择器主题）· `machine-facts.md`（参考机器事实）
 
+`oc-edit-safe.sh` 默认存档到工作区的 `oc-config-archive/`。旧版仅含 SHA 的编辑基线不能直接用于新版 `finish`；先核对旧备份及未完成改动，再建立新的 `begin` 会话。
+
 ## 注意
 
-- 这个技能会**改你的 EFI**。改动都走安全流程（备份 → 校验 → 复验），但**请自己留一份 EFI 备份**。
+- 支持只读审查与实际维护；只有任务涉及修改时才写入 EFI，并保留备份、校验与复验记录。
 - 涉及安全边界的改动（放宽 SIP、`SecureBootModel=Disabled`、AMFI 参数）会在报告里明确写出来。
-- `-v` 要不要开、选择器主题这类**你能看见的偏好**，会先问你，不会替你决定。
+- 按你已表达的偏好和授权执行；未请求调整时保留 `-v`、主题等设置，确实影响任务且无法推断的选择再询问。

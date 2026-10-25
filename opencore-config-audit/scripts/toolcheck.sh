@@ -19,7 +19,11 @@ STRICT=0
 JSON=0
 while [ $# -gt 0 ]; do
   case "$1" in
-    --oc-dir) OC_DIR="${2:-}"; shift 2 ;;
+    --oc-dir)
+      case "${2:-}" in
+        ""|--*) echo "--oc-dir 缺少目录参数" >&2; exit 2 ;;
+      esac
+      OC_DIR="$2"; shift 2 ;;
     --strict) STRICT=1; shift ;;
     --json)   JSON=1; shift ;;
     -h|--help) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;

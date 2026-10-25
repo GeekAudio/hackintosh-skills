@@ -21,19 +21,15 @@
 确定 codec 型号与 revision
    ├─ A. 先搜「有没有同型号前人做过」 ← 推荐，绝大多数情况够用
    │      找到 ⇒ 抄 layout-id，一次只试一个，重启验证
-   └─ B. 没有 ⇒ ★ 先问用户能不能提供 Windows 侧取数（§3.0.1 清单 1–4）
-                ├─ 能提供 ⇒ 直接走 §3 定制流程，数据用他提供的
-                └─ 不能   ⇒ 讲清硬约束：按 §3.0.1 在 Windows 下取全再回来，不要空手开写
+   └─ B. 没有 ⇒ 核对现有 codec / pin / 插孔资料（§3.0.1）
+                ├─ 数据充分 ⇒ 直接走 §3 定制流程
+                └─ 有缺项   ⇒ 按可用系统选择 Linux / Windows 等取数路径，补齐所需证据
 ```
 
 **为什么要先搜**：AppleALC 的机制是「codec 名 + layout-id」映射到一套 platform/layout 数据，
 **同 codec 的不同主板通常能共用同一批 layout**，逐个试过去往往就通了 —— 比从零做 layout 省几个数量级的时间。
 
-> ★★★ **路线 B 的硬约束：开动手之前，必须已经在 Windows 下把数据取全。**
-> **没有这份数据就不要开始写 layout** —— 缺什么回去补什么，比写完再返工便宜一个数量级。
-> 取什么、怎么取、要存成什么样，见 **§3.0.1**；手头没有 Windows 时的降级路径与代价也在那里。
-> ★ **但如果用户手里已经有这份数据（自己导过、或贴得出来），别让人家再跑一遍 Windows ——
-> 直接进 §3 定制流程，用他提供的数据即可。**
+> 路线 B 需要足够的 codec 节点、pin config 与物理插孔证据，不能凭 codec 名猜 PathMap。先检查已有资料，不要求用户重复取数，也不把 Windows 当成唯一来源。官方数据结构见 [AppleALC codec 支持说明](https://github.com/acidanthera/AppleALC/wiki/Adding-codec-support)，取数方案见 §3.0–3.0.1。
 
 ## 0.5 ★★★ macOS 26（Tahoe）的前置：先把 `AppleHDA` 弄回来
 
@@ -150,7 +146,7 @@ strings -a /System/Volumes/Data/Library/KernelCollections/AuxiliaryKernelExtensi
 | `layout-id`（14） | 任一未被占用的 ID | 查 `Resources/<codec>/Info.plist` 现有 ID 列表（自定义只能用 11–99） |
 | 节点号（`0x14` / `0x18` / …） | 你 codec 的节点号 | codec dump（§3.0） |
 | `PathMap` 里的路径 | 你 codec 的连接关系 | 连接表 + Amp 能力（§3.0） |
-| pin config 值 | 你主板的值 | **Windows HDAU 导出 + 寄存器回读校验**（硬约束，§3.0.1） |
+| pin config 值 | 你主板的值 | **Linux / Windows dump 与寄存器回读校验**（按现有环境选择，§3.0.1） |
 | 设备顺序 / App 里的名称映射 | 按你 UID 的引擎序号重做 | §3.9 |
 
 **先试现成的，不要一上来就自己写**（指南 §0.4 的原话，也是最省时间的一条）：
@@ -256,23 +252,22 @@ strings -a /System/Volumes/Data/Library/KernelCollections/AuxiliaryKernelExtensi
 |---|---|---|
 | **① Linux（推荐）** | Ventoy 做启动盘 → 启动任意发行版「Try」→ 一条命令收集：<br>`cd ~/Desktop && mkdir CodecDump && for c in /proc/asound/card*/codec#*; do f="${c/\/*card/card}"; cat "$c" > CodecDump/${f//\//-}.txt; done && zip -r CodecDump.zip CodecDump` | ★ **只有 Linux 的 dump 能生成拓扑图**（Clover / OpenCore 的不行） |
 | **② OpenCore** | 换 **DEBUG** 版 OpenCore（含同名 Drivers）→ `Misc>Debug>SysReport=true` · `UEFI>ConnectDrivers=true` · `UEFI>Drivers` 加 **`AudioDXE.efi`** → 重启（会慢些）→ ESP 根出现 `SysReport/Audio/` → **改回 RELEASE 并把那两个开关关掉** | 拿不到拓扑图，**只能应急** |
-| **③ Windows（两条子路线）** | 见 §3.0.1 —— **路线 B 的硬约束，定制前必须走的一步**：GUI 走 `HDAU.exe`；脚本走 **`HDAudDev.dll` 直连**（免管理员、可脚本化、产出 Linux 风格 `codec_dump.txt/.json`） | 没有拓扑图（脚本路线产出的 `codec_dump.txt` 可直接喂 Codec-Graph，见下） |
+| **③ Windows（两条子路线）** | 见 §3.0.1 —— 可选取数来源：GUI 走 `HDAU.exe`；脚本走 **`HDAudDev.dll` 直连**（免管理员、可脚本化、产出 Linux 风格 `codec_dump.txt/.json`） | 没有拓扑图（脚本路线产出的 `codec_dump.txt` 可直接喂 Codec-Graph，见下） |
 
-### 3.0.1 ★★★ 硬约束：路线 B 开动手之前，必须已有 Windows 下取全的数据
+### 3.0.1 定制所需证据与 Windows 取数路线
 
-**落地顺序（先问，再动手）**：
+**先复用已有资料，缺项再采集**：
 
 ```
 走到定制路线
-  ├─ ① 先问用户：能不能提供 Windows 侧取数（下面清单 1–4）
-  │     ├─ 能提供 ⇒ 直接进 §3 写 layout，用他提供的数据（别让人再跑一遍 Windows）
-  │     └─ 不能   ⇒ 说明硬约束 + 给出 HDAU 步骤，取全再回来
-  └─ ② 拿到数据后，按 §3.10 核对字段，再动笔
+  ├─ ① 已有 Linux / Windows dump 与插孔资料充分 ⇒ 直接核对并复用
+  ├─ ② 缺关键字段 ⇒ 按可用系统补采；Windows 路线见下，Linux 见 §3.0
+  └─ ③ 按 §3.10 核对字段；缺失资料标为待验证，不能伪造
 ```
 
-**为什么是硬约束**：要写的 `PlatformsXX.xml` / `layoutXX.xml` / pin config 全部建立在**这份数据**上，
+**为什么要核对数据**：要写的 `PlatformsXX.xml` / `layoutXX.xml` / pin config 全部建立在**这份数据**上，
 缺一项就得返工。而三类数据里最麻烦的**插孔语义**（哪口是耳机、哪口是麦、哪口有没有插入检测）
-只有在 Windows 下最容易确认 —— 它是由下面四项硬件事实推导出来的，macOS 侧看不到「丝印」。
+可结合 Windows 端点、Linux dump、主板文档、面板丝印及插拔实测确认；单靠 macOS 中显示的设备名称不足以确定物理插孔。
 
 **开动手之前，手上必须有这张清单（缺一项就不要开始）**：
 
@@ -582,7 +577,7 @@ alc-verb 0x57 0x48e 0xa6   # 写系数：启用耳麦检测
 检测不上报时，AppleHDA 拿不到信号，同组多路径会**退化成只保留最后一条，其余静默消失**（§3.8 结论一）
 ⇒ **先按 §5.6 确认这块板子的 pin sense 是活的，再决定用哪种排法**，否则就是靠运气。
 
-### 3.8 ★★ AppleHDA 的三条实测根因（任何 codec 通用，优先级高于 pin config）
+### 3.8 AppleHDA 的三条实测排障线索（先核实目标 codec 的适用性）
 
 > 这三条是一次完整落地（示例机型 ALC897）里逐次排除出来的，**与 codec 型号无关，是 AppleHDA 本身的行为**。
 > 按优先级排序：分组方式 > 引脚 Port Connectivity > 插孔检测。

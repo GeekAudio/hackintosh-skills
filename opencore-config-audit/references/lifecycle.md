@@ -1,6 +1,6 @@
 # 全流程：从 Windows 生成 EFI 到修补完成
 
-黑苹果不是「一次配好」，而是**六个阶段**。按这个顺序走，每一步都有明确的产出和判据。
+以下是从零装机与完整调试的一种六阶段流程。已有稳定 EFI 或只需审查文件时，直接进入对应专题；不必重新装机或更换构建。
 
 ```
 ① Windows 上生成基础 EFI ──► ② 用它安装 macOS ──► ③ 进系统后换成 DEBUG OpenCore
@@ -16,7 +16,7 @@
 | ② 安装 macOS | 目标机 | 能进桌面的系统 | —（安装本身不在本 skill 范围） |
 | ③ 换 DEBUG OpenCore | macOS 里（改 ESP） | 能产出完整日志的引导器 | `scripts/oc-swap-build.sh` + 本文 §3 |
 | ④ 收集日志 | macOS 里 | OC 引导日志 + 内核日志 | `scripts/grab-logs.sh` + `logs-and-debug.md` |
-| ⑤ 修补 | macOS 里（改 ESP） | 逐项修正后的 config/SSDT/kext | SKILL.md 阶段 1–8 |
+| ⑤ 修补 | macOS 里（改 ESP） | 逐项修正后的 config/SSDT/kext | [技能入口](../SKILL.md) 的对应专题 |
 | ⑥ 日常化 | macOS 里（改 ESP） | 快启动 + 安静屏幕的成品 | 本文 §6 + `scripts/oc-swap-build.sh release` |
 
 ---
@@ -37,7 +37,7 @@
 
 ## ③ 换成 DEBUG OpenCore（本阶段的关键动作）
 
-### 为什么必须换
+### 什么时候需要换
 
 | | RELEASE | DEBUG |
 |---|---|---|
@@ -48,7 +48,7 @@
 | `Misc>Debug>SysReport` | **不可用**（文档明确：RELEASE 构建不提供） | **可用** —— 会在 ESP 上生成 `SysReport/`，含 ACPI / SMBIOS / 音频 codec 转储 |
 | 启动速度 | 快 | 慢一点（日志生成开销） |
 
-⇒ **要「收集日志再修补」，就得先换 DEBUG**；`SysReport` 更是在阶段⑤里用来拿到 DSDT/SSDT 原件的唯一省事途径。
+先分析已有日志；需要 RELEASE 不提供的调试输出或 SysReport 时再换 DEBUG，取证后评估恢复原构建。
 
 ### 怎么换（`scripts/oc-swap-build.sh` 已封装）
 
@@ -70,7 +70,7 @@
    shasum -a 256 /Volumes/EFI/EFI/OC/OpenCore.efi                 # 应与官方 DEBUG 包一致
    ```
 
-### 换完之后顺手做的两件事
+### 按取证需要启用的选项
 
 - **打开 `Misc>Debug>SysReport`（一次性）**：重启后 ESP 上会出现 `SysReport/`，里面有 **ACPI 表（DSDT/SSDT）、SMBIOS、音频 codec** 转储 —— 阶段⑤ 要判断「该补哪张 SSDT」时，这些就是一手材料。**拿完就关掉**（它只在 DEBUG 下可用，且会占空间）
 - **配好日志去向**：`Misc>Debug>Target` 建议 `69 (0x45)` = 记录 + DataHub + **文件**（不上屏，见 `logs-and-debug.md`）
@@ -97,14 +97,13 @@
 
 ## ⑤ 修补
 
-回到 SKILL.md 的 **阶段 1–8**，按这个顺序：
+按 [技能入口](../SKILL.md) 选择当前任务所需的步骤：
 
-1. **阶段 1–2**：取同版官方文档 + `ocvalidate` 校验 + 逐键对照（找出「与文档相反」的项）
-2. **阶段 3**：日志取证（上面 ④ 的产出）
-3. **阶段 5**：ACPI/SSDT 巡检（用 `SysReport/` 里的 DSDT/SSDT 对照官方 `AcpiSamples`）
-4. **阶段 4**：每改一项走 `oc-edit-safe.sh begin/finish`
-5. **阶段 6–7**：磁盘屏蔽、kext 精简（收尾整洁）
-6. **阶段 8**：装/调驱动（NVIDIA、Intel 无线）
+1. 取同版官方文档与校验器，逐键解释配置偏离。
+2. 分析已有日志；需要补充时按上面④取证。
+3. 有 ACPI / SSDT 需求时，对照目标机器的原始表与官方样例。
+4. 实际修改用 `oc-edit-safe.sh begin/finish` 备份、校验并复验。
+5. 磁盘屏蔽、kext 精简与驱动调整仅在用户请求或证据支持时执行。
 
 ### 修补的节奏（重要）
 
@@ -144,9 +143,9 @@ nvram 4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102:opencore-version    # 期望 1.0.8-20
 > 想**完全静默**可以把 `Target` 设 `0`（文档：不设 `0x01` = 全部日志丢弃）；
 > 但那样屏幕上连 OC 的错误提示都没有，排障会很被动 ⇒ 日常建议保持 `3`。
 
-### 6.3 `-v`：**必须问客户，不要自己决定**
+### 6.3 `-v`：按用户已有偏好执行
 
-`-v`（macOS verbose）是**偏好项**，不是技术默认值。切日常态时**明确问用户**要哪种，并把差别讲清楚：
+`-v`（macOS verbose）是**偏好项**，不是技术默认值。切日常态时按用户已表达的选择处理；未要求调整就保留，确需决定且无法推断时再说明差别：
 
 | | 开 `-v` | 关 `-v` |
 |---|---|---|
@@ -156,13 +155,13 @@ nvram 4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102:opencore-version    # 期望 1.0.8-20
 | 日志完整性 | **不受影响** | **不受影响**（`log show` / Send logs / OC 日志都还在） |
 
 - 关掉 = boot-args 去掉 `-v`（等同驱动安装 App 的 "Turn verbose off"）
-- 换的时候**只动这一个 token**，并在报告里写明「客户选择了哪种」
+- 换的时候**只动这一个 token**，并在报告里写明选择与依据
 
 ### 6.4 日常态收尾清单
 
 - [ ] `oc-swap-build.sh release` 已执行，重启后 `opencore-version` 无 `DBG-` 前缀
 - [ ] `Misc>Debug` 已回到 §6.2 的值（或按客户意愿保留 panic 落盘）
-- [ ] `-v` 已**问过客户**并按选择设置
+- [ ] `-v` 已按用户已有选择处理或保留原值
 - [ ] ESP 上排障期攒下的 `opencore-*.txt` 按需清理（可留最近几份备查）
 - [ ] 再跑一次 `scripts/oc-verify.sh` 确认仍是 `No issues found`
 - [ ] 报告里记录：本次生命周期各阶段做了什么、最终 sha、以及「明确不动」清单

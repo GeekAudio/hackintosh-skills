@@ -130,7 +130,7 @@ NVRAM 域 = **`4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102`**（OpenCore 的 `NVRAM > A
 ## 6. 回滚（三条，任选一条即可）
 
 1. **最快**：BIOS 把 `Active Efficient Cores` 设回 **`0`** —— **配置一行都不用改**。
-2. **只想去掉 kext**：`CpuTopologyRebuild` 条目设 **`Enabled=false`**（或删条目 + 移走 kext，见铁律 6）。
+2. **只想去掉 kext**：`CpuTopologyRebuild` 条目设 **`Enabled=false`**（或删条目 + 移走 kext，保持文件与配置引用一致）。
 3. **起不来**：拷回备份的 config（`scripts/oc-edit-safe.sh` 的存档）+ U 盘 EFI 救援。
 
 ## 7. 实测与取舍
@@ -170,7 +170,7 @@ Geekbench 7 官网同 CPU（i7-12700K，`Family 6 Model 151 Stepping 2`）榜：
   `Kernel>Add` 插入条目 `Enabled=true`、**紧跟 Lilu**（index 1）；`ProvideCurrentCpuInfo` 保持 `true`。
   校验：`plutil` OK · **`ocvalidate` 1.0.8 = No issues found** · 语义 diff 仅 1 处（Add 19→20）· 卸载重挂 sha 一致。
 - **待做（BIOS，只能人工）**：`Active Efficient Cores = All` → F10。
-- **可选的下一步**：默认拓扑不理想时再加 **`ctrsmt=full`**（**一次只加一个变量**，见铁律 5）。
+- **可选的下一步**：默认拓扑不理想时再加 **`ctrsmt=full`**（**一次只加一个变量**，便于归因）。
 
 ## 8. 官方出处
 

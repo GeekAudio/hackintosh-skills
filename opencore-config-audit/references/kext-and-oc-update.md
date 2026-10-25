@@ -1,162 +1,134 @@
-# 更新 kext 与 OpenCore —— 什么时候该更新、什么时候**千万别动**
+# 更新 kext 与 OpenCore：先核来源、兼容性与升级路径
 
-> 依据：一次**完整踩坑与回滚**（把 Dortania 构建误判成「第三方重编译」→ 换成上游 release →
-> 逐字节核对后发现是**降级** → 全部回滚）+ OpenCore 官方文档 + 上游驱动安装脚本逐行核对。
-> ★★ **一句话**：**「更新」在黑苹果里不是好事** —— 先证明「该更新」，再动手；
-> **判「这个文件是不是官方件」的最后一步，是去 grep 厂商自己的安装脚本，而不是查上游 tag。**
+在用户请求更新、目标 macOS 需要兼容构建，或有相关修复时使用。
+先识别现有版本、来源与依赖，再选择升级路径；版本号较高或较新本身不能证明适用性。
+审查不代表授权写入；已有更新请求内的常规备份、候选准备和验证可直接完成，不重复索要确认。
 
-## 0. ★★★ 先记住这条（付过学费）
+## 0. 上游 tag 查不到，不等于来路不明
 
-**上游 tag 查不到 ≠ 来路不明。**
+一个 kext 可能来自上游 release、按 commit 构建的开发版、自编译或驱动套件的配套包。
+先确定实际来源与 commit，再比较目标构建，不能只按版本号判断升降级。
 
-实测见过一份 EFI 里有 8 个 kext 的版本号**比上游 release 高一个补丁号**，上游**逐个 404**：
+### 0.1 配套安装器是依赖证据
 
-| kext | EFI 里的版本 | 上游最新 release | 上游有该 tag？ |
-|---|---|---|---|
-| `Lilu` | **1.7.3** | 1.7.2 | ❌ 404 |
-| `VirtualSMC` / `SMCProcessor` / `SMCSuperIO` | **1.3.9** | 1.3.8 | ❌ 404 |
-| `WhateverGreen` | **1.7.2** | 1.7.1 | ❌ 404 |
-| `RestrictEvents` | **1.1.7** | 1.1.6 | ❌ |
-| `NVMeFix` | **1.1.4** | 1.1.3 | ❌ |
-| `BlueToolFixup` | **2.7.3** | 2.7.2 | ❌ |
+若目标机器使用厂商或第三方套件管理的驱动，检查**当前使用版本**的安装器、README、依赖清单或锁定文件。
+钉版说明套件测试过或要求某个组合；它不自动证明文件可信，也不等于永远不可更新。
 
-**它们全都是 Dortania `build-repo` 的构建产物** —— 该仓库**按具体 commit 构建**，
-上游在最后一次 release 之后又有提交时，就把**补丁号自己 +1**。
+- 套件提供新版兼容组合时，优先按其升级路径一起更新相关依赖。
+- 用户要求单独更新钉版组件时，先核对该目标版本能否配合现有套件，准备可回滚候选。
+- 兼容性不明时保留正在工作的版本，说明尚未验证的依赖关系；继续完成可独立进行的来源核对与候选准备。
+- 无此类套件时，直接按 kext 作者的发布说明、构建记录和依赖要求判断，不要求虚构一个「厂商安装器」。
 
-⇒ **把它们「更新」成上游 release = 降级**（做过一次，已回滚）。
+来源入口：[Dortania build-repo](https://github.com/dortania/build-repo)、各驱动作者仓库、
+[OpenCorePkg 官方发布](https://github.com/acidanthera/OpenCorePkg/releases)。
+开发构建的命名与版本规则以对应构建记录为准。
 
-### 0.1 谁是「官方源」？—— **厂商自己的安装器说了算**
+### 0.2 参考案例：按 commit 构建的配套 kext
 
-以 NullMoth（NVIDIA 驱动）为例，其安装脚本 `app/Resources/nullmoth-setup.sh` 第 100–105 行有一张 `kurl()` 表，
-把驱动需要的 kext **固定到具体文件并校验 SHA-256**：
+参考机器曾把以下构建误当成异常版本，替换成较早的上游 release 后又回滚。
+这是**历史快照**，不能当作当前最新版或其他机器的推荐版本：
 
-| kext | 安装器钉的源 | 包内版本 |
+| 组件 | 当时 EFI 版本 | 当时核对到的构建线索 |
 |---|---|---|
-| `Lilu.kext` | `dortania/build-repo/releases/download/**Lilu-0515f40**/` | **1.7.3** |
-| `RestrictEvents.kext` | `dortania/build-repo/releases/download/**RestrictEvents-9265e78**/` | **1.1.7** |
-| `AMFIPass.kext` | `dortania/OpenCore-Legacy-Patcher/raw/main/payloads/Kexts/Acidanthera/` | 1.4.1 |
-| `USBToolBox.kext` | `USBToolBox/kext/releases/download/1.2.0/` | 1.2.0 |
+| Lilu | 1.7.3 | `Lilu-0515f40` |
+| VirtualSMC / SMCProcessor / SMCSuperIO | 1.3.9 | `VirtualSMC-b5c62c2` |
+| WhateverGreen | 1.7.2 | `WhateverGreen-093e76f` |
+| RestrictEvents | 1.1.7 | `RestrictEvents-9265e78` |
+| BlueToolFixup | 2.7.3 | `BrcmPatchRAM-6538902` |
+| NVMeFix | 1.1.4 | 还需对应构建记录，不能仅凭「同族」认定来源 |
 
-注释原话：
+其中 NullMoth 安装器曾通过 `kurl()` / `mirror.json` 指定部分依赖并校验 SHA-256。
+执行其他版本的维护时重新读取实际安装器，不能将这次核对过的版本、行号或哈希当作长期规则。
+参考机器的现状见 [machine-facts.md](machine-facts.md)。
 
-> *"Kexts the driver's OpenCore setup needs, **pinned to the same files 1401 builds with** (p1401/mirror.json)."*
+## 1. 来源与兼容性：组合证据，不设唯一判据
 
-**其余映射（已逐个下载比对，逐字节一致）**：
+| 证据 | 能说明什么 | 局限 |
+|---|---|---|
+| 上游 release / tag / commit | 对应发布或源码位置 | 查不到 tag 可能是开发构建；有 tag 不证明本地二进制就是该产物 |
+| 构建元数据 | 工具链、SDK 和构建线索 | 老工具链或元数据差异本身不代表不可信 |
+| 与可信产物的 SHA-256 对比 | 哈希一致时核对文件是否与该产物相同 | 差异只说明内容不同；哈希本身不能证明来源可信或配置兼容 |
+| 套件依赖锁定 / 安装脚本 | 某套件选用的组件及组合 | 套件也可能过时；需要核对版本、来源和目标系统 |
+| 发布说明 / 作者文档 / 目标机验证 | 是否支持目标 OS、依赖与症状 | 不能用参考机器的结果代替目标机器验证 |
 
-| EFI 里的版本 | Dortania tag |
-|---|---|
-| `VirtualSMC` / `SMCProcessor` / `SMCSuperIO` **1.3.9** | `VirtualSMC-b5c62c2` |
-| `WhateverGreen` **1.7.2** | `WhateverGreen-093e76f` |
-| `BlueToolFixup` **2.7.3** | `BrcmPatchRAM-6538902` |
-| `NVMeFix` **1.1.4** | （同族构建） |
+区分「与哪个产物相同」「是否为作者支持的构建」「是否适合当前套件」三个问题。
+证据不足时写明不确定项，不把文件定性为可疑，也不因安装器钉版就忽略其他证据。
 
-Lilu 那支的 zip SHA = `261aebb9dc83adb6515c96405653f53c3c50b09c89babdb91fb41f7b33a1cd2a`，
-**与安装器里钉的值一字不差**。
+## 2. 判 DEBUG / RELEASE
 
-⇒ ★★ **纪律**：判定「该不该更新某个 kext」之前，**先 grep 厂商的安装脚本 / 文档 / `mirror.json`**：
-它们才是「官方源」的定义。**厂商钉死的东西一律不动。**
+优先核对下载包来源、构建记录和可信产物哈希。文件体积可作线索，
+**仅凭体积相近或包含 `DEBUG` 字符串，不能确定构建类型**。
 
-## 1. 判「这个 kext 是不是官方件」的四条判据（**必须一起看**）
-
-| # | 判据 | 能证明什么 | 会怎么误判 |
-|---|---|---|---|
-| 1 | **上游有没有这个 tag**（`git/ref/tags/<v>`） | 是否来自上游 release | ★ **会误判** —— Dortania build-repo 的 tag 在上游查不到 |
-| 2 | **构建元数据**（`DTXcode` / `DTSDKName` / `BuildMachineOSBuild`） | 是不是同一批、同一工具链 | ★ **会误判** —— Dortania 的构建机就是**老工具链**（本机这批是 `DTXcode 1420 / macosx13.1 / 21G320`，2022 年） |
-| 3 | **二进制 sha256** | 与官方是否同一份 | 只能证明「不同」，**不能证明「不可信」** |
-| 4 | ★★★ **厂商安装器 / 文档 / `mirror.json` 有没有钉它** | **权威答案** | —— |
-
-**结论**：1–3 只能给出「可疑」，**只有第 4 条能定性**。
-★ 反之：**若第 4 条钉了，即使 1–3 全「异常」，也不要动**。
-
-> ★ **`DTXcode` 老 ≠ 可疑**；**版本号比官方高 ≠ 可疑**。
-> 反例记牢：本机这批「可疑件」全部是**厂商指定的 Dortania 构建**，对应的是**比官方 release 更新的 commit**。
-
-## 2. 判 DEBUG / RELEASE —— 用**体积对照**，别找字符串
-
-下载**同版本**官方 RELEASE + DEBUG 双包，逐个比体积（**DEBUG 通常 1.2–1.9×**）：
-
-| kext | 你手上那份 | 官方 REL | 官方 DBG | 判定 |
-|---|---|---|---|---|
-| `Lilu` | 543,840 | 527,456 | **978,324** | REL |
-| `WhateverGreen` | 531,800 | 527,896 | 752,368 | REL |
-| `RestrictEvents` | 52,848 | 52,768 | 62,408 | REL |
-| `NVMeFix` | 51,312 | **51,312** | 91,320 | REL |
-| `BlueToolFixup` | 41,336 | 41,296 | 42,592 | REL |
-
-★ 比「在二进制里找 `DEBUG` 字符串」可靠得多（Release 构建里也可能残留字样）。
-★ **OpenCore 本体**的 DEBUG/RELEASE 是**另一回事**（看 `opencore-version` 前缀 `DBG-` / `REL-`，见 §4）。
-
-## 3. ★ 什么情况下**才**该更新
-
-| 情况 | 该更新吗 |
-|---|---|
-| 上游发了新 release，**且厂商安装器没钉死这个 kext** | ✅ 可以（走 §5 流程） |
-| 升级 macOS 大版本，需要 `MinKernel` / `MaxKernel` 版本分流的新构建 | ✅ **必须**（见 `os-upgrade-15-to-26.md`） |
-| 有明确 bug fix / CVE **正对着你的症状** | ✅ 可以 |
-| **厂商安装器钉死了** | ❌ **不要动**（§0.1） |
-| 只是「版本号看着旧」/「习惯性全部更新」 | ❌ **不要动** |
-| 驱动本体（如 NullMoth）由 App 自己管版本 | ❌ 交给 App（`/Library/NullMoth/driver-version`），**别手工换 kext** |
-
-> ★ 教训：**「统一更新一遍」这种想法本身就是错的** ——
-> 黑苹果的 kext 生态里，「厂商钉死的组合」比「最新版」重要得多。
-
-## 4. OpenCore 本体的更新
-
-### 4.1 先看现在是什么
+OpenCore 可读取运行版本作为线索，并与磁盘文件和包来源相互核对：
 
 ```bash
 nvram 4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102:opencore-version
-# 例：DBG-108-2026-09-27  ⇒ 1.0.8 的 DEBUG 构建
 ```
 
-`DBG-` = DEBUG / `REL-` = RELEASE；数字是版本（`108` = 1.0.8）；后面是构建日期。
+替换后的文件尚未参与引导时，NVRAM 仍反映此前运行的构建；不要据此认定候选替换失败。
 
-### 4.2 ★★ 换构建必须**连官方同名 Drivers 一起换**（铁律 14）
+## 3. 什么情况下更新
 
-同版本下 **RELEASE 与 DEBUG 的所有 Drivers 内容都不同**（例 1.0.8：`OpenRuntime.efi` 24,576 → 36,864）。
-只换 `OpenCore.efi` = **构建混搭的引导器**。
-★ **第三方驱动**（如 `NullMothLogo.efi`）**保持不动**。
-
-用 `scripts/oc-swap-build.sh`（它连 Drivers 一起换、保留第三方驱动、自动备份/校验/落盘）。
-
-### 4.3 升级到**新版本** OpenCore 时还要做
-
-1. **先取同版本的官方包**：`scripts/fetch-opencore-docs.sh`（拿 `ocvalidate` / `Configuration.tex` / `Sample.plist` / `AcpiSamples`）
-2. ★ **`ocvalidate` 必须与机器上的 OpenCore 同版本** —— 否则校验结论无效（铁律 10）
-3. **读官方 `Differences.pdf` / Release notes** 看有没有 breaking change（`Sample.plist` 的语义 diff 是最快的检查）
-4. 换完跑 `scripts/oc-verify.sh`（`plutil` + `ocvalidate` + 引用完整性 + sha）
-5. ★ **别忘 BIOS 侧**：新版本可能对 `ResizeGpuBars` / `ResizeAppleGpuBars` / `Kernel>Block` 有不同要求
-
-## 5. 更新流程（安全版，一次只动一类）
-
-1. **备份**：整个 EFI（`tgz`）+ kext 目录（**含一份版本清单 `VERSIONS-before.txt`**）
-2. **记录现状**：`scripts/kext-inventory.sh` 导出每个 kext 的 `CFBundleVersion` / `DTXcode` / sha256
-3. **判断该不该动**：§1 四条判据 + §3 该更新表
-4. ★ **一次只动一类**：**先 kext 或先 OpenCore 本体，不要同时**
-5. **改**：`rsync -a --delete` 同步 kext 目录（★ 注意它会删掉目标里不在源里的文件）
-6. **自检三条**：
-   - `ocvalidate` = No issues found
-   - **config 里所有 `BundlePath` 都能在 `Kexts/` 找到**（引用 0 缺失）
-   - **只有被改动的 kext** 的 `Info.plist` + 二进制发生变化
-7. **落盘**：`sync` → **卸载** → **重挂** → 复验版本/sha 一致（FAT 有写缓存）
-8. **重启后验证**：`kmutil showloaded --list-only` 对照版本；跑 `scripts/oc-verify.sh`
-9. **写清回滚路径**（备份在哪、怎么还原）
-
-## 6. 自检与坑
-
-| 项 | 做法 |
+| 情况 | 处理方式 |
 |---|---|
-| **kext 版本清单** | `scripts/kext-inventory.sh <EFI 挂载点或 Kexts 目录>` —— 版本 / `DTXcode` / 大小 / sha256 / config 引用核对 |
-| ★ **shell `PATH` 会被沙箱搞坏** | 脚本里先 `export PATH=/usr/bin:/bin:/usr/sbin:/sbin`（否则 `stat` / `strings` / `grep` 会莫名 `command not found`） |
-| ★ **盘号会漂** | 一律 `diskutil list \| grep "EFI EFI"` 认盘（铁律 1） |
-| ★ **卸载重挂才算落盘** | FAT 写缓存（铁律 4） |
-| ★ **`rsync --delete` 是双刃剑** | 它会让目标与源**完全一致** —— 别拿它同步「只应该多几个文件」的场景 |
-| ★ **别在没备份时试** | 尤其 OC 本体：混搭构建 = 可能进不去选择器 |
+| 用户明确要求更新，且目标版本满足系统与依赖条件 | 准备候选、备份、验证并在请求范围内更新 |
+| 新版修复当前症状或相关安全问题 | 说明具体收益与兼容性，选择适用版本 |
+| 升级 macOS 需要新构建或按系统版本分流 | 对照各系统要求，设置适用范围，见 [系统升级指南](os-upgrade-15-to-26.md) |
+| 组件被套件钉版 | 核对套件兼容性和升级路径，按 §0.1 处理 |
+| 只读巡检发现版本较旧 | 记录现状与更新理由，不把巡检扩展为写入 |
+| 驱动由 App 管理 | 优先使用该版本 App 支持的更新方式，避免手工覆盖破坏其管理状态 |
 
-## 7. 出处
+批量更新也可在用户请求内执行；按依赖关系分组，记录每项来源与结果，保留可回滚的批次边界。
 
-- Dortania `build-repo`（<https://github.com/dortania/build-repo>）—— 按 commit 构建、补丁号 +1 的机制。
-- 厂商安装脚本 `nullmoth-setup.sh` 的 `kurl()` 表 + `p1401/mirror.json` —— **「官方源」的实际定义**。
-- OpenCore `Configuration.pdf`（`Misc>Debug` 版本号语义）+ 官方 `Differences.pdf`。
-- 相关：`official-docs-method.md`（逐键对照）· `os-upgrade-15-to-26.md`（版本分流）·
-  `nvidia-driver.md`（驱动本体版本由 App 管）· `disks-and-kexts.md`（kext 精简与「不能删」清单）。
+## 4. OpenCore 本体的更新
+
+### 4.1 确认当前和目标版本
+
+分别记录当前运行版本、磁盘文件来源、目标版本和构建类型，核对发布说明与配置迁移要求。
+不要把「已下载最新版」当成「目标机器已支持最新版」。
+
+### 4.2 保持官方核心文件与驱动配套
+
+使用同一目标版本 / 构建的官方包替换 `OpenCore.efi`、对应的 `BOOTx64.efi` 和正在使用的官方驱动，
+避免无意混用不同来源。先检查包内路径与现有驱动清单，保留不属于本次升级范围的第三方驱动。
+
+参考机器的 OpenCore 1.0.8 RELEASE / DEBUG 包中驱动曾存在大小差异，
+这不证明所有版本、所有驱动的内容必定不同。
+
+[oc-swap-build.sh](../scripts/oc-swap-build.sh) 用于同版本 RELEASE / DEBUG 切换；
+先查看帮助与 dry-run，不把它当成任意跨版本迁移工具。
+
+### 4.3 升级到新版本时的额外检查
+
+1. 获取**目标版本**的官方文档、样例和 `ocvalidate`，逐项处理配置迁移。
+2. 现有配置的基线审查使用当前版本校验器；**候选配置使用目标版本校验器**。
+3. 核对正在使用的官方 Drivers / Tools 是否需配套更新；第三方组件按作者要求处理。
+4. 校验 config 引用、文件内容与目标包来源；完成离线验证后才写入。
+
+配置解释与限制以该版本的
+[OpenCore 官方文档](https://github.com/acidanthera/OpenCorePkg/blob/master/Docs/Configuration.tex) 为准，
+取用方法见 [官方文档方法](official-docs-method.md)。
+
+## 5. 执行与回滚
+
+1. 确认实际目标 EFI、现有 live 哈希和已有授权；目标或基线变化时重新核对，避免覆盖用户回退。
+2. 备份完整 EFI 与相关系统侧驱动，运行 [kext-inventory.sh](../scripts/kext-inventory.sh) 保存版本和哈希清单。
+3. 在工作区准备候选，按依赖分组替换；保留禁用项、第三方文件和已声明的保留项，除非请求要求处理。
+4. 运行对应版本 `ocvalidate`、plist lint 和引用检查；确认启用的 `Kernel > Add` 条目有正确文件与顺序。
+5. 核对改动范围和候选哈希，按 [安全工作流](../SKILL.md) 写入、落盘复验并保留恢复入口。
+6. 重启后核对实际 OpenCore / kext 状态与目标功能。离线检查通过不代表启动验证已完成，未重启时明确记录。
+7. 失败时按已确认的备份回退，不在失败后反复叠加无依据改动。
+
+## 6. 常见误判
+
+| 误判 | 修正 |
+|---|---|
+| 上游 tag 404，所以来路不明 | 查 commit、构建记录与实际来源 |
+| 安装器钉了，所以永远不能更新 | 核对该套件的兼容组合与升级路径 |
+| 大小接近 release，所以确定是 release | 用来源、构建记录与哈希补证 |
+| `kmutil showloaded` 出现，所以功能已正常 | 继续验证设备绑定和实际功能 |
+| `rsync -a --delete` 只是复制新文件 | 它也删除目标多余文件，只在明确需要镜像同步时使用 |
+| 第一个 EFI 分区就是目标 | 结合 UUID、设备信息、实际内容确认目标 |
+
+相关：[kext 精简](disks-and-kexts.md)、[NVIDIA 驱动](nvidia-driver.md)、
+[系统升级](os-upgrade-15-to-26.md)。
