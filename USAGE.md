@@ -26,7 +26,7 @@
 name: opencore-config-audit
 description: 审查与维护黑苹果 OpenCore EFI 配置。
 metadata:
-  version: "0.43.0"
+  version: "0.43.1"
   description_en: Audit and maintain hackintosh OpenCore EFI configurations.
   agent_created: "true"
 ---

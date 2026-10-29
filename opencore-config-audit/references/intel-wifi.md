@@ -20,9 +20,8 @@
 
 - `AirportItlwm-Sequoia` 目标：**macOS Sequoia 15.2 及以后**，x86_64；实测于 macOS 15.8 (24H23)
 - `AirportItlwm-Tahoe` 目标：**macOS 26.x（Darwin 25.x）**
-- ★ 原文：*"Sequoia and Tahoe use separate ABI headers and build products."*
-  → *"Use this kext only on Darwin 24.2.0–24.99.99. Keep the Tahoe kext restricted to Darwin 25.x when both systems share an OpenCore configuration."*
-  ⇒ **双系统共用一个 OpenCore 配置时，必须用 `MinKernel`/`MaxKernel` 把两个 kext 分别限定在各自的 Darwin 版本**，否则会加载错的那份
+- [fork 的 main 分支说明](https://github.com/laobamac/itlwm/blob/main/README.md) 要求 Sequoia 构建仅用于 Darwin `24.2.0`–`24.99.99`，双系统共用配置时 Tahoe 构建限于 Darwin 25.x。
+  ⇒ **双系统共用一个 OpenCore 配置时，用 `MinKernel` / `MaxKernel` 把两份构建分别限定在各自支持的区间**，见 §2 的独立条目示例。
 
 **macOS 26 上的能力与限制**
 
@@ -49,9 +48,17 @@ xcodebuild -project itlwm.xcodeproj -scheme AirportItlwm-Sequoia \
 
 ## 2. 装进 OpenCore（通用做法）
 
-1. 把 `AirportItlwm.kext` 放进 `EFI/OC/Kexts/`
+1. 将所需构建放进 `EFI/OC/Kexts/`。双系统并存时，分别命名外层 bundle 为 `AirportItlwm-Sequoia.kext` 与 `AirportItlwm-Tahoe.kext`（示例名称），不要将两份同名 `AirportItlwm.kext` 互相覆盖，也不要让两个条目指向同一份文件。
 2. 在 `Kernel → Add` 加条目，**必须排在 `Lilu.kext` 之后**（Lilu 是宿主）
-3. **用 `MinKernel` / `MaxKernel` 限定 Darwin 版本**（见 §1）：Sequoia 那份填 `MinKernel=24.2.0` / `MaxKernel=24.99.99`；Tahoe 那份填 `MinKernel=25.0.0`。用 `uname -r` 查当前 Darwin 版本
+3. **按下表分别填写 `BundlePath` 和版本范围**。`ExecutablePath` / `PlistPath` 相对于各自 bundle，按包内实际内容填写；更改外层目录名不代表要重命名内部可执行文件。用 `uname -r` 查当前 Darwin 版本。
+
+   | 构建 | `BundlePath`（示例） | `MinKernel` | `MaxKernel` |
+   |---|---|---|---|
+   | macOS 15.2+ Sequoia | `AirportItlwm-Sequoia.kext` | `24.2.0` | `24.99.99` |
+   | macOS 26 Tahoe | `AirportItlwm-Tahoe.kext` | `25.0.0` | `25.99.99` |
+
+   两个条目均设 `Enabled=true`，OpenCore 按当前内核版本选择。`MaxKernel` 留空会允许未来的 Darwin 26 及以后，不符合此 fork 限于 Darwin 25.x 的要求；上下限同时设置时须满足 `MinKernel ≤ MaxKernel`。
+
 4. 需要 Wi-Fi 6 时，boot-args 加 `itlwm_he=1`
 5. 按该构建作者对目标系统的要求核对 `SecureBootModel` 与 SIP；第三方 kext 的签名本身不足以推出应关闭这些保护，已有设置可用时保留
 6. 重启后验证：

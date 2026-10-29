@@ -41,30 +41,37 @@ macOS 的「大版本」在内核里是 **Darwin 主版本号**，`Kernel > Add/
 | **26 Tahoe** | **25.x** | **`25.0.0`** |
 | （查自己的机器） | — | `uname -r` |
 
-### 1.2 ★ `24.99.99` 这个写法是什么意思
+### 1.2 版本范围怎样匹配
 
-它是**「把上限钉死在整个 Darwin 24，但不误伤 Darwin 25」**的惯用写法：
+OpenCore 按 **`MinKernel ≤ 当前 Darwin 版本 ≤ MaxKernel`** 匹配，包含两个端点。
+`MinKernel` 留空表示无下限，`MaxKernel` 留空表示无上限；两者同时填写时，下限不能高于上限。
+依据：[OpenCore 官方 Add Properties](https://github.com/acidanthera/OpenCorePkg/blob/master/Docs/Configuration.tex)。
 
-```
-MaxKernel = 24.99.99   ⇒ 只在 Darwin 23 / 24 生效，Darwin 25 起自动跳过
-MinKernel = 25.0.0     ⇒ 只在 Darwin 25 起生效
-```
+| 需要限制的范围 | `MinKernel` | `MaxKernel` |
+|---|---|---|
+| 仅 Darwin 24.x | `24.0.0` | `24.99.99` |
+| 仅 Darwin 25.x（macOS 26） | `25.0.0` | `25.99.99` |
+| Darwin 25 及以后，且作者确认支持 | `25.0.0` | 留空 |
 
-**不要**写 `MaxKernel = 25.0.0`（会把 Darwin 25 本身也框进去）或 `MaxKernel = 24.0.0`（会把 24.1–24.99 全排除）。
-`24.99.99` 是 OCLP 官方配置里用的写法，跟着用。
+单写 `MaxKernel=24.99.99` 也允许更早的内核；单写 `MinKernel=25.0.0` 也允许未来的 Darwin 26 及以后。
+因此，「仅 macOS 26」需要同时限定 `25.0.0`–`25.99.99`，不能把 `MinKernel` 填成 macOS 的 `26.0.0`。
+
+作为旧版驱动的上限，`MaxKernel=25.0.0` 会包含 Darwin 25.0.0；`MaxKernel=24.0.0` 则会排除 24.1.0 等后续版本。
 
 ### 1.3 条目字段（`Kernel > Add` 一条的完整形态）
+
+以下示例用于一份**仅支持 Darwin 25.x** 的 kext；文件路径以实际包内容为准。
 
 | 字段 | 值 | 说明 |
 |---|---|---|
 | `Arch` | `x86_64` | |
-| `BundlePath` | `Xxx.kext` | **plugin 要写全路径**，见下 |
+| `BundlePath` | `Xxx.kext` | 相对于 `EFI/OC/Kexts/`；plugin 填包含父 bundle 的嵌套路径，见下 |
 | `Comment` | 自由文本 | 建议写清「给哪个系统、来自哪」 |
 | `Enabled` | `True` / `False` | |
-| `ExecutablePath` | `Contents/MacOS/<可执行名>` | plugin 同理要带前缀路径 |
-| `PlistPath` | `Contents/Info.plist` | |
+| `ExecutablePath` | `Contents/MacOS/<可执行名>` | 相对于本条 `BundlePath` 指向的 bundle；无代码 kext 留空 |
+| `PlistPath` | `Contents/Info.plist` | 同样相对于本条 bundle |
 | **`MinKernel`** | **`25.0.0`** | ★ 版本分流 |
-| **`MaxKernel`** | **`24.99.99`** | ★ 版本分流 |
+| **`MaxKernel`** | **`25.99.99`** | 与下限组成有效的 Darwin 25.x 区间 |
 
 **★ plugin 的写法**（实例：博通卡驱动是 `IO80211FamilyLegacy.kext` 里的一个 plugin）：
 
@@ -76,13 +83,13 @@ MinKernel      = 23.0.0
 MaxKernel      = 24.99.99
 ```
 
+父 bundle 的嵌套前缀只出现在 `BundlePath`；不要在 plugin 的 `ExecutablePath` / `PlistPath` 中再次拼接它。
+
 ### 1.4 三条规则
 
-1. **同一个功能如果上游提供了「按内核版本分别构建」的产物 ⇒ 必须写两条条目、用 `MinKernel`/`MaxKernel` 分开**。
-   **不能**只留一条（会有一个系统用不了），也**不能**两条都不写限制（会两个系统都加载 ⇒ 冲突/panic）。
-2. **上限一律用 `24.99.99`** 收口到 Darwin 24。
-3. **通用 kext（Lilu / VirtualSMC / WhateverGreen / RestrictEvents / USBToolBox …）不需要写** ——
-   它们跨版本通用，留空即可。**只给「按系统分构建」的那些写。**
+1. **同一份 EFI 要兼容两个系统，且同一功能有分别构建的产物时，为两份构建建立独立条目**，用各自支持的 `MinKernel` / `MaxKernel` 分流。文件也要使用不同的 bundle 目录名，避免互相覆盖；只运行一个系统时只需对应构建。
+2. **按每份构建的支持范围填写上下限**：Darwin 24.x 的上限是 `24.99.99`，Darwin 25.x 的上限是 `25.99.99`。不要将新旧构建的边界拼到同一条目，也不要在未经确认时让专用构建覆盖未来内核。
+3. **同一构建已支持多个目标系统的通用 kext 无需复制成两份**。保留作者要求的版本限制；没有限制要求时可留空。仍需核实该构建确实支持目标系统。
 
 ---
 
@@ -92,21 +99,24 @@ MaxKernel      = 24.99.99
 
 | 网卡 | Sequoia (Darwin 24) 条目 | Tahoe (Darwin 25) 条目 | 来源 |
 |---|---|---|---|
-| **博通 BCM43602 / BCM943602CDP** | `IO80211FamilyLegacy.kext`（`Min 23.0.0`）<br>+ **plugin** `…/PlugIns/AirPortBrcmNIC.kext`（`Min 23.0.0` / **`Max 24.99.99`**） | **`AirPortBrcmNIC-Tahoe.kext`**<br>（`Min 25.0.0`，**OCLP 3.0.0-rc.3 起才提供**） | `broadcom-wifi.md` |
-| **Intel** | `AirportItlwm-Sequoia`（`Min 24.2.0` / `Max 24.99.99`） | `AirportItlwm-Tahoe`（`Min 25.0.0`） | `intel-wifi.md` |
+| **博通 BCM43602 / BCM943602CDP** | `IO80211FamilyLegacy.kext`（`Min 23.0.0`）<br>+ **plugin** `…/PlugIns/AirPortBrcmNIC.kext`（`Min 23.0.0` / **`Max 24.99.99`**） | **`AirPortBrcmNIC-Tahoe.kext`**<br>（`Min 25.0.0` / `Max 25.99.99`，部署范围限于 macOS 26；**OCLP 3.0.0-rc.3 起才提供**） | `broadcom-wifi.md` |
+| **Intel** | `AirportItlwm-Sequoia.kext`（`Min 24.2.0` / `Max 24.99.99`） | `AirportItlwm-Tahoe.kext`（`Min 25.0.0` / `Max 25.99.99`） | `intel-wifi.md`；bundle 目录名按两份构建分别命名 |
 | **MediaTek MT792x** | 无版本分流（本来就都实验性） | 同左 | `mediatek-wifi.md` |
 
 > ★★ **博通这条是踩过的坑**：`AirPortBrcmNIC.kext` 的 `MaxKernel=24.99.99` 是 **OCLP 2.5.1 写死的**，
 > 而 **OCLP 2.5.1 根本没有 Tahoe 支持** ⇒ 升到 26 后 Wi-Fi 直接消失。
 > **必须换 OCLP 3.0.0-rc.3+**（它的 `payloads/Config/config.plist` 里才有 `AirPortBrcmNIC-Tahoe.kext` 那条）。
-> 三条条目的正确形态（对照 OCLP 官方配置）：
+> 相关条目的部署示例（组件参考 OCLP 来源，Tahoe 专用条目限定到 Darwin 25.x）：
 >
 > ```
 > [1] IOSkywalkFamily.kext                      Min 23.0.0  Max —
 > [2] IO80211FamilyLegacy.kext                  Min 23.0.0  Max —
 > [3] …/AirPortBrcmNIC.kext                     Min 23.0.0  Max 24.99.99   ← Darwin 23–24
-> [4] AirPortBrcmNIC-Tahoe.kext                 Min 25.0.0  Max —          ← Darwin 25+（3.0.0 新增）
+> [4] AirPortBrcmNIC-Tahoe.kext                 Min 25.0.0  Max 25.99.99   ← 仅 Darwin 25（3.0.0 新增）
 > ```
+
+OCLP 来源配置中 Tahoe 条目的上限可能留空，表示没有上限。本文的部署示例只覆盖已验证的 macOS 26，
+因此将该专用条目收口到 `25.99.99`；这属于部署范围限制，不能据此认定来源配置也设置了该上限。后续系统是否可用仍需重新核对兼容性。
 
 ### 2.2 网卡配套（不分版本，但升级时状态会变）
 
@@ -152,7 +162,7 @@ MaxKernel      = 24.99.99
 
 ### 阶段 C：升级**后**（在 macOS 26 上做）
 
-6. **补版本分流的 kext 条目**（§2.1）—— 装 `AirPortBrcmNIC-Tahoe.kext` + 在 `Kernel > Add` 加 `MinKernel=25.0.0` 那条。重启，先让内核栈通。
+6. **补版本分流的 kext 条目**（§2.1）—— 装 `AirPortBrcmNIC-Tahoe.kext`，在 `Kernel > Add` 为该 Tahoe 专用条目设置 `MinKernel=25.0.0` / `MaxKernel=25.99.99`。重启，先让内核栈通。
 7. **重打 OCLP root patch**：`OpenCore-Patcher.app` → **Post-Install Root Patch** → Start Root Patching。
    应看到 **"Networking: Modern Wireless"**。
 8. **重启**，然后按 §6 验证。
