@@ -1,126 +1,133 @@
 #!/bin/bash
-# 把 ESP 上的 OpenCore 换成同版本的另一个构建（RELEASE <-> DEBUG）
-#
-# 用法: oc-swap-build.sh <debug|release> [版本号] [--efi <EFI 根目录>] [--yes]
-#   版本号省略时从 NVRAM 推断：DBG-108-2026-09-27 → 1.0.8 / 1.0.8-2026-09-27 → 1.0.8
-#   默认 EFI 根目录 = /Volumes/EFI/EFI
-#
-# 为什么必须连 Drivers 一起换：同版本下 RELEASE 与 DEBUG 的**所有** Drivers 内容都不同
-#   （例 1.0.8：OpenRuntime.efi 24,576 → 36,864；OpenCanopy.efi 114,688 → 151,552）
-#   只换 OpenCore.efi 会得到「构建混搭」的引导器。
-# 只替换**官方同名**驱动，第三方驱动（如驱动安装 App 放的 NullMothLogo.efi）保持不动。
+# 把指定 EFI 的 OpenCore 换成同版本的另一个构建（RELEASE <-> DEBUG）。
+# 用法: oc-swap-build.sh <debug|release> <目标版本号> [--efi <EFI 根目录>] [--yes]
+# 版本必须由目标 EFI 的记录/日志确认后显式给出；不使用宿主 NVRAM 猜测离线目标。
+# 默认 EFI 根目录 = /Volumes/EFI/EFI；只替换目标已有的官方同名 Drivers。
 set -euo pipefail
 
-TARGET="${1:?用法: oc-swap-build.sh <debug|release> [版本号] [--efi <EFI 根目录>] [--yes]}"
+TARGET="${1:?用法: oc-swap-build.sh <debug|release> <目标版本号> [--efi <EFI 根目录>] [--yes]}"
 shift
 VER=""; EFIROOT="/Volumes/EFI/EFI"; YES=0
 while [ $# -gt 0 ]; do
   case "$1" in
-    --efi) EFIROOT="${2:-}"; shift;;
-    --yes) YES=1;;
-    *) [ -z "$VER" ] && VER="$1";;
+    --efi)
+      case "${2:-}" in ""|--*) echo "--efi 缺少目录" >&2; exit 2;; esac
+      EFIROOT="$2"; shift 2;;
+    --yes) YES=1; shift;;
+    -*) echo "未知参数: $1" >&2; exit 2;;
+    *) [ -z "$VER" ] || { echo "只能指定一个版本号" >&2; exit 2; }; VER="$1"; shift;;
   esac
-  shift
 done
 case "$TARGET" in debug|DEBUG) TARGET=debug; KIND=DEBUG;; release|RELEASE) TARGET=release; KIND=RELEASE;; *) echo "目标只能是 debug 或 release"; exit 2;; esac
-
-# ---------- 1) 版本与当前构建 ----------
-CUR=$(nvram 4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102:opencore-version 2>/dev/null | awk '{print $2}' || true)
-echo "== 1) 现状 =="
-echo "   NVRAM opencore-version : ${CUR:-<读不到>}"
-CURKIND="未知"
-case "$CUR" in DBG-*) CURKIND=DEBUG;; ""|-*) CURKIND=未知;; *) CURKIND=RELEASE;; esac
-if [ -z "$VER" ]; then
-  # DBG-108-2026-09-27 → 108 → 1.0.8
-  N=$(printf '%s' "$CUR" | sed -n 's/^DBG-\([0-9][0-9]*\)-.*/\1/p')
-  [ -n "$N" ] || N=$(printf '%s' "$CUR" | sed -n 's/^\([0-9][0-9]*\)-.*/\1/p')
-  if [ -n "$N" ] && [ ${#N} -ge 3 ]; then
-    VER="$(printf '%s' "$N" | cut -c1).$(printf '%s' "$N" | cut -c2).$(printf '%s' "$N" | cut -c3-)"
+[[ "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "请显式给出经目标 EFI 确认的版本号，例如 1.0.8；不从宿主 NVRAM 推断" >&2; exit 2; }
+[ -f "$EFIROOT/OC/OpenCore.efi" ] || { echo "找不到 $EFIROOT/OC/OpenCore.efi" >&2; exit 2; }
+EFIROOT="$(cd "$EFIROOT" && pwd -P)"
+OC="$EFIROOT/OC"
+BK=""; BACKUP_READY=0; CHANGED=0
+fail() {
+  echo "★ $*" >&2
+  if [ "$BACKUP_READY" = 1 ]; then
+    echo "  已替换 $CHANGED 项；保留备份 ${BK}，请先恢复并校验再重启。" >&2
+    echo "  回滚：cp -pR \"$BK/.\" \"$EFIROOT/\"" >&2
+  else
+    echo "  尚未开始替换目标；备份未完成。" >&2
   fi
+  exit 1
+}
+sha() { shasum -a 256 "$1" | awk '{print $1}'; }
+echo "== 目标 EFI: $EFIROOT =="
+echo "   目标版本（显式指定）: $VER    目标构建: $KIND"
+echo "   当前目标 OpenCore SHA: $(sha "$OC/OpenCore.efi")"
+
+WORK="${PWD}/_oc-build-swap"; mkdir -p "$WORK"
+WORK="$(cd "$WORK" && pwd -P)"
+ZIP="$WORK/OpenCore-$VER-$KIND.zip"
+if [ ! -f "$ZIP" ]; then
+  DOWNLOAD=$(mktemp "$WORK/.download.XXXXXX")
+  if ! curl -fsSL --max-time 300 "https://github.com/acidanthera/OpenCorePkg/releases/download/$VER/OpenCore-$VER-$KIND.zip" -o "$DOWNLOAD"; then
+    rm -f "$DOWNLOAD"; fail "官方包下载失败"
+  fi
+  mv "$DOWNLOAD" "$ZIP"
 fi
-[ -n "$VER" ] || { echo "   ★ 推断不出版本号，请显式给出，例如: oc-swap-build.sh $TARGET 1.0.8"; exit 2; }
-echo "   版本 : $VER      当前构建 : $CURKIND      目标构建 : $KIND"
-if [ "$CURKIND" = "$KIND" ]; then echo; echo "== 已经是 ${KIND}，无需切换。=="; exit 0; fi
+STAGE=$(mktemp -d "$WORK/_oc-build-src.XXXXXX")
+trap 'rm -rf "$STAGE"' EXIT
+unzip -oq "$ZIP" -d "$STAGE" || fail "官方包解压失败"
+SRC="$STAGE/X64/EFI"
+[ -f "$SRC/OC/OpenCore.efi" ] && [ -f "$SRC/BOOT/BOOTx64.efi" ] || fail "官方包缺少 OpenCore/BOOT 文件"
 
-# ---------- 2) 取官方包 ----------
-WORK="${PWD}/_oc-build-swap"; mkdir -p "$WORK"; cd "$WORK"
-ZIP="OpenCore-$VER-$KIND.zip"
-echo
-echo "== 2) 取官方 ${KIND} 包（OpenCore-${VER}）=="
-[ -f "$ZIP" ] || curl -sSL --max-time 300 \
-  "https://github.com/acidanthera/OpenCorePkg/releases/download/$VER/$ZIP" -o "$ZIP"
-ls -la "$ZIP"
-rm -rf "src"; unzip -oq "$ZIP" -d src
-SRC="src/X64/EFI"
-[ -f "$SRC/OC/OpenCore.efi" ] || { echo "   ★ 包里没找到 $SRC/OC/OpenCore.efi，版本号对吗？"; exit 1; }
+# 备份、替换、校验共用相同的目标相对路径。缺少目标 BOOT 时不新增文件，
+# 从而回滚仅需恢复原有文件。第三方 Drivers 不进入替换清单。
+RELS=("OC/OpenCore.efi")
+if [ -f "$EFIROOT/BOOT/BOOTx64.efi" ]; then
+  RELS[${#RELS[@]}]="BOOT/BOOTx64.efi"
+elif [ -f "$EFIROOT/BOOT/bootx64.efi" ]; then
+  RELS[${#RELS[@]}]="BOOT/bootx64.efi"
+fi
+for file in "$SRC/OC/Drivers"/*; do
+  [ -f "$file" ] || continue
+  name=$(basename "$file")
+  [ ! -f "$OC/Drivers/$name" ] || RELS[${#RELS[@]}]="OC/Drivers/$name"
+done
+source_file() {
+  case "$1" in BOOT/*) printf '%s\n' "$SRC/BOOT/BOOTx64.efi";; *) printf '%s\n' "$SRC/$1";; esac
+}
+for rel in "${RELS[@]}"; do
+  [ ! -L "$EFIROOT/$rel" ] || fail "目标 $rel 是符号链接，拒绝写入目标目录以外的文件"
+  TARGET_DIR=$(cd "$(dirname "$EFIROOT/$rel")" && pwd -P)
+  case "$TARGET_DIR/" in "$EFIROOT"/*) ;; *) fail "目标 $rel 的目录链接超出指定 EFI，拒绝替换";; esac
+done
+if [ "$YES" != 1 ]; then
+  printf '将替换 %s 中 %d 个文件为 %s %s。继续？[y/N] ' "$EFIROOT" "${#RELS[@]}" "$VER" "$KIND"
+  read -r answer || answer=""
+  case "$answer" in y|Y) ;; *) echo "已取消"; exit 0;; esac
+fi
 
-# ---------- 3) 校验 ESP ----------
-OC="$EFIROOT/OC"; BOOT="$EFIROOT/BOOT"
-[ -f "$OC/OpenCore.efi" ] || { echo "   ★ 找不到 $OC/OpenCore.efi（ESP 挂载了吗？）"; exit 1; }
+BK=$(mktemp -d "$WORK/_oc-build-backup-$(date +%Y%m%d-%H%M%S).XXXXXX")
+BASES=(); EXPECTED=()
+for rel in "${RELS[@]}"; do
+  BASE=$(sha "$EFIROOT/$rel") || fail "无法读取目标 $rel"
+  EXPECT=$(sha "$(source_file "$rel")") || fail "无法读取源文件 $rel"
+  mkdir -p "$BK/$(dirname "$rel")"
+  cp -p "$EFIROOT/$rel" "$BK/$rel" || fail "备份 $rel 失败"
+  SAVED=$(sha "$BK/$rel") || fail "无法读取备份 $rel"
+  [ "$SAVED" = "$BASE" ] || fail "备份 $rel SHA 不一致"
+  BASES[${#BASES[@]}]="$BASE"; EXPECTED[${#EXPECTED[@]}]="$EXPECT"
+done
+BACKUP_READY=1
+echo "== 完整备份: $BK =="
+for ((i=0; i<${#RELS[@]}; i++)); do
+  CURRENT=$(sha "$EFIROOT/${RELS[$i]}") || fail "无法复读目标 ${RELS[$i]}"
+  [ "$CURRENT" = "${BASES[$i]}" ] || fail "备份后目标 ${RELS[$i]} 被修改，停止替换"
+done
+for rel in "${RELS[@]}"; do
+  cp -p "$(source_file "$rel")" "$EFIROOT/$rel" || fail "替换 $rel 失败（可能部分写入）"
+  CHANGED=$((CHANGED+1)); echo "   已替换 $rel"
+done
+verify_target() {
+  local i actual
+  for ((i=0; i<${#RELS[@]}; i++)); do
+    actual=$(sha "$EFIROOT/${RELS[$i]}") || fail "无法校验 ${RELS[$i]}"
+    [ "$actual" = "${EXPECTED[$i]}" ] || fail "${RELS[$i]} SHA 与官方包不一致"
+  done
+}
+verify_target
+sync || fail "sync 失败"
 ESP_DEV=""; MP=$(df -P "$OC/OpenCore.efi" | awk 'NR==2{print $NF}')
 case "$MP" in
-  /Volumes/*) INFO=$(diskutil info "$MP" 2>/dev/null || true)
-              printf '%s\n' "$INFO" | grep -q 'Partition Type:.*EFI' \
-                && ESP_DEV=$(printf '%s\n' "$INFO" | awk -F': *' '/Device Identifier/{print $2}') || true;;
+  /Volumes/*)
+    INFO=$(diskutil info "$MP" 2>/dev/null || true)
+    if printf '%s\n' "$INFO" | grep -q 'Partition Type:.*EFI'; then
+      ESP_DEV=$(printf '%s\n' "$INFO" | awk -F': *' '/Device Identifier/{print $2}')
+    fi;;
 esac
-
-# ---------- 4) 备份 ----------
-TS=$(date +%Y%m%d-%H%M%S); BK="${PWD}/_oc-build-backup-$TS"
-echo
-echo "== 3) 备份到 $BK =="
-mkdir -p "$BK/OC" "$BK/BOOT" "$BK/Drivers"
-cp -p "$OC/OpenCore.efi" "$BK/OC/" 2>/dev/null && echo "   OpenCore.efi"
-cp -p "$BOOT/bootx64.efi" "$BK/BOOT/" 2>/dev/null && echo "   BOOT/bootx64.efi" || echo "   (无 bootx64.efi，跳过)"
-cp -pR "$OC/Drivers/." "$BK/Drivers/" 2>/dev/null && echo "   Drivers/（$(ls "$OC/Drivers" | wc -l | tr -d ' ') 个文件）"
-
-# ---------- 5) 替换 ----------
-echo
-echo "== 4) 替换 =="
-if [ "$YES" != 1 ]; then
-  printf "   将把 %s 的 OpenCore.efi / BOOTx64.efi / 官方同名 Drivers 换成 $KIND 版。继续？[y/N] " "$EFIROOT"
-  read -r a; case "$a" in y|Y) ;; *) echo "   已取消"; exit 0;; esac
-fi
-cp -p "$SRC/OC/OpenCore.efi" "$OC/OpenCore.efi" && echo "   OC/OpenCore.efi"
-if [ -f "$SRC/BOOT/BOOTx64.efi" ]; then cp -p "$SRC/BOOT/BOOTx64.efi" "$BOOT/bootx64.efi" && echo "   BOOT/bootx64.efi"; fi
-for f in "$SRC/OC/Drivers"/*; do
-  n=$(basename "$f")
-  [ -f "$OC/Drivers/$n" ] || continue          # 只换 ESP 上已有的
-  cp -p "$f" "$OC/Drivers/$n" && echo "   Drivers/$n"
-done
-echo "   （保留第三方驱动：$(ls "$OC/Drivers" | while read -r n; do [ -f "$SRC/OC/Drivers/$n" ] || printf '%s ' "$n"; done)）"
-
-# ---------- 6) 校验 ----------
-echo
-echo "== 5) 校验（sha 必须与官方包一致）=="
-rc=0
-for rel in OC/OpenCore.efi BOOT/BOOTx64.efi; do
-  a=$(shasum -a 256 "$EFIROOT/$rel" 2>/dev/null | awk '{print $1}')
-  b=$(shasum -a 256 "$SRC/$rel" 2>/dev/null | awk '{print $1}')
-  if [ "$a" = "$b" ]; then echo "   ✓ $rel  $a"; else echo "   ★ $rel 不一致"; rc=1; fi
-done
-for f in "$SRC/OC/Drivers"/*; do
-  n=$(basename "$f"); [ -f "$OC/Drivers/$n" ] || continue
-  a=$(shasum -a 256 "$OC/Drivers/$n" | awk '{print $1}'); b=$(shasum -a 256 "$f" | awk '{print $1}')
-  [ "$a" = "$b" ] || { echo "   ★ Drivers/$n 不一致"; rc=1; }
-done
-if [ $rc -eq 0 ]; then echo "   全部一致 ✓"; else echo "   ★ 有不一致，先别重启"; fi
-
-# ---------- 7) 落盘 + 重启提示 ----------
-echo
-echo "== 6) 落盘（sync → 卸载 → 重挂）=="
-sync
 if [ -n "$ESP_DEV" ]; then
-  diskutil unmount "$ESP_DEV" >/dev/null 2>&1 || true
-  diskutil mount   "$ESP_DEV" >/dev/null 2>&1 || \
-    osascript -e "do shell script \"diskutil mount $ESP_DEV\" with administrator privileges" >/dev/null 2>&1 || true
-  shasum -a 256 "$OC/OpenCore.efi" | sed 's/^/   重挂后 OpenCore.efi: /'
+  diskutil unmount "$ESP_DEV" || fail "卸载 ${ESP_DEV} 失败，未完成落盘复验"
+  diskutil mount "$ESP_DEV" || fail "重挂 ${ESP_DEV} 失败，请先挂回并检查备份"
+  verify_target
 fi
-
-echo
-echo "== 完成。重启后才生效，重启后验证： =="
-echo "   nvram 4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102:opencore-version    # 期望 $([ "$TARGET" = debug ] && echo "DBG-$VER-*" || echo "$VER-*")"
-echo "   shasum -a 256 $OC/OpenCore.efi"
+echo "== 完成：全部 ${#RELS[@]} 项 SHA 与官方包一致 =="
 echo "   回滚：cp -pR \"$BK/.\" \"$EFIROOT/\""
+echo "   回滚后逐项核对上述目标文件与备份的 SHA；未通过前不要重启。"
 if [ "$TARGET" = release ]; then
   cat <<'TIP'
 

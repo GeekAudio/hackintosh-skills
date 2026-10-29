@@ -14,12 +14,14 @@ VER="${1:?用法: fetch-opencore-docs.sh <版本号> [输出目录]}"
 OUT="${2:-./_oc-docs-audit}"
 PY="${PYTHON:-python3}"
 
+[[ "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "版本号应为 x.y.z" >&2; exit 2; }
 mkdir -p "$OUT"
+OUT="$(cd "$OUT" && pwd)"
 cd "$OUT"
 
 echo "== 1) 下载官方 RELEASE 包 OpenCore-$VER =="
 if [ ! -f "oc-$VER.zip" ]; then
-  curl -sSL --max-time 300 \
+  curl -fsSL --max-time 300 \
     "https://github.com/acidanthera/OpenCorePkg/releases/download/$VER/OpenCore-$VER-RELEASE.zip" \
     -o "oc-$VER.zip"
 fi
@@ -33,7 +35,7 @@ chmod +x "oc$VER/Utilities/ocvalidate/ocvalidate" 2>/dev/null || true
 xattr -d com.apple.quarantine "oc$VER/Utilities/ocvalidate/ocvalidate" 2>/dev/null || true
 
 echo "== 3) 取该版本的 Configuration.tex（LaTeX 源，便于检索）=="
-curl -sSL --max-time 120 \
+curl -fsSL --max-time 120 \
   "https://raw.githubusercontent.com/acidanthera/OpenCorePkg/$VER/Docs/Configuration.tex" \
   -o "Configuration-$VER.tex"
 ls -la "Configuration-$VER.tex"

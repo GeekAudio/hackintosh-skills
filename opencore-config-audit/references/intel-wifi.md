@@ -49,7 +49,10 @@ xcodebuild -project itlwm.xcodeproj -scheme AirportItlwm-Sequoia \
 ## 2. 装进 OpenCore（通用做法）
 
 1. 将所需构建放进 `EFI/OC/Kexts/`。双系统并存时，分别命名外层 bundle 为 `AirportItlwm-Sequoia.kext` 与 `AirportItlwm-Tahoe.kext`（示例名称），不要将两份同名 `AirportItlwm.kext` 互相覆盖，也不要让两个条目指向同一份文件。
-2. 在 `Kernel → Add` 加条目，**必须排在 `Lilu.kext` 之后**（Lilu 是宿主）
+2. 在 `Kernel → Add` 加条目，按实际 `OSBundleLibraries` 核对依赖与加载顺序。所述 fork 的
+   [Tahoe](https://github.com/laobamac/itlwm/blob/main/AirportItlwm/WCL/Info.plist) /
+   [Sequoia](https://github.com/laobamac/itlwm/blob/main/AirportItlwm/WCL/Sequoia-Info.plist)
+   构建依赖 Apple 网络栈，**不是 Lilu 插件**；不要仅为 AirportItlwm 新增 Lilu。蓝牙补丁自己的依赖另见 §3。
 3. **按下表分别填写 `BundlePath` 和版本范围**。`ExecutablePath` / `PlistPath` 相对于各自 bundle，按包内实际内容填写；更改外层目录名不代表要重命名内部可执行文件。用 `uname -r` 查当前 Darwin 版本。
 
    | 构建 | `BundlePath`（示例） | `MinKernel` | `MaxKernel` |
@@ -85,7 +88,7 @@ Intel 无线网卡上的**蓝牙**不由 itlwm 负责，需要：
 
 | 现象 | 检查 |
 |---|---|
-| Wi-Fi 完全不出现在系统里 | `Lilu` 是否加载、`Kernel → Add` 顺序是否 Lilu 在前、kext 是否与当前 macOS **ABI 匹配**（Sequoia/Tahoe 别装错） |
+| Wi-Fi 完全不出现在系统里 | 查目标设备匹配、启用状态、实际 Apple 网络栈依赖与当前 macOS **ABI**（Sequoia/Tahoe 别装错）；不要以 Lilu 是否加载判断 AirportItlwm 状态 |
 | kext 加载了但没有接口 | `MinKernel`/`MaxKernel` 是否把当前 Darwin 排除掉了（`uname -r`）；`system_profiler SPAirPortDataType` 里有没有接口 |
 | 能连 2.4G 连不上 5G / 连上很慢 | HE 是否开了（`itlwm_he=1`）、信道/加密方式是否在支持列表内（WPA3-only 与强制 PMF **不支持**） |
 | AirDrop 不可用 | [上游 FAQ](https://openintelwireless.github.io/itlwm/FAQ.html) 未将 AirDrop 列入 AirportItlwm 的支持功能；先核对具体 fork 与版本的能力，见 [连续互通排查](airdrop-handoff.md) |
@@ -96,13 +99,16 @@ Intel 无线网卡上的**蓝牙**不由 itlwm 负责，需要：
 
 换掉 Intel 网卡（例如换成 Broadcom BCM943602CDP）之后：
 
-- **必须**把 Intel 无线/蓝牙那三个 kext 从 `Kernel → Add` 里**禁用或删除**，并把 `EFI/OC/Kexts/` 下的文件删掉 —— 否则它们仍会尝试匹配不存在的设备（白加载、日志噪音，某些版本还可能干扰 Bluetooth 栈）
+- 先确认换下的设备确实不再使用，再禁用其专用驱动；若机器仍有其他 Intel 无线或蓝牙设备，保留需要的驱动。
+  `BlueToolFixup` 可被其他蓝牙方案使用，不能连同 Intel 专用固件加载器一并机械删除。
+  需要清理文件时同步处理对应 config 引用，不因换一张卡就删除全部无线/蓝牙驱动。
 - 删除前先把原件备份出来；判断「是否真的不用」见 `disks-and-kexts.md` 的删除判据
 - ★★ **换卡后要确认 `en0` 归属** —— 内核按**驱动挂载先后**给 `en` 编号（与 PCI 顺序无关），
   换卡 / 增删驱动会让 `en0` 换人 ⇒ **详见 `network-en0-order.md`**（有线可以是 `en0`，不要求无线必须排第一）
 
-> **同一台机器不要同时注入多套网卡驱动**。除 Intel / Broadcom 之外，MediaTek（MT7921 / MT7922 / RZ608）见
-> `mediatek-wifi.md` —— 那里的结论是「**蓝牙可用、Wi-Fi 仍实验性**，要稳定就换卡」。
+> **互斥判断针对同一设备的不同实现**（例如同一卡上的 `itlwm` 与 `AirportItlwm`），不是禁止多卡机器使用不同驱动。
+> 先核对 vendor/device ID 与实际绑定对象。MediaTek（MT7921 / MT7922 / RZ608）的具体路线与限制见
+> [MediaTek 专题](mediatek-wifi.md)，是否换卡取决于所需功能和目标系统验证。
 
 ## 6. 安全提示
 

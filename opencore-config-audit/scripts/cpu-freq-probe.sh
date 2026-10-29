@@ -6,7 +6,7 @@
 # 用法：bash cpu-freq-probe.sh          （需要 Xcode 命令行工具，提供 clang）
 # 参考：i7-12700K 单核睿频 5.0 GHz / 全核约 4.7 GHz / 基础频率 3.6 GHz
 # 配合 CPU-S（看「当前睿频状态」）与 Intel Power Gadget 交叉印证
-set -u
+set -eu
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 cat > "$TMP/fb.c" <<'EOF'
 #include <stdio.h>
@@ -31,5 +31,17 @@ clang -O2 -o "$TMP/fb" "$TMP/fb.c" || { echo "编译失败（需要 Xcode 命令
 echo "机型: $(system_profiler SPHardwareDataType 2>/dev/null | awk -F': ' '/Model Identifier/{print $2}')"
 echo -n "单线程实测核心频率: "; "$TMP/fb"; echo " GHz"
 echo "8 线程并发（每线程）:"
-for i in 1 2 3 4 5 6 7 8; do printf '  '; "$TMP/fb"; echo ' GHz'; done
+pids=()
+for i in 1 2 3 4 5 6 7 8; do
+  "$TMP/fb" > "$TMP/result-$i" &
+  pids+=("$!")
+done
+failed=0
+for pid in "${pids[@]}"; do
+  wait "$pid" || failed=1
+done
+[ "$failed" -eq 0 ] || { echo "并发探针失败" >&2; exit 1; }
+for i in 1 2 3 4 5 6 7 8; do
+  printf '  线程 %s: %s GHz\n' "$i" "$(cat "$TMP/result-$i")"
+done
 echo "参考：i7-12700K 单核睿频 5.0 GHz / 全核约 4.7 GHz"

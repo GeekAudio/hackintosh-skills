@@ -123,7 +123,7 @@ USB 映射、系统根补丁、机型支持范围、NVRAM 和驱动依赖均可�
 | 显示名缓存 / `ByHost` 偏好 | 有具体异常时再诊断，不默认删除或重置 |
 
 CPUFriend 作者明确提醒多数机器无需自定义电源数据。没有使用 CPUFriend 时，不因机型切换而默认安装；
-已使用时也不把参考机器的 `hwp` 删除方案直接套用。
+已使用时按当前机型数据与结构重新核对；旧记录中的删除 `hwp` 字节方案不满足固定布局要求，不能当作有效 profile。
 依据：[CPUFriend Instructions](https://github.com/acidanthera/CPUFriend/blob/master/Instructions.md)。
 内存字段见 [内存注入指南](memory-injection.md)，睿频案例见 [Intel 电源管理](intel-turbo.md)。
 

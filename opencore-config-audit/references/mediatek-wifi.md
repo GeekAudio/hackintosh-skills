@@ -1,8 +1,8 @@
 # MediaTek 无线网卡（MT7921 / MT7922 / RZ608 / RZ616）在 macOS 上的支持与流程
 
-> ★★★ **2026-10 重大更新：macOS 26（Tahoe）已原生内置 Apple 自己的 MediaTek 驱动**
-> （`com.apple.AppleSunriseWLAN.dext` + `com.apple.AppleSunriseBluetooth.dext`，**自带固件**）——
-> **优先走原生路线**，见 §0.3 / §1.5；下面的第三方仓库是**退路**。
+> macOS 26 的部分构建可找到 Apple Sunrise 驱动与部分 MediaTek 固件。
+> **文件存在、设备 ID 匹配、固件齐全与实际可用是不同证据**；按芯片、总线和系统构建核实，见 §0.3 / §1.5。
+> 原生与第三方路线按目标机器的验证结果选择，不能仅凭文件清单承诺免驱。
 >
 > 上游（第三方路线）`laobamac` 的三个仓库（同一作者，也是本 skill 里 Intel 无线用的那个 fork 作者）
 > - **Wi-Fi（PCIe）**：`laobamac/SimpleMtkWlan` —— *"An experimental macOS kernel extension for MediaTek MT792x PCIe wireless adapters."*
@@ -33,9 +33,11 @@
 
 ## 0. ★★★ 结论先行（先看这段，能省很多时间）
 
-### 0.1 macOS 26 原生内置 MediaTek 驱动 —— 这是首选路线
+### 0.1 macOS 26 中的 Sunrise 驱动文件与匹配线索
 
-**macOS 26（Tahoe）自带 Apple 自己的 MediaTek 驱动**，不需要任何第三方 kext：
+参考构建中有以下 Apple 驱动文件。本文作者没有 MediaTek 硬件，
+这些文件与匹配表不能证明任意 MT792x 模块已可用，也不能证明无需 HAL、固件或配置调整。
+**MT7932 与标为 RZ717 的零售模块应先分别核对实际芯片 / PCI ID，未验证前不作为免驱购卡建议。**
 
 ```
 /System/Library/DriverExtensions/
@@ -76,10 +78,10 @@ BT_RAM_CODE_MT7922 · MT7923 · MT7923A0 · SRS_7922
 
 > **`SRS` = SunRise** —— `SRS_7922` 就是 MT7922 在 Sunrise 里的代号。
 
-★★ **2026-10-16 补充实测（本机 26.7.1/25G241）**：「26.7.1+ 什么都不用装」只对一半成立：
-- **蓝牙 dext 已内置** `BT_RAM_CODE_MT7922_1_1_hdr.bin`（+MT7923）→ 26.7.1 蓝牙免操作 ✅
+**参考构建文件核对（26.7.1/25G241）**：以下只说明文件是否存在，不代表已完成目标硬件验证：
+- **蓝牙 dext 已内置** `BT_RAM_CODE_MT7922_1_1_hdr.bin`（+MT7923）→ 仅证明该构建含此固件，目标 PCIe 蓝牙控制器是否可用仍需实测
 - **WLAN dext 的 `IZUBA/` 只有 MT7932 一套 Wi-Fi 固件**，`find … -iname '*7922*'` 为空 ⇒
-  **MT7922 的 Wi-Fi 固件在 26.7.1 仍缺失**，「升级免写固件」对 MT7922 Wi-Fi 不成立、对 MT7932 成立
+  **MT7922 的 Wi-Fi 固件在该参考构建仍缺失**；MT7932 固件虽存在，也不能单凭此项认定目标模块免操作
 - `AppleSunrise.kext` 26.7.1 仍**不在** `/System/Library/Extensions`，仅 KDK 有；
   KDK 可用 Dortania GitHub 镜像（`dortania/KdkSupportPkg/releases`，按 build 号选），
   提取法：`hdiutil attach` KDK.dmg → `pkgutil --expand-full KernelDebugKit.pkg` →
@@ -89,13 +91,13 @@ BT_RAM_CODE_MT7922 · MT7923 · MT7923A0 · SRS_7922
 
 | 路线 | 蓝牙 | Wi-Fi | 前提 |
 |---|---|---|---|
-| **① 原生（Sunrise）** | ✅ **Apple 自带** | ✅ **Apple 自带** | **macOS 26+**（Sequoia 没有这两个 dext） |
+| **① 原生（Sunrise）** | 按 PCIe 控制器与固件验证 | 按 PCI ID、HAL 与固件验证 | 在对应系统构建中确认 Sunrise 文件；存在文件不等于已验证支持 |
 | ② 第三方 `SimpleMtkBtFw` | ✅ 有 release | — | 蓝牙走 **USB** 的老款模块 |
 | ③ 第三方 `SimpleMtkWlan` | — | ⚠️ **以太网式接口**（v1.5.0） | 任何能加载的版本；接受 `enX` + `SimpleMTK` 客户端 App |
 | **④ 第三方 `AirportMtkWlan`** | — | ✅ **原生 Wi-Fi 菜单**（v1.3.0+） | **macOS 26 Tahoe** + `DisableIoMapper=true` |
 
-> ★★ **先试路线 ①** —— 系统自带，**不用装任何 kext**。
-> 只有当「你的模块蓝牙走 USB（老款）」或「系统是 Sequoia」时，才退到 ②/③/④。
+> 先只读核对目标系统与设备，再选择路线；驱动已正确绑定且功能通过时无需新增组件。
+> WLAN 与蓝牙分别判断：USB 蓝牙可用第三方固件加载器，不据此排除同模块 Wi-Fi 的其他路线。
 > ★ **③ 与 ④ 是同一个仓库的两种产物，二选一** —— 同时启用会抢同一块卡。
 >
 > 第三方路线的成熟度（作为对比）：
@@ -104,14 +106,16 @@ BT_RAM_CODE_MT7922 · MT7923 · MT7923A0 · SRS_7922
 |---|---|---|
 | 蓝牙（USB） | 可用 | `SimpleMtkBtFw` 有 **`1.0.0`** release；issue #1 标题即 *"MT7922 bluetooth is working"*（fork：`flxxxxddd/SimpleMtkBtFw`，AirPods 音频可用） |
 | Wi-Fi（PCIe）· 原生菜单 | ★ **v1.3.0 起可用** | `AirportMtkWlan`：Tahoe 上真原生接口，**不需要 OCLP 补丁**；但 **802.11ax 未支持**、**WPA3-only 不支持**、**AWDL 未实现 ⇒ 无 AirDrop** ⇒ §4.7 |
-| Wi-Fi（PCIe）· 以太网式 | ★ 能用，有硬限制 | `SimpleMtkWlan`：**MT7921 / RZ608 实测能连上网**；**无原生菜单**、**AWDL 不可能** ⇒ §4 |
+| Wi-Fi（PCIe）· 以太网式 | ★ 能用，有硬限制 | `SimpleMtkWlan`：**MT7921 / RZ608 实测能连上网**；**无原生菜单**、当前版本未实现 AWDL ⇒ §4 |
 
-> **要「能日常用的 Wi-Fi + AirDrop」的兜底做法仍是换卡**（Broadcom 原生 / Intel `AirportItlwm` 成熟）。
+> 需要 AirDrop 时，按目标系统选择已有验证的支持方案；**Intel `AirportItlwm` 不支持 AirDrop**。
+> Handoff / 通用剪贴板与 Wi-Fi 6 分别核对，见 [连续互通专题](airdrop-handoff.md) 和
+> [OpenIntelWireless FAQ](https://openintelwireless.github.io/itlwm/FAQ.html)。
 
-### 0.3 先用三行命令判断你该走哪条
+### 0.3 先只读收集路线判断所需信息
 
 ```bash
-# ① 系统有没有原生 Sunrise 驱动？（有 ⇒ 优先走原生路线）
+# ① 系统是否含 Sunrise 文件？存在只表示有候选，不证明目标设备受支持
 ls /System/Library/DriverExtensions/ | grep -i sunrise
 
 # ② 你的模块蓝牙是 PCIe 还是 USB？
@@ -121,8 +125,8 @@ ioreg -l -p IODeviceTree | grep -i "14c3"                          # PCIe 侧（
 # ③ 系统是哪个大版本？（Sequoia 没有 Sunrise ⇒ 只能走第三方）
 sw_vers -productVersion && uname -r
 
-# ④ 上面都不缺 ⇒ 原生路线缺的只是「打包好的固件/kext/片段」⇒ 用
-#    GeekAudio/mediatek-sunrise-hackintosh（MT7922 Sunrise Pack，见 §1.5）
+# ④ 形成原生路线候选后，继续核对芯片总线、匹配、固件、HAL 与关联/实际流量证据
+#    GeekAudio/mediatek-sunrise-hackintosh 是 §1.5 的实验工具，补包不保证成功
 ```
 
 ## 1. 先认芯片（别把型号认错）
@@ -134,7 +138,7 @@ sw_vers -productVersion && uname -r
 | **MT7922** | MT7922A | **`14c3:7922`** | ★ **`14c3:792a`** | **`0x7922`** |
 | **MT7922 · AMD RZ616** | **AMD RZ616**（笔记本常见） | ★★ **`14c3:0616`** | 按 §0.3 ② 自查 | 按 §0.3 ② 自查 |
 | MT7923 | — | `14c3:7923` | `14c3:792b` | — |
-| MT7932 / MT7925 | AMD RZ717 | `14c3:7932` / `14c3:7925` | `14c3:793b` | — （Wi-Fi 6E/7，见 §5 支线） |
+| MT7932 / MT7925（分别核对） | 不凭 RZ717 等零售命名认定芯片等价 | 以实际 PCI ID 为准 | 以实际 USB / PCIe 枚举为准 | 本文未完成硬件验证，不据固件文件承诺免驱 |
 
 ★★ **RZ616 有两个 ID 报法，别只认一个**：`14c3:7922`（标准 MT7922）和 **`14c3:0616`**（AMD 贴牌的 RZ616 形态）。
 `ioreg` 里 `device-id` 是**小端**显示的 —— `<16060000>` = `0x0616`，`<22790000>` = `0x7922`。
@@ -166,7 +170,8 @@ system_profiler SPUSBDataType | grep -i -B3 -A8 -E "MediaTek|0x0e8d"
 ### 前提
 
 - 系统是 **macOS 26（Tahoe）或更新**（`ls /System/Library/DriverExtensions/ | grep -i sunrise` 有输出）
-- 你的模块蓝牙**走 PCIe**（`ioreg` 里能看到 `14c3:792a`）
+- Wi-Fi：核对实际 PCI ID 是否被 WLAN dext 匹配，以及该构建所需 HAL / 固件是否具备。
+- 蓝牙：只有匹配的 PCIe 控制器才适用所述 Bluetooth dext；USB 蓝牙另选对应方案，不将两者绑定成同一个前提。
 
 ### 步骤（先别装任何 kext）
 
@@ -175,7 +180,7 @@ system_profiler SPUSBDataType | grep -i -B3 -A8 -E "MediaTek|0x0e8d"
 3. **看有没有自动认**：
 
 ```bash
-# dext 是否加载
+# 内核 HAL 是否加载；此命令不用于判断用户态 dext 是否运行
 kmutil showloaded --list-only | grep -i sunrise
 # 蓝牙控制器是否起来（Chipset 会显示 MediaTek 相关）
 system_profiler SPBluetoothDataType | head -20
@@ -299,36 +304,45 @@ DEXT 的 `Info.plist` **只匹配 `0x7922`**（另 7923 / 7932），而 **RZ616 
 
 | 部件 | 26.7.1 状态 |
 |---|---|
-| **蓝牙固件**（MT7922 / MT7923） | ✅ **已在 `AppleSunriseBluetooth.dext` 内**（`BT_RAM_CODE_MT7922_1_1_hdr.bin`）⇒ 走 PCIe 的 **什么都不用装** |
-| **MT7932 / RZ717 的 Wi-Fi 固件** | ✅ 已在 `AppleSunriseWLAN.dext` 内（IZUBA 一套）⇒ **换这张卡才是真正的零操作解** |
+| **蓝牙固件**（MT7922 / MT7923） | 参考构建含 `BT_RAM_CODE_MT7922_1_1_hdr.bin`；仍需匹配 PCIe 控制器并验证实际蓝牙功能 |
+| **MT7932 的 Wi-Fi 固件** | 参考构建含 IZUBA 固件；不代表标为 RZ717 的零售模块与其等价，也不代表目标机器已验证免驱 |
 | **MT7922 / RZ616 的 Wi-Fi 固件** | ❌ **仍缺失**（dext 内没有 `*7922*` 文件，日志仍报 `Failed to open WIFI_MT7922_patch_mcu_1_1_hdr.bin`）⇒ **仍需按本包补** |
 
-### 不想动系统卷？按这个优先级挑
+### 不想动系统卷？按功能与验证情况选择
 
 | 方案 | 做法 | 代价 |
 |---|---|---|
-| **① 换 MT7932（RZ717）卡** | 26.7.1 已内置其全部 Wi-Fi 固件 | 换硬件 |
-| **② 第三方 kext 路线** | `SimpleMtkWlan` + `SimpleMtkBtFw`（固件打包在 kext 内，**只动 EFI、完全不碰系统卷**） | 以太网式接口、无原生 Wi-Fi 菜单、无 AirDrop/Handoff/Continuity、无 802.11ax |
-| **③ 只要蓝牙** | `/etc/bluetool/` + `BT_RAM_CODE_MT7922_1_1_hdr.bin`（26.7.1+ 已内置免操作） | — |
-| **④ 仍用原生驱动** | 上面的「写固件 + bless 快照」 | 需一次 bless；**本身就是可回滚写法**，`wifi.cfg` 可不写 |
+| **① 核实可替换硬件** | 先确认实际芯片 / PCI ID、目标系统构建与实机报告；不因存在 MT7932 固件就承诺 RZ717 免驱 | 验证不足时不建议为此购卡 |
+| **② 第三方 kext 路线** | 同一卡按构建二选一：`AirportMtkWlan` 提供原生 Wi-Fi 菜单，`SimpleMtkWlan` 提供以太网式接口；USB 蓝牙按需配 `SimpleMtkBtFw`，均核对对应发布说明（§4） | 不需要系统卷无线 root patch；AWDL / AirDrop 未实现，HE、WPA3 与 Handoff 分别按具体构建核对 |
+| **③ 只要蓝牙** | 按实际 USB / PCIe 控制器确认固件来源与加载方式，已有固件不等于已绑定设备 | 单独验证蓝牙功能 |
+| **④ 实验原生驱动** | 仅在目标构建与固件需求明确时评估系统卷修改 | 需可恢复的原封印快照或完整恢复方案；补固件仍不保证成功 |
 
-★ **bless 快照法比「长期关 SIP」安全**：macOS 本来就工作在快照上，建新快照后从新快照启动；
-**改回 SIP + authenticated-root 重启会自动清理**，无需手动还原。
+**写入系统卷并 bless 新快照后，SIP / authenticated-root 开关不会还原文件或替你切回原快照。**
+改动前记录当前启动快照并确认可恢复的封印快照和救援入口；无法确认恢复路径时，不执行系统卷写入。
+要恢复保护，应先按下方流程恢复未修改的系统并验证启动。依据：
+[Apple SSV 安全说明](https://support.apple.com/guide/security/signed-system-volume-security-secd698747c9/web)、
+[OCLP 快照恢复流程](https://dortania.github.io/OpenCore-Legacy-Patcher/TROUBLESHOOT-MISC.html#stuck-on-boot-after-root-patching)。
 
 ### AirDrop / Handoff / Continuity 呢？
 
 - **原生路线理论上支持 AWDL** —— f10 在 macOS 26.3 beta + KDK_26.3 kext 上是**唯一见到完整 AWDL 支持**的配置；
 - **但 MT7922 实测成功率有限，不保证** ⇒ **别为了 AirDrop 走这条路**；
-- 要 AirDrop / Continuity / Wi-Fi 6 ⇒ **换 Broadcom 或 Intel 卡**（第三方路线更是**设计上不可能**，§4.1）。
+- AirDrop：本原生实验路线尚无足够验证，当前第三方驱动也未实现；不要推荐不支持 AirDrop 的 Intel AirportItlwm 作为兜底。
+- Handoff / 通用剪贴板：按具体驱动的支持声明判断，不能和 AirDrop 捆绑。
+- Wi-Fi 6：按网卡与构建分别核对 HE 支持 / 实验开关，不能承诺换成任意 Broadcom 或 Intel 卡即可获得。
 
 ### 回滚
 
 1. 改回 **RELEASE** 版 OpenCore、删掉 `wlan.debug.enable=0x1` 等 boot-arg、禁用 SSDT / `Kernel>Add` 条目 ⇒ 回到原状
-2. 系统卷改动：**启用 SIP + authenticated-root 重启即自动清理**，无需手动还原
+2. 系统卷改动：先确认正确目标卷与备份，显式恢复改动前的有效封印快照。OCLP 在 Recovery 中的示例为
+   `bless --mount "/Volumes/<目标系统卷>" --bootefi --last-sealed-snapshot`，前提是确有可用原快照；
+   不要对猜测的卷执行。没有可用快照时，采用受支持的系统重装 / 备份恢复方式。
+3. 验证未修改系统能启动后，再按现用驱动 / 补丁要求恢复原来的 SIP、authenticated-root 与相关 OpenCore 设置。
+   **重新启用保护不执行自动清理**；未恢复系统就收紧保护可能无法启动。
 
 > ⚠️ **保留**：**作者机器没有 MediaTek 卡，以上均未复现**。
 > `wlan.debug.enable=0x1` 是**调试开关不是启用开关**；26.0–26.2 这套手动注入流程
-> **已被 Apple 后续更新取代**（现在先试「什么都不装」，§1.5 步骤 1–4）。
+> 不能仅凭后续构建增加驱动文件就认定已被取代；先按 §1.5 对目标设备做只读核对与功能验证。
 
 ### Sequoia（macOS 15）怎么办
 
@@ -366,7 +380,7 @@ Sequoia **没有**这两个 dext ⇒ 原生路线走不通，只能走下面的�
 ```
 
 3. ★ **只走 OpenCore 注入**（作者明确推荐）；**不要**同时注入另一个会绑定**同一 USB 蓝牙设备**的固件加载器
-   （例如同时留 `IntelBluetoothFirmware` / `BrcmPatchRAM*` 会互相抢设备）
+   （是否冲突以实际 USB 匹配和绑定为准；不同控制器的驱动可按各自需求保留）
 
 ### 3.2 ★★ 两个致命坑（来自 `SimpleMtkBtFw` issue #3 的实机验证）
 
@@ -384,10 +398,13 @@ Sequoia **没有**这两个 dext ⇒ 原生路线走不通，只能走下面的�
   bluetoothInternalControllerInfo  = <14 字节>
 ```
 
-- 在 OC 里写在 `NVRAM > Add`，**同时 `NVRAM > Delete` 里也必须出现**（官方规则：Add 的键要在 Delete 里才生效）
+- 先读取运行环境的现值。`NVRAM > Add` 可为不存在的变量提供默认值；**只有明确要覆盖已有值时才先列入 `NVRAM > Delete`**。
+  已正常工作的控制器信息不机械删除重写，所需值按具体控制器与驱动要求确定。
+  依据：[OpenCore NVRAM Add 定义](https://github.com/acidanthera/OpenCorePkg/blob/master/Docs/Configuration.tex)。
 - ★ **不做对的症状**：`bluetoothd` 每 ~30 s 被看门狗杀掉、蓝牙菜单一直转圈、
   关机卡在 BlueTool、日志里反复 `Can't obtain vendorID and productID`
-- 这两条键与 Broadcom 路线用的是**同一对键**（见 `broadcom-wifi.md` §2.3），只是 Broadcom 那边填的是具体控制器信息
+- 这两条键也见于其他蓝牙方案，但适用条件和值并非因此通用；不要从 Broadcom 示例复制非零控制器身份。
+  [BrcmPatchRAM README](https://github.com/acidanthera/BrcmPatchRAM#bluetoolfixupkext) 对至少 Intel 蓝牙给出的是 `00` 与 14 字节全零示例。
 
 **附加坑：AirPods 连上但没声音** = A2DP 的「Read Clock」问题（issue #3 有修法）。
 
@@ -421,9 +438,8 @@ ioreg -l -p IOService | grep -i -E "FirmwareLoaded|fw_name"
 
 **两者共同的三条硬限制（README Status 表）：**
 
-1. **❌ AirDrop / Handoff / Continuity（AWDL）** —— **驱动层没实现 AWDL**。
-   ★★ **归因别搞错**：不是「因为是以太网接口所以不行」（`AirportMtkWlan` 是原生接口，**一样不行**），
-   而是这个驱动根本不实现 AWDL。**设计决定，不是 bug，别去排查**。
+1. 当前 v1.5.0 的上游状态表未支持 **AirDrop / Handoff / Continuity（AWDL）**。
+   这不是由原生菜单 / 以太网式接口单独决定的，也不能推广为其他驱动或未来版本永远无法实现。
 2. **❌ 802.11ax（HE / Wi-Fi 6）** —— 状态表写 `not yet`；但安装节又说 `itlwm_he=1` 是「实验性开关」
    ⇒ **两处口径不一致，属未验证，别当结论**。
 3. **❌ WPA3-only（SAE）** 网络连不上。
@@ -461,9 +477,9 @@ ioreg -l -p IOService | grep -i -E "FirmwareLoaded|fw_name"
 | AUTH / ASSOC 重传（丢一帧不再整轮重扫） | ✅ |
 | 卡死自愈（DMA stall 看门狗、attach 时 PCIe FLR） | ✅ |
 | **802.11ax（HE）** | ❌ 尚未 |
-| **原生 macOS Wi-Fi 菜单** | ❌ 用 SimpleMTK |
-| **睡眠 / 唤醒** | ⚠️ 未测试 |
-| **AirDrop / Handoff / Continuity** | ❌ 该设计下不可能 |
+| **原生 macOS Wi-Fi 菜单** | `AirportMtkWlan` 在 Tahoe 支持；`SimpleMtkWlan` 使用 SimpleMTK |
+| **睡眠 / 唤醒** | 当前 README 声明支持；目标机器仍需实测 |
+| **AirDrop / Handoff / Continuity** | 当前版本未支持 |
 
 ### 4.4 安装（**有 release，不用自编译**）
 
@@ -586,11 +602,11 @@ xcodebuild -project SimpleMtkWlan.xcodeproj -scheme SimpleMtkWlan \
 ### 4.8 风险与前置
 
 - 备份 EFI、备好可引导 U 盘；**禁用该 kext 即回到「无驱动」状态**
-- **它是第三方路线**：**没有 AirDrop / Continuity（AWDL 未实现）**、不支持 802.11ax、不支持 WPA3-only
-  ⇒ **要这些功能就换卡**（Broadcom / Intel），见 §6 决策树
+- 当前第三方版本未支持 AirDrop / Continuity，WPA3-only 不支持；HE 在状态表与实验开关说明间仍有不一致。
+  按所需功能分别选择，不把 Intel AirportItlwm 当作 AirDrop 替代方案，见 §6 决策树
   （★ 原生 Wi-Fi 菜单 **v1.3.0 起有了**，别再按「第三方一定没有菜单」下判断，见 §4.4.1）
 - ★ 装上后 **`en0` 归属可能变化**（`SimpleMtkWlan` 是以太网式接口）⇒ 参考 **`network-en0-order.md`**
-  （`AirportMtkWlan` 走原生 Wi-Fi 栈，不会抢 `en0`）
+  （两种形态都应记录实际 `enX`；不能仅凭驱动形态保证接口编号不变）
 
 ### 4.9 ★★ 注入失败怎么读日志（通用，不限 MediaTek）
 
@@ -625,9 +641,11 @@ Status                                // → 失败原因
 
 ★ **注意区分**：`Not Found` = 文件缺失（路径/大小写/多套一层目录）；`Invalid Parameter` = **读到了但解析不了**。
 
-**别忽略的第二个雷**：日志里如果同时出现别的 `Airport*.kext` 也在注入
-（如 `AirportItlwm`、`AirportBrcmNIC`），说明**两套 Wi-Fi 驱动都开着** —— 匹配同一块卡，
-**必然有一个要失败**，先把不相干的那个 `Enabled=false`。
+**检查同一设备的驱动竞争**：`AirportMtkWlan` 与 `SimpleMtkWlan` 针对同一卡时二选一。
+日志里同时出现 Intel `AirportItlwm` 或 Broadcom `AirportBrcmNIC`，不代表它们会匹配 MediaTek 卡；
+多卡机器可有不同驱动。先核对各 kext 的 vendor/device 匹配与实际绑定对象，再处理冲突。依据：
+[Intel 匹配表](https://github.com/laobamac/itlwm/blob/main/AirportItlwm/WCL/Info.plist)、
+[MediaTek 匹配表](https://github.com/flxxxxddd/SimpleMtkWlan/blob/mt7921-fixes/SimpleMtkWlan/Info.plist)。
 
 ★★★ **`ESP` 上的 0 字节陷阱**：FAT 写满时 `cp` 会报 `short write` 并留下 **0 字节文件**，
 `ls` 看不出来 ⇒ 注入照样报错。**必须** `find /Volumes/EFI/EFI/OC/Kexts -size 0` 查一遍。
@@ -644,7 +662,7 @@ Status                                // → 失败原因
 芯片是 MediaTek MT792x（14c3:7922 / 7923 / 7932 / 7961 / 0608）？
 │
 ├─ 系统是 macOS 26+，且蓝牙走 PCIe（14c3:792a）
-│   └─► ★★★ 路线 ①：原生 Sunrise —— 什么都不用装，插上重启看认不认（§1.5）
+│   └─► 路线 ①候选：核对 Sunrise 文件、匹配、HAL / 固件，再实测（§1.5）；不承诺免操作
 │           └─ 不认 ⇒ **先拿 `GeekAudio/mediatek-sunrise-hackintosh`**（固件/HAL kext/伪装片段都在里面），
 │              再按 §1.5 的「社区做法」补：注入 AppleSunrise.kext（HAL）+ device-id 伪装 + 固件（看芯片！）
 │
@@ -655,9 +673,14 @@ Status                                // → 失败原因
 └─ 要 Wi-Fi
    ├─ macOS 26+ 且芯片在 7922 / 7923 / 7932 里 ─► ★ 先试原生（路线 ①）
    │
-   ├─ 要「AirDrop / Continuity / Wi-Fi 6(HE)」
-   │   └─► ✗ 第三方路线给不了（AWDL 未实现、HE 未支持）⇒ 换卡：
-   │        Broadcom（原生，broadcom-wifi.md）或 Intel + AirportItlwm（intel-wifi.md）
+   ├─ 要 AirDrop
+   │   └─► 当前第三方版本未支持；按目标系统寻找已验证方案，不推荐 Intel AirportItlwm 作为 AirDrop 兜底
+   │
+   ├─ 要 Handoff / 通用剪贴板
+   │   └─► 按具体驱动功能表核对；AirportItlwm 与 AirDrop 的支持范围不同（airdrop-handoff.md）
+   │
+   ├─ 要 Wi-Fi 6(HE)
+   │   └─► 核对具体网卡、构建和实验开关；不把换卡或存在开关当作已验证可用
    │
    ├─ 要「原生 Wi-Fi 菜单」但不想动系统卷（macOS 26）
    │   └─► ★ 路线 ④：`AirportMtkWlan`（§4.4.1）—— 原生接口，需 `DisableIoMapper=true`
@@ -675,9 +698,9 @@ Status                                // → 失败原因
 
 | 现象 | 检查 |
 |---|---|
-| **原生路线**：Sunrise dext 在但不加载 | ① 芯片是否在 `IOPCIMatch` 列表里（`0x792214c3`/`792a14c3` 等，见 §0.1）；② 蓝牙是不是 PCIe 形态（USB 形态不吃这个驱动）；③ `kmutil showloaded \| grep -i sunrise` 看有没有加载 |
+| **原生路线**：Sunrise dext 在但不加载 | ① 芯片是否在 `IOPCIMatch` 列表里（`0x792214c3`/`792a14c3` 等，见 §0.1）；② 蓝牙是不是 PCIe 形态（USB 形态不吃这个驱动）；③ `kmutil showloaded` 仅核对内核 HAL；DEXT 运行状态结合相关 IOUserServer、设备绑定与日志判断 |
 | **原生路线**：Wi-Fi 认了但连不上 | 先看是不是被 **`en0` 归属** / 网络服务顺序影响（⇒ **`network-en0-order.md`**）；再看系统日志里 Sunrise 相关行 |
-| 蓝牙 kext 加载了但控制器起不来 | NVRAM 两条 data 是否**同时在 `Add` 和 `Delete`**（§3.2 坑 2） |
+| 蓝牙 kext 加载了但控制器起不来 | 先查设备匹配、固件与 NVRAM 现值；需要新增时 Add，明确覆盖已有值时才先 Delete（§3.2） |
 | `bluetoothd` 反复重启 / 蓝牙菜单转圈 / 关机卡 BlueTool | 同上；并确认**没有**把产品名改成 `Bluetooth USB Host Controller` |
 | 日志里固件没加载 | 内部设备 ID 是不是 `0x7961` / `0x7922`；USB 是否被 `Info.plist` 匹配（`idVendor 0x0E8D` + class `0xE0/1/1`） |
 | AirPods 连上无声 | A2DP Read Clock 问题（issue #3） |
@@ -692,18 +715,21 @@ Status                                // → 失败原因
 | **原生路线**：满屏 `wlanCfgSet ... no empty entry` | 缺 `wifi.cfg` —— **不致命**（观察项），但只补固件缺它仍可能收不了场 |
 | **原生路线**：device-id 伪装后仍不匹配 | ★ 三个都要查：① 有没有被 `SSDT-Disable_Network` 藏掉（`vendor-id` 变 `ffffffff`）② `device-id` 值是小端 base64（`0x7922 → InkAAA==`）③ **PXSX 下还要补 DEXT 相关属性**（§1.5） |
 | 装了蓝牙但另一套 BT 固件加载器也在 | 移除冲突项（同一条纪律见 `intel-wifi.md` §5「换网卡后要清理」） |
-| 引导日志 `OC: … injection X.kext (…) - Invalid Parameter` | ★★ 见 **§4.9**：括号里是 `Comment` 不是标识；`Invalid Parameter` = 读到了但解析不了（plist 非 XML / Mach-O 非法），**不是路径错**（那是 `Not Found`）；同时排除「两套 Wi-Fi 驱动都开着」与 `find … -size 0` |
-| `AirportMtkWlan` 装了但菜单里没 Wi-Fi | ① 两个 kext 是否都开着 ② OCLP 无线补丁 / `IOSkywalkFamily` 被 block ③ `DisableIoMapper` ④ 构建与系统版本是否匹配（§4.4.1） |
+| 引导日志 `OC: … injection X.kext (…) - Invalid Parameter` | ★★ 见 **§4.9**：括号里是 `Comment` 不是标识；`Invalid Parameter` = 读到了但解析不了（plist 非 XML / Mach-O 非法），**不是路径错**（那是 `Not Found`）；同时排除同一卡的 SimpleMtkWlan / AirportMtkWlan 同时启用与 `find … -size 0` |
+| `AirportMtkWlan` 装了但菜单里没 Wi-Fi | ① 同一卡的 SimpleMtkWlan / AirportMtkWlan 是否同时启用 ② OCLP 无线补丁 / `IOSkywalkFamily` 被 block ③ `DisableIoMapper` ④ 构建与系统版本是否匹配（§4.4.1） |
 
 ## 8. 安全提示与边界
 
-- 三个 kext 都**非 Apple 签名** ⇒ 需要 `SecureBootModel=Disabled`，SIP 视情况放宽；**只在确实要用这张卡时这么做**
+- 按具体构建、目标系统和安装方式核对 `SecureBootModel` / SIP；不能由「非 Apple 签名」直接推出关闭保护。
+  EFI 注入、系统侧安装与系统卷 root patch 分别判断，已有设置可用时保留；确需修改时记录作者依据、原值与恢复路径。
+  参考 [OpenCore SecureBootModel 定义](https://github.com/acidanthera/OpenCorePkg/blob/master/Docs/Configuration.tex)。
 - `SimpleMtkWlan` 是 **GPLv2 的实验性项目**；`flxxxxddd` 的 fork **有 CI 构建的 release**（v1.1.0 → **v1.5.0**），
   但**上游主线仍是 bring-up 状态、没有 release** ⇒ **第三方路线认准 fork 的 release**（§2 / §4）。
   从源码构建前先看清 `CREDITS.md` 与固件再分发条款（固件按 MediaTek 固件许可，同 linux-firmware）
 - ★ **fork 的 issue 是关的** ⇒ 反馈/求助回上游 `laobamac/SimpleMtkWlan`；fork 默认分支是 **`mt7921-fixes`**
-- 与 `broadcom-wifi.md` / `intel-wifi.md` 的关系：**同一台机器不要同时注入三套网卡驱动**；
-  换卡后按 `intel-wifi.md` §5 的纪律把旧的一套**禁用或删除**，并注意 **`en0` 归属**会随驱动挂载顺序变化（⇒ **`network-en0-order.md`**）
+- 与其他无线专题的关系：互斥要求针对同一设备的不同实现；多卡机器按各设备实际需求保留驱动。
+  换卡后确认旧设备不再使用才清理其专用驱动，并记录实际接口编号；不为编号变化例行重排网络或改 ROM。
+  见 [Intel 换卡说明](intel-wifi.md) 与 [接口顺序](network-en0-order.md)。
 - ★ **MT7922 Sunrise Pack 的许可是分层的**：仓库文本与补丁 **MIT**；`firmware/*.bin` 走 **linux-firmware 再分发条款**；
   `SSDT-ARPT_RP04_Mediatek.aml` 原作者 **Elias64Fr** 公开发布于帖子，**使用时请署名**。
 - **本 reference 是通用流程**；本机（Z690）用的是 Broadcom `BCM943602CDP`，**没有 MT7922**。

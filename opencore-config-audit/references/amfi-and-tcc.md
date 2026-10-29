@@ -6,14 +6,14 @@
 > 解法是**用 `tcc-helper` 把「已授权」条目直接写进 TCC 数据库**，代价是**不持久**
 > （系统大版本更新 / `tccutil reset` / 清理工具都会抹掉）。
 
-## 0. 现象三连（对号入座就是这个问题）
+## 0. 现象线索（还需确认运行态 AMFI 与实际请求对象）
 
 1. 语音 / 摄像头类 App 报 **「没有权限」**；
 2. **不弹权限窗**（点多少次都不弹）；
 3. **「系统设置 → 隐私与安全性」里根本没有那个 App 的开关**（不是灰的，是**不存在**）。
 
-★ **第三条才是判据** —— 与「用户点了拒绝」的区别就在这里：
-被拒的 App **在列表里有条目**（只是开关关着）；这个问题是**条目压根不生成**。
+缺少条目是线索，**不能单独证明 AMFI 被关闭**。先确认 App / helper 实际发起了目标权限请求、
+检查当前启动参数与相关日志，再判断是否属于本文的 AMFI 场景；不要仅凭列表为空就写 TCC 数据库。
 
 ## 1. 根因：AMFI 被关闭
 
@@ -32,8 +32,8 @@ amfi=0x80
 ⇒ **既不弹窗，也不在隐私列表里生成条目** ⇒ App 永远拿不到权限，
 **不是 App 坏了、也不是麦克风/摄像头设备坏了**。
 
-> ★ **判据**：`sysctl -n kern.bootargs` / `nvram boot-args` 里有没有 `amfi`；
-> 再看用户 TCC 库里的麦克风条目数（§6 第 1 条）—— **条目数 0 或极少 = 弹窗被抑制**。
+> 核对 `sysctl -n kern.bootargs` 中实际生效的参数；NVRAM / config 的改动尚未启动时不代表当前状态。
+> 再检查请求权限的具体组件、目标数据库和日志；条目数为 0 或极少本身不能定性。
 
 ## 2. 谁在要求关 AMFI（以及 AMFIPass 的位置）
 
@@ -69,14 +69,16 @@ amfi=0x80
 
 - **Release**：`v1.0.0` 的 **`TCC.Helper-1.0.dmg`** ⇒ 挂载后把 App 拖进 `Applications`
 - **自构建**：`./build.sh`（出 App）/ `./make-dmg.sh`（出 DMG）—— 只依赖 **Xcode 命令行工具**（`swiftc`），**不需要 Xcode 工程文件**
-- ★ **签名是 ad-hoc**（作者没有 Developer ID）⇒ **首次打开要「右键 → 打开」**（或被 Gatekeeper 拦一次）
+- 当前工具为 ad-hoc 签名。先确认来源与下载完整性；可信未公证 App 按
+  [Apple 单应用“仍要打开”流程](https://support.apple.com/en-us/102445) 在系统设置中建立例外。
+  不把右键打开、删除隔离标记或全局关闭 Gatekeeper 当作所有系统的默认做法。
 
 ### 4.2 GUI 用法（五步）
 
 1. **目标数据库** —— 选 **用户库**（麦克风 / 摄像头 / 音频采集 / 蓝牙…）或 **系统库**（辅助功能 / 屏幕录制…）。
    面板会显示自检结果；**系统库属主是 root，写它时会弹管理员密码**。
-2. **自动授权（推荐）** —— 打开 App 就自动扫一遍，列出「谁声明了要什么权限、还缺几条」，
-   勾选后点「授权选中的」，**一次事务写完**（§4.3）。
+2. **扫描候选** —— 自动扫描只能提供线索，不能替代授权范围。只选择本次任务要求的 App / helper 与权限；
+   已有明确授权时按其执行，不把“修一个 App”扩展为给扫描到的所有 App 授权。先预演，再写入所需条目（§4.3）。
 3. **目标 App（手动）** —— 把 `.app` 拖进虚线框，或用「选择目标…」。
    ★★ **要授权的是「真正申请权限的那个组件」，不一定是主 App**
    （例：Loopback 的麦克风/系统音频权限属于它包内的 `Audio Routing Kit (ARK).app`（`com.rogueamoeba.arkaudiod`），
@@ -112,6 +114,9 @@ amfi=0x80
 并认出它需要 `kTCCServiceMicrophone` + `kTCCServiceAudioCapture` —— **完全不用人工翻包**。
 
 ### 4.4 CLI 用法（与 GUI 共用同一套逻辑，DMG 里自带）
+
+`auto` 是扫描预演；`auto --apply` 会批量写入，只在本次任务已授权相应批量范围时使用。
+单个 App 的修复使用限定目标和服务的 `dry` / `grant`，不把扫描结果视为所有候选的授权。
 
 ```sh
 bin/tcchelper-cli auto                                  # 预演（只列，不写）
@@ -167,15 +172,15 @@ bin/tcchelper-cli revoke   <App> <service> [--db ...] [--path]
      "select service,client,auth_value from access where service like '%Microphone%';"
    ```
 
-   - **条目数 0 或极少** ⇒ **弹窗被抑制**（AMFI 关着）⇒ 本文档；
-   - 条目在但 `auth_value=0` ⇒ 是**被拒**（`tccutil reset` 后重试，或直接改 `auth_value=2`）。
+   - **条目数 0 或极少**：确认请求是否真的发生、组件 / 服务与数据库是否选对；结合运行态 AMFI 与日志判断，不能直接定性。
+   - 条目在且 `auth_value=0`：按系统设置与用户意图处理；需要重置时限定具体服务和 App，不能默认把拒绝改为允许。
 2. **查 boot-args 里有没有 `amfi`**：`sysctl -n kern.bootargs` / `nvram boot-args`。
 3. **查 `csr-active-config` 要看字节**：用 `plistlib` 读；
    ⚠️ **`PlistBuddy -c Print` 打的是 base64** —— 本机显示 `C` 其实是 `430a0000`（= `0x0A43`）。
 4. ★★ **诊断纪律（先分三类，别一上来就写库）**：
-   ① **条目不存在** ⇒ 本文档（AMFI 抑制）
-   ② **条目存在但被拒** ⇒ 用户操作，`tccutil reset` 后重试
-   ③ **条目存在且已允许但仍失败** ⇒ **App 自身 / 设备问题，别再折腾 TCC**
+   ① **条目不存在**：先核对实际请求、组件、服务、数据库、运行态 AMFI 与日志
+   ② **条目存在但被拒**：按用户期望在系统设置处理，必要时限定范围重置后重试
+   ③ **条目存在且已允许但仍失败**：继续查实际请求组件、签名 / 条目匹配与设备或 App 日志，不只凭一行记录排除 TCC
    ★ 还有一类最容易漏：**授权的对象选错了** —— 要授权的是**真正申请权限的那个 helper / 子组件**（§4.2 第 3 步）。
 
 ## 7. 注意与边界
@@ -185,8 +190,8 @@ bin/tcchelper-cli revoke   <App> <service> [--db ...] [--path]
   也可以点面板上的「给自己完全磁盘访问」（**写系统库，需要管理员密码**）
 - **撤销**：用「撤销」按钮，或 `tccutil reset <service> <bundle-id>`
 - ★ 这是**有意降低系统安全边界**的操作 ⇒ **只给确实需要的 App 授权**
-- ★ 同一个机制适用于**所有** TCC 服务（把 `service` 换掉即可）；
-  但**屏幕录制 / 辅助功能**在部分系统上还要额外处理 ⇒ **先用 §6 第 1 条确认到底是「没条目」还是「被拒」**
+- 只使用工具明确支持且与当前系统数据库结构匹配的服务；不要仅替换 `service` 就推断任意 TCC 权限都能同样写入。
+  屏幕录制 / 辅助功能按目标系统与工具当前说明单独验证。
 
 ## 8. 出处
 
@@ -196,46 +201,37 @@ bin/tcchelper-cli revoke   <App> <service> [--db ...] [--path]
 
 ---
 
-## 附录：Gatekeeper /「任何来源」/「无法验证开发者」（**与 TCC 无关，但常一起排查**）
+## 附录：Gatekeeper 与未公证 App
 
-### A.1 先分清是两个问题
+Gatekeeper 的启动评估与运行后 TCC 权限分别排查，不能用关闭其中一个替代另一个。
 
-| 现象 | 根因 | 去哪 |
-|---|---|---|
-| 双击 App 弹「**无法打开，因为无法验证开发者**」/「**已损坏，应移到废纸篓**」/「来自身份不明的开发者」 | **Gatekeeper**（系统策略评估，`spctl`） | 本附录 |
-| App **能打开**，但麦克风 / 摄像头 / 屏幕录制拿不到权限、也不弹窗 | **AMFI 关闭 ⇒ TCC 不记录** | §0–§7 |
+### A.1 先确认来源与完整性
 
-★ 两者都表现为「App 用不了」，但**修法完全不通用** —— 先看 App 到底有没有启动。
-
-### A.2 命令
-
-```bash
-spctl --status                  # assessments enabled / disabled（只读，不用 sudo）
-sudo spctl --global-disable     # 关闭 Gatekeeper 全局评估 = 旧版「任何来源」
-sudo spctl --global-enable      # 恢复
-```
-
-| 项 | 说明 |
+| 提示 | 处理 |
 |---|---|
-| **`--master-disable`** | ★ **macOS 15+（Sequoia/Tahoe）已不是文档化的做法**，对应开关是 **`--global-disable`**。<br>二进制里仍留着 `master-disable` 兼容旧脚本，**但别写进新流程**（网上大量教程还是它） |
-| **GUI 路径** | 系统设置 → 隐私与安全性 → 安全性 → 「**允许来自任何来源**」。<br>部分版本该选项**默认不显示**，要先跑一次 `--global-disable` 才出现（Ventura 时代的经典现象） |
-| `spctl --disable-status` | 26.7.1 返回：*"The option to globally disable the assessment system is currently available in **System Settings**."*<br>⇒ **Apple 正在把入口收回 GUI**，CLI 仍可用但已非官方推荐路径 |
+| 身份不明的开发者 / Apple 无法检查恶意软件 | 核对作者来源、目标版本、下载哈希或签名；可信完整产物可按单应用例外打开 |
+| 已损坏 / 已修改 / 应移到废纸篓 | 也可能是真损坏或篡改；先重新获取可信产物并核对完整性，不默认删除隔离标记 |
+| App 能打开但无法使用麦克风 / 摄像头 | 查实际权限请求、组件、运行态参数与日志；不能仅凭该症状认定 AMFI 问题 |
 
-### A.3 本机实测（macOS 26.7.1 / Tahoe）
+依据：[Apple 安全打开 App](https://support.apple.com/en-us/102445)。
+
+### A.2 可信未公证 App：建立单应用例外
+
+确认产物可信完整后，先尝试打开，再到「系统设置 → 隐私与安全性」选择该 App 的「仍要打开」，
+确认目标 App 后重试。具体入口按目标 macOS 的当前界面和
+[工具作者说明](https://github.com/GeekAudio/tcc-helper/blob/main/README.md) 核对。
+该方式不会把所有下载 App 的评估全局关闭。
+
+### A.3 全局策略只在任务确有需要时调整
+
+可先只读查看：
 
 ```bash
-spctl --status          # → assessments disabled
-spctl --help            # 列出的开关：--assess / --status / --global-disable / --disable-status
-strings /usr/sbin/spctl | grep global-   # → global-disable、global-enable 都在
+spctl --status
+spctl --help
 ```
 
-- ★ **`--global-enable` 只在二进制里，`--help` 不列** ⇒ 恢复时照用即可，别以为它被删了
-- 本机 `assessments disabled`，与「装第三方驱动 / 工具后一切正常」的现状一致
-
-### A.4 判据与边界
-
-- ★ **「已损坏，应移到废纸篓」≠ 真损坏**：多半是 Gatekeeper 拦 + `quarantine` 属性。
-  先摘属性：`xattr -d com.apple.quarantine /Applications/xxx.app`，**不行再动 `spctl`**
-- ★ **关 Gatekeeper 不会让 kext 加载成功** —— kext 看的是 **`SecureBootModel` / SIP / 签名**（见 §1、
-  `nvidia-driver.md` §8），两套机制别混
-- ★ 关掉后系统**不再校验任何下载的 App** ⇒ 与 §7 同一条纪律：**只在明确知道要装什么的时候开，装完考虑 `--global-enable` 恢复**
+全局修改 Gatekeeper 不作为常规安装或“已损坏”提示的后备修复。
+只有用户明确请求该全局变更、或该操作确属任务所需且已获授权时，才按目标 macOS 文档 / 当前界面操作，
+记录原状态与恢复方式；不要从 `strings` 中存在某个旧参数就推断它仍是受支持接口。
+关闭 Gatekeeper 也不解决 kext 加载或 TCC 授权问题。

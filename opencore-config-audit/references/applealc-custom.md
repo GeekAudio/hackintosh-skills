@@ -9,7 +9,7 @@
 >
 > ★★★ **macOS 26（Tahoe）请先读 §0.5** —— Apple 在 DP2 删了 `AppleHDA.kext`，
 > **不先把它恢复回来，后面所有 layout-id 都是白试**；
-> 主参考 `perez987/AppleHDA-gone-on-macOS-26-Tahoe`（KDK + MyKextInstaller / SimpleLoader）。
+> 主参考 [AppleHDA 恢复方案](https://github.com/perez987/AppleHDA-gone-on-macOS-26-Tahoe) 与各方案作者的当前说明。
 >
 > **怎么读这份文档**：正文是**可复用的方法与判据**，与具体 codec 无关；
 > 标 **「示例」** 的小节是一次完整落地（ALC897）里量出来的具体数值，**换机器必须整套替换**——
@@ -60,7 +60,7 @@
 | `SimpleLoader`（laobamac） | 同上，SwiftUI 界面，自带 **APFS 快照回滚**保护 | ★ 作者**已有一阵没更新、显得过时**；KDK 依赖同前 |
 | **OCLP root patch** | 像根补丁一样把 `AppleHDA` 打回去 | ★ **OCLP 团队仍在早期阶段，目前还不适合普通用户**；★ 专门的实操仓库：**`5T33Z0/OCLP4Hackintosh` 的 `Enable_Features/Audio_Tahoe.md`**（`5T33Z0` 指南推荐） |
 | **VoodooHDA 系**（如 `SimpleVoodooHDA`） | **完全替换**音频栈 | ★ **音质有损**（兼容面广） |
-| ~~`SimpleHDA`~~（Lilu 插件注入原版 AppleHDA） | 此前本节推荐的做法 | ★ 见 §0.5.6 —— **已降为备选** |
+| `SimpleHDA`（Lilu 插件，通过 OpenCore 注入恢复音频栈） | 不修改系统卷或重建 KC；沿用可工作的 AppleALC/layout | 已有正式版，要求与安装顺序见 §0.5.6；不能与其它 AppleHDA 恢复方案叠加 |
 
 ### 0.5.3 两个 App（指南推荐的正是这两个）
 
@@ -96,8 +96,8 @@ KDK 版本检测与询问（`Do you want to install this compatible KDK now?`）
 1. 装好 / 合并 **KDK**（选对版本，见 §0.5.4）
 2. 确认 **`AppleALC ≥ 1.9.5`** 在位、**`csr-active-config = 03080000`**
 3. 打开 **MyKextInstaller** → 选 KDK → 选 `AppleHDA.kext` → 安装（会**重建内核集合**）
-   - 不用 App 的手动等价做法：`hdiutil attach <KDK dmg>` → `cp -R AppleHDA.kext /System/Library/Extensions/`
-     → `chown -R root:wheel` / `chmod -R 755` → `kmutil install --volume-root / --update-all` → 重启
+   - 依照[MyKextInstaller 作者说明](https://github.com/Mirone/MyKextInstaller)处理目标系统、KDK 与快照，并确认安装器报告全部成功。
+   - 不用直接向 `/System/Library/Extensions` 复制再跑 `kmutil` 来替代安装器：默认系统卷不可写，macOS 11+ 从系统快照启动。手动方案还需处理目标系统卷的可写挂载、KC、创建并选择新启动快照及原快照回退；本文不提供省略这些步骤的命令。机制见 [Apple 的系统卷与快照说明](https://support.apple.com/en-ca/guide/security/seca6147599e/web)。
 4. **重启** —— 不重启不生效
 5. **验证**（三道，全过才算成）：
 
@@ -126,11 +126,11 @@ strings -a /System/Volumes/Data/Library/KernelCollections/AuxiliaryKernelExtensi
   这与「OpenCore 注入」类方案（`SimpleHDA` / `SimpleMtkWlan`）**根本不同** —— 后者系统更新后不用重打。
 - ★ **这是有意放宽系统安全边界**（SIP 部分关闭 + 往 `/System/Library/Extensions` 写）⇒ **在报告里写明**，
   并保留「用 App 里的快照回滚撤销」这条路。
-- ★ **`SimpleHDA` 路线（此前本节推荐）已降为备选** —— 它是「OpenCore 注入原版 AppleHDA」的 Lilu 插件，
-  好处是**不打补丁 / 不关 SIP / 不动系统卷 / 不用 KDK**；但实际障碍是：
-  **作者声明不遵循任何开源协议、不允许任何二次开发**、**至今只有 `v1.0.0-alpha` 无正式版**
-  （附件名还带提交短哈希），且有已知问题（Books 登录异常、状态栏重复启动）。
-  ⇒ **要省事优先 USB 声卡；要在系统里恢复就按本节走 KDK + MyKextInstaller。**
+- **`SimpleHDA` 已有正式版**：[作者 v1.0.0 release](https://github.com/laobamac/SimpleHDA/releases/tag/v1.0.0) 明确通过 OpenCore 注入恢复原版音频栈，无需修改系统卷或重建 KC。不能继续以“只有 alpha”排除这条路线。
+  - 该版要求 macOS Tahoe 26 / Darwin 25.x、x86_64、OpenCore、Lilu ≥ 1.7.1、AppleALC、有效的 `alcid` / `layout-id`，以及 `keepsyms=1`。
+  - 先核实目标系统、版本、发行包说明、许可与已知问题；使用发行包提供的条目，保持顺序 `Lilu → AppleALC → SimpleHDA`。不更改已有可用 layout 来迁就恢复方案。
+  - 安装前先按原方案的受支持流程卸载其它 AppleHDA 恢复件 / root patch，不能简单叠加。可选 HAL 包按作者说明与用户需要选择，重启后验证实际音频功能。
+  - 这条路线与修改系统卷的安装器是不同方案。根据当前兼容性与回退条件选择；本文没有在所有 codec 上验证正式版，不能把“正式发布”当成兼容保证。
 - ★ **`SimpleVoodooHDA`** 仍是一条兜底（一键、兼容面广），但**音质有损**；与其它方案**二选一，不要同时装**。
   工具索引见 `laobamac-toolkit.md`。
 
@@ -251,8 +251,8 @@ strings -a /System/Volumes/Data/Library/KernelCollections/AuxiliaryKernelExtensi
 | 办法 | 做法 | 限制 |
 |---|---|---|
 | **① Linux（推荐）** | Ventoy 做启动盘 → 启动任意发行版「Try」→ 一条命令收集：<br>`cd ~/Desktop && mkdir CodecDump && for c in /proc/asound/card*/codec#*; do f="${c/\/*card/card}"; cat "$c" > CodecDump/${f//\//-}.txt; done && zip -r CodecDump.zip CodecDump` | ★ **只有 Linux 的 dump 能生成拓扑图**（Clover / OpenCore 的不行） |
-| **② OpenCore** | 换 **DEBUG** 版 OpenCore（含同名 Drivers）→ `Misc>Debug>SysReport=true` · `UEFI>ConnectDrivers=true` · `UEFI>Drivers` 加 **`AudioDXE.efi`** → 重启（会慢些）→ ESP 根出现 `SysReport/Audio/` → **改回 RELEASE 并把那两个开关关掉** | 拿不到拓扑图，**只能应急** |
-| **③ Windows（两条子路线）** | 见 §3.0.1 —— 可选取数来源：GUI 走 `HDAU.exe`；脚本走 **`HDAudDev.dll` 直连**（免管理员、可脚本化、产出 Linux 风格 `codec_dump.txt/.json`） | 没有拓扑图（脚本路线产出的 `codec_dump.txt` 可直接喂 Codec-Graph，见下） |
+| **② OpenCore** | 换 **DEBUG** 版 OpenCore（含同名 Drivers）→ `Misc>Debug>SysReport=true` · `UEFI>ConnectDrivers=true` · `UEFI>Drivers` 加 **`AudioDxe.efi`** → 重启（会慢些）→ ESP 根出现 `SysReport/Audio/` → **改回 RELEASE 并把那两个开关关掉** | 拿不到拓扑图，**只能应急** |
+| **③ Windows** | 见 §3.0.1 的 HDAU GUI 导出节点树与 pin config；DLL 直连仅作开发参考 | 导出的 XML 不能直接当 Linux codec dump 喂给 Codec-Graph |
 
 ### 3.0.1 定制所需证据与 Windows 取数路线
 
@@ -279,7 +279,7 @@ strings -a /System/Volumes/Data/Library/KernelCollections/AuxiliaryKernelExtensi
 | 4 | **插孔语义表**：哪口是耳机 / 麦 / 线路，颜色 + 面板丝印 | 由 1–3 推导 | 分组顺序与验收清单 |
 | 5 | codec 的 `CodecID` / `Revision` / 控制器路径与 ACPI 名 | 识别信息 | `Info.plist` 与 DeviceProperties |
 
-**前置一步：确认 codec 已启用** —— codec 被禁用时枚举不到任何接口，脚本会直接提示「没有枚举到任何接口」：
+**前置一步：确认 codec 已启用** —— codec 被禁用时，HDAU 可能无法枚举目标设备，先检查 Windows 设备状态：
 
 ```bat
 :: ProblemCode 22 = 已禁用（InstanceId 换成实际值）
@@ -297,66 +297,15 @@ pnputil /enable-device "<上面的 InstanceId>"      :: 需要管理员，或在
    - `File → Export PinConfig Settings As...` → pin config（registry / BIOS / inf 三种格式，取 **32 位 Pin Config Default**）
    - `File → Export PinConfig Settings with system specific name` → 当前目录直接落 `.reg`，一步到位
 
-**路线 ② 脚本（`HDAudDev.dll` 直连，免管理员、可脚本化、产出 Linux 风格 dump）** ★ 要反复导出 / 想进 CI 就走这条：
+**开发参考：`HDAudDev.dll` 直连（本技能未提供完整采集器）**：
 
-微软官方 HDAU 3.3 自带一个原生库 **`HDAudDev.dll`**，导出的几个函数可以直接对 codec 发 HDA verb。
-绕开 GUI 只调这个 DLL，就能拿到与 Linux `/proc/asound/card*/codec#*` **等价**的拓扑数据。
-依赖只有 **Python 3 标准库 + `HDAudDev.dll`**，**不需要管理员权限**。
+HDAU 工具包含该 DLL，但本技能没有附带经过验证的设备枚举、DLL 调用和 codec dump 序列化脚本。
+因此这里不提供“运行某个 `.py` 即得到 `.txt/.json`”的命令，也不能把零散调用片段当成现成工具。
+需要数据时优先使用上面的 HDAU GUI，或 §3.0 的 Linux Live USB 路线。
 
-```bat
-:: 拿 DLL（微软官方工具包）：取 hdausetup_x64.msi → 从 MSI 的 _Streams 表取出内嵌 cab → 展开
-C:\Windows\System32\expand.exe -F:* hdau.cab out\
-:: out\ 下得到 HDAU.exe / HDAudDev.dll / Topo.dll / Config.xml
-:: 把 HDAudDev.dll 和 dump 脚本放同一目录，脚本启动时自动加载
-
-python hda_codec_dump.py --probe                :: 探测验证链路：列私有接口→打开→读 VendorId
-python hda_codec_dump.py --out <路径基名>        :: 完整 dump：写 <base>.txt + <base>.json
-python hda_codec_dump.py --only 10EC0897        :: 只 dump 指定 VendorId 的 codec
-python hda_codec_dump.py --nvidia               :: 连 HDMI codec 一起 dump（AppleALC 用不到）
-```
-
-- **`codec_dump.txt` 是 Linux codec_dump 风格** ⇒ 可**直接喂 `Codec-Graph.py`** 出拓扑图；
-  `codec_dump.json` 是同上的机器可读版（含每个字段的原始 32 位值）；
-- **文末会自动打印一张 Pin Complex 一览表**（NID / Pin Default / 设备类型 / 位置 / 颜色 / 关联组 / 序号）⇒ 定制 layout 时直接查这张表；
-- **探测通过的样子**：`GrabDeviceHandle=True` 且读到的 VendorId 是目标 codec（如 `0x10EC0897`）。
-
-**核心调用序列**（自己写脚本时照着来，三步）：
-
-```python
-import ctypes
-from ctypes import wintypes as wt
-
-dll = ctypes.WinDLL("HDAudDev.dll")
-dll.GrabDeviceHandle.argtypes = [ctypes.c_wchar_p];  dll.GrabDeviceHandle.restype = ctypes.c_bool
-dll.SendVerbLong.argtypes     = [ctypes.c_uint32];   dll.SendVerbLong.restype  = ctypes.c_int64
-dll.ReleaseDeviceHandle.argtypes = [];               dll.ReleaseDeviceHandle.restype = None
-
-GUID_PRIVATE = "{A17579F0-4FEC-4936-9364-249460863BE5}"   # HD Audio 私有接口类（微软公开常量）
-GUID_KS      = "{6994AD04-93EF-11D0-A3CC-00A0C9223196}"   # KS 媒体类（端点拓扑，微软公开常量）
-
-# ① SetupAPI 枚举完整设备接口路径（DIGCF_PRESENT|DIGCF_DEVICEINTERFACE = 0x02|0x10）
-#    x64 上 SetupDiGetDeviceInterfaceDetailW 的 cbSize 必须填 8；字符串从 buf+4 开始
-# ② GrabDeviceHandle(path) → True；verb(0x00, 0xF00, 0x00) → 0x10EC0897
-# ③ 根节点 → function group → widget 遍历：
-
-def verb(nid, verb12, payload=0, codec=0):
-    v = ((codec & 0xF) << 28) | ((nid & 0xFF) << 20) | ((verb12 & 0xFFF) << 8) | (payload & 0xFF)
-    return int(dll.SendVerbLong(ctypes.c_uint32(v))) & 0xFFFFFFFF
-
-fg_type   = verb(nid,   0xF00, 0x05)          # 0x01 = Audio Function Group
-w_start, w_count = verb(fg_nid, 0xF00, 0x04)  # 高16=起始 NID，低16=数量
-wcaps     = verb(wid,   0xF00, 0x09)          # type = (wcaps >> 20) & 0xF
-
-if (wcaps >> 20) & 0xF == 4:                  # Pin Complex
-    pin_default = verb(wid, 0xF1C, 0x00)      # 32 位 Pin Config Default
-    pin_caps    = verb(wid, 0xF00, 0x0C)
-    eapd        = verb(wid, 0xF0C, 0x00)      # 0x2 = EAPD 使能
-
-n = verb(wid, 0xF00, 0x0E) & 0x7F             # Connection List：每 4 个一组读
-for base in range(0, n, 4):
-    word = verb(wid, 0xF02, base)
-    conns += [(word >> (8*k)) & 0xFF for k in range(4)]
-```
+若任务本身是开发采集器，再单独核实所用 DLL 版本、位数、导出函数签名、设备权限和 SetupAPI 枚举。
+实现必须处理调用失败、节点能力及长/短连接表格式，并与已有 GUI/Linux dump 交叉核对；
+生成 Linux 风格文件的正确性也需要验证，不能仅凭扩展名宣称能交给 Codec-Graph。
 
 > ★★ **导出时务必排除显卡的 HDMI codec**（示例机上是 `10DE:009A`）—— 它也出现在 codec 列表里，
 > **取错会得到一张完全无关的节点树。**
@@ -368,8 +317,8 @@ for base in range(0, n, 4):
 > grep -A2 "Node 0x14" /proc/asound/card0/codec#0
 > #   Pin Default 0x01014010: [Jack] Line Out at Ext Rear
 > #   Conn = 1/8, Color = Green
-> # macOS（AppleALC 已加载、alc-verbs 已开）：读 Pin Config Default 四个字节
-> alc-verb 0x14 0xF1C 0x00 | tail -1     # F1Dh/F1Eh/F1Fh 取其余三个字节
+> # macOS（AppleALC 已加载、alc-verbs 已开）：读取完整 32 位 Pin Config Default
+> alc-verb 0x14 0xF1C 0x00 | tail -1     # 一次返回完整 32 位 Pin Config Default
 > ```
 >
 > ★★ **没有 Windows 可用时的降级路径（记住代价）**：Linux Live USB 的 `/proc/asound/card0/codec#0`
@@ -379,14 +328,11 @@ for base in range(0, n, 4):
 
 ### 3.0.2 交叉验证：让 Windows 自己作证「哪个 pin 是面板上哪个孔」
 
-dump 出来后如果还不知道「哪个 pin 对应哪个孔」，**不用猜**——Windows 自己建的 KS 拓扑接口会把答案写出来。
-用同一个枚举函数改枚举 **KS 媒体类** GUID，把接口路径末尾的 refstring 拿出来：
+Windows 音频端点和 KS 拓扑可以辅助核对插孔用途，但本技能没有提供相应的枚举工具。
+如需自行开发，须先实现并验证 SetupAPI / KS 查询，不能把未定义的枚举函数当成可运行脚本。
+现有数据不足时仍用 HDAU、主板资料与插拔实测补证。
 
-```python
-paths = enum_interfaces(GUID_KS)                  # 同一个枚举函数，换 GUID
-refs  = [p.rsplit("\\", 1)[-1] for p in paths if "0897" in p.lower()]
-# -> eheadphonetopo / elineouttopo / emicintopo / emixedcapturetopo / espdifouttopo / espdifoutwave
-```
+下面只是 ALC897 案例中的关联结果，端点名、NID 与分组均不能直接套用到其它机器：
 
 | Windows 端点 | 对应 pin | 含义 |
 |---|---|---|
@@ -395,12 +341,11 @@ refs  = [p.rsplit("\\", 1)[-1] for p in paths if "0897" in p.lower()]
 | `espdifouttopo` / `espdifoutwave` | 0x1e | 光纤 S/PDIF 输出 |
 | `emicintopo` + `emixedcapturetopo` | 0x18 / 0x19 / 0x1a | 麦克风 + 混合录音（**输入被聚合成一组**） |
 
-**三条可直接抄的判读规则**：
+**解读这些端点时的限制**：
 
 1. **播放侧出现几个 `e*outtopo`，就有几个独立输出端点** —— 同一个 DefAssociation 组的多个 pin
    （如 5.1 的 L/R、后环绕、中置低音）**只会建一个端点**，这直接验证了关联组分组；
-2. **录音侧常见一个 `emicintopo` + 一个 `emixedcapturetopo`** ⇒ 驱动把多个输入口聚合了
-   ⇒ **AppleALC 的 `PlatformsXX.xml` 里输入也只应选一组**（与 §3.8 结论一同源）；
+2. 录音侧多个物理口可能被 Windows 驱动聚合成端点；这不直接决定 AppleALC 的 PathMap 应有几组，还需 codec 路径和插拔行为证据；
 3. 端点 `NOTPRESENT` = **插孔没插设备**（presence detect 为空），**不是故障**；
    S/PDIF 输出没有 presence detect，恒为 `ACTIVE`。
 
@@ -501,10 +446,14 @@ alc-verb <NID> <verb> <parameter>      # 例：alc-verb 0x19 0x707 0x40
 | `0x500` | Set Coefficient Index（寻址处理系数） |
 | `0x4XX` | Set Processing Coefficient（写系数值） |
 | `0xF06` | Get Converter Stream/Channel（**采样时看这个 DAC 有没有流**，§5.7） |
-| `0xF1C–0xF1F` | Get Pin Config Default 四个字节（逐字节回读，§3.0） |
-| **`0xF00` + payload** | **Get Parameter**（Windows 脚本路线遍历全树就靠它，§3.0.1）：`0x00` VendorID（如 `0x10EC0897`）· `0x02` RevisionID · `0x04` NodeCount（高16=起始NID / 低16=数量）· `0x05` FunctionGroupType · `0x08` AFG Caps · `0x09` Widget Caps（**type = `caps>>20 & 0xF`，4 = Pin Complex**）· `0x0C` Pin Caps · `0x0D` / `0x12` Amp-In / Amp-Out Caps · `0x0E` Conn List Length（低 7 位） |
+| **`0xF1C`** | Get Pin Config Default，一次返回完整 **32 位**值；要取字节时在软件中移位和掩码 |
+| **`0xF00` + payload** | **Get Parameter**：`0x00` VendorID（如 `0x10EC0897`）· `0x02` RevisionID · `0x04` NodeCount（高16=起始NID / 低16=数量）· `0x05` FunctionGroupType · `0x08` AFG Caps · `0x09` Widget Caps（**type = `caps>>20 & 0xF`，4 = Pin Complex**）· `0x0C` Pin Caps · `0x0D` / `0x12` Amp-In / Amp-Out Caps · `0x0E` Conn List Length（低 7 位） |
 | **`0xF02` + 组基址** | Get Connection List Entry（**一次返回 4 个 entry**） |
 | **`0xF0C`** | Get EAPD/BTL（`0x2` = EAPD 使能） |
+
+[Intel HDA 规范 Table 108](https://www.intel.com/content/dam/www/public/us/en/documents/product-specifications/high-definition-audio-specification.pdf#page=180) 区分 GET 与 SET：
+GET `F1C` 返回 bits31:0；SET `71C`、`71D`、`71E`、`71F` 才是分别写入四个字节。
+`F1D/F1E/F1F` 是保留的 GET 编码，允许不实现；若实现，返回值也须与 `F1C` 相同，不能用于读取不同字节。
 
 选项：`-d <int>` 选 codec 序号（默认 0，多 codec 时用）· `-l` / `-L` 列 verb · `-q` 静默。
 
@@ -536,7 +485,7 @@ alc-verb 0x57 0x48e 0xa6   # 写系数：启用耳麦检测
 ./dump_coeff.sh 0 0x20 80      # codec 0、节点 0x20、读 80 个系数
 ```
 
-**在能工作的系统（Linux / Windows）跑一次、在有问题的 macOS 再跑一次，然后 diff** ——
+**在能工作的系统取得同一批系数、在有问题的 macOS 再采样，然后 diff**（该脚本依赖平台的 verb 工具，不能直接当 Windows 可执行程序）——
 **差在哪几个系数，就是你要发的 verb**。这比猜快得多。
 
 **★ 三个坑**：
@@ -622,8 +571,8 @@ codec 有 GPIO 且支持输入，但 **AppleHDA 从不配置它们** ⇒ 没有�
 ```bash
 # 设备 UID 形如 AppleHDAEngineInput:1F,3,0,1,:n
 # 最后一个冒号后的 n 就是 PathMap 里输入组的顺序
-./audio-tool listin
-# 或直接用 CoreAudio 读 kAudioDevicePropertyDeviceUID
+# 用已有 CoreAudio 工具读取 kAudioDevicePropertyDeviceUID
+# 本技能未附 audio-tool；不能把示例中的工具名当成已安装命令
 ```
 
 ### 3.10 ★ Pin Config Default / PinCntl 字段读法（Intel HDA 规范 Rev 1.0a）
@@ -794,8 +743,8 @@ wait $PLAY
 
 | 要判断什么 | 手段 |
 |---|---|
-| **每个输出设备对应哪个物理口** | 遍历系统输出设备：切默认 → 播放 → 采样各引脚 `pin ctl` 与 DAC `conv`，**谁的 pins 里出现某个 NID，谁就是那个口**（工具包 `04-脚本工具/map-outputs.sh` 就是这个思路） |
-| **输入链路是活的（没有麦克风也行）** | 打开输入设备报峰值：**峰值 = 底噪水平即说明 ADC 在采集**（`mic-probe`） |
+| **每个输出设备对应哪个物理口** | 遍历系统输出设备：切默认 → 播放 → 采样各引脚 `pin ctl` 与 DAC `conv`，**谁的 pins 里出现某个 NID，谁就是那个口**（这是检查思路，本技能未附自动映射工具） |
+| **输入链路是活的（没有麦克风也行）** | 用可用的 CoreAudio 采集工具读输入峰值；底噪只能作为采样活动线索，不能替代麦克风功能实测 |
 | **麦克风有没有偏置电压** | 读引脚 `0xF07`：`0x24`=IN+VREF80% 有偏置；`0x20`=只有 IN enable 没偏置（§3.10） |
 
 **四个必知的操作性细节**：
@@ -806,7 +755,7 @@ wait $PLAY
 3. **刚登录就跑 CoreAudio 工具会得到 0 个设备** —— 这是 `coreaudiod` 还没就绪的假象，**不是失败，等 5 秒再跑**；
 4. 部署到 ESP 的老规矩：`sync` 后等 2 秒、双 sha 比对、`find -size 0` 扫 FAT 写满留下的 0 字节文件。
 
-**一条命令的整体体检**（工具包 `04-脚本工具/verify-applealc.sh`，按这八段写自己的即可）：
+**整体体检顺序**（本技能未附一键音频体检脚本，按已有工具逐项核实）：
 系统版本 → `AppleHDA` 是否加载（macOS 26 前置）→ Lilu/AppleALC 是否加载 → HDAS 上生效的 `layout-id`
 → codec 识别（`IOHDACodecVendorID` 应为 `0x10ec0897`）→ `AppleHDAController` 实例
 → 系统音频设备 → AuxKC 里 `com.apple.driver.AppleHDA` 出现次数（>0 才扛得住重启）。
@@ -844,7 +793,7 @@ PR 里应当包含：
 | **同一 codec 但插上不自动切** | PathMap 里**输入/输出没放在同一个 group/array** ⇒ §3.7（前提：pin sense 是活的） |
 | **组合口（耳麦）插拔后没声音 / 麦克风不出声** | `WakeConfigData` **管不了插拔事件** ⇒ 用 **`ALCPlugFix-Swift`**；先用 `alc-verb` 试出正确序列（§3.5） |
 | **`AppleHDA` 装完重启就没了 / kextstat 看不到** | ① 装错版本（macOS 26 的 KDK 里没有 AppleHDA，必须 15.8.1/24H32）；② AuxKC 被系统重建清掉 ⇒ §0.5.5 的检查 ③ |
-| **写 layout 写到一半，不知道哪个口是麦 / 哪口能检测** | ★★ **硬约束没执行**（§3.0.1）—— 停下，回 Windows 用 HDAU 取全再继续；macOS 侧看不到面板丝印，猜必返工 |
+| **写 layout 写到一半，不知道哪个口是麦 / 哪口能检测** | 先核对现有 dump、主板资料和插拔实测；缺字段时按 §3.0.1 用可用的 HDAU GUI 或 Linux 路线补采，不能凭 macOS 设备名猜 |
 
 ## 8. 示例：一次完整落地的机器侧数值（ASUS TUF Z690-PLUS WIFI D4 / ALC897）
 

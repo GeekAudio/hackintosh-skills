@@ -41,7 +41,10 @@ def info(msg): print("  %s" % msg)
 # ── nvram 读写（macOS 的 nvram 用 %XX 编码不可打印字节，'%' 本身编码为 %25）──
 def nv_get(name):
     r = subprocess.run([NVRAM, "%s:%s" % (G, name)], capture_output=True, text=True)
-    if r.returncode != 0: return None
+    if r.returncode != 0:
+        # 权限/服务错误不能被当成空闲编号或“已不存在”。
+        if "data was not found" in r.stderr.lower(): return None
+        die("读取 %s 失败，无法确认变量状态：%s" % (name, r.stderr.strip() or "nvram 返回非零"))
     line = r.stdout.rstrip("\n")
     return line.split("\t", 1)[1] if "\t" in line else line
 
@@ -50,6 +53,12 @@ def nv_set(name, val):
 
 def nv_del(name):
     return subprocess.run([NVRAM, "-d", "%s:%s" % (G, name)], capture_output=True).returncode == 0
+
+def nv_write_verified(name, value):
+    if not nv_set(name, value): return False
+    readback = nv_get(name)
+    # nvram 可把可打印字节显示成 ASCII；比较解码后的值，不比较显示编码。
+    return readback is not None and decode(readback) == decode(value)
 
 def decode(s):
     out = bytearray(); i = 0
@@ -238,27 +247,40 @@ def cmd_restore(argv):
     if not argv: die("用法: %s restore <备份目录>" % PROG)
     d = argv[0]
     if not os.path.isdir(d): die("目录不存在: %s" % d)
-    n = 0
+    n = 0; failed = []; order = None
     for f in sorted(os.listdir(d)):
-        if not f.endswith(".txt"): continue
+        if not re.fullmatch(r"Boot(?:[0-9A-Fa-f]{4}|Order)\.txt", f): continue
         nm = f[:-4]; v = open(os.path.join(d, f)).read().rstrip("\n")
+        if nm == "BootOrder": order = encode(decode(v)); continue
         # ★ 必须重编码：备份里是 macOS 的混合写法（含字面空格），直接写回去会失败
-        if nv_set(nm, encode(decode(v))): info("已回写 %s" % nm); n += 1
-        else: info("回写 %s 失败" % nm)
+        if nv_write_verified(nm, encode(decode(v))): info("已回写并验证 %s" % nm); n += 1
+        else: failed.append(nm); info("回写或验证 %s 失败" % nm)
+    if failed: die("部分恢复：已回写 %d 项，失败 %s；未改 BootOrder" % (n, ", ".join(failed)))
+    if order is not None:
+        if not nv_write_verified("BootOrder", order): die("已回写 %d 项，但恢复 BootOrder 失败；请检查部分恢复状态" % n)
+        info("已回写并验证 BootOrder"); n += 1
     if not n: die("没有回写任何变量")
 
 def cmd_del(argv):
     if not argv: die("用法: %s del <N> [N...]" % PROG)
     tgt = [int(x, 0) for x in argv]
+    if any(n < 0 or n > 0xFFFF for n in tgt): die("编号必须在 0..65535 内")
+    original_order = order_list(); deleted = []
     for i in tgt:
         nm = "Boot%04X" % i
-        if nv_del(nm): info("已删除 %s" % nm)
-        else: info("%s 不存在或删除失败" % nm)
-    keep = [n for n in order_list() if n not in tgt]
+        if nv_get(nm) is None: info("%s 已不存在" % nm); continue
+        if not nv_del(nm) or nv_get(nm) is not None:
+            die("删除 %s 失败；此前已删除 %s，未改 BootOrder" % (nm, ", ".join(deleted) or "无"))
+        deleted.append(nm); info("已删除 %s" % nm)
+    keep = [n for n in original_order if n not in tgt]
     if keep:
-        v = order_enc(keep); nv_set("BootOrder", v); info("BootOrder 重写为 %s" % v)
+        v = order_enc(keep)
+        if not nv_write_verified("BootOrder", v): die("启动项已处理，但写 BootOrder 失败；请检查部分删除状态")
+        info("BootOrder 重写为 %s" % v)
     else:
-        nv_del("BootOrder"); info("BootOrder 已清空")
+        if nv_get("BootOrder") is not None and (not nv_del("BootOrder") or nv_get("BootOrder") is not None):
+            die("启动项已处理，但清空 BootOrder 失败；请检查部分删除状态")
+        info("BootOrder 已清空")
 
 def cmd_add(argv):
     a = {"esp": None, "name": None, "file": "\\EFI\\OC\\OpenCore.efi",
@@ -297,8 +319,12 @@ def cmd_add(argv):
     idx = int(a["index"], 0) if a["index"] else None
     if idx is None:
         used = set(order_list())
-        idx = next(i for i in range(1, 0xFFFF) if i not in used)
+        idx = next((i for i in range(1, 0xFFFF)
+                    if i not in used and nv_get("Boot%04X" % i) is None), None)
+        if idx is None: die("没有可用的 Boot 编号")
+    if idx < 0 or idx > 0xFFFF: die("编号必须在 0..65535 内")
     nm = "Boot%04X" % idx
+    if nv_get(nm) is not None: die("%s 已存在；先备份并显式删除后再添加，拒绝覆盖" % nm)
 
     info("写入 %s  →  %s" % (nm, a["name"]))
     info("  ESP   : %s   GUID %s   LBA 0x%x   0x%x 扇区" % (a["esp"], guid, off, size))
@@ -310,13 +336,14 @@ def cmd_add(argv):
         print(payload)
         print(); info("比对：%s dump 看现有项；或 %s add ... --index N 真正写入" % (PROG, PROG))
         return
-    if not nv_set(nm, payload): die("写 %s 失败" % nm)
-    if nv_get(nm) != payload: die("❌ 回读不一致")
+    if not nv_write_verified(nm, payload): die("写入或回读 %s 失败；BootOrder 未修改，请检查该项是否部分写入" % nm)
     info("✅ 回读逐字节一致（★ 不等于已落固件，见文件头警告）")
 
     rest = [n for n in order_list() if n != idx]
     new_order = ([idx] + rest) if a["first"] else (rest + [idx])
-    v = order_enc(new_order); nv_set("BootOrder", v)
+    v = order_enc(new_order)
+    if not nv_write_verified("BootOrder", v):
+        die("%s 已写入，但 BootOrder 写入或回读失败；部分添加，回滚可运行 %s del %d" % (nm, PROG, idx))
     info("BootOrder = %s%s" % (v, "（已置顶）" if a["first"] else "（已追加）"))
     print(); info("回滚：%s del %d" % (PROG, idx))
 

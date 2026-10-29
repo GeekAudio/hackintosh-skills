@@ -26,7 +26,7 @@
 name: opencore-config-audit
 description: 审查与维护黑苹果 OpenCore EFI 配置。
 metadata:
-  version: "0.43.1"
+  version: "0.44.0"
   description_en: Audit and maintain hackintosh OpenCore EFI configurations.
   agent_created: "true"
 ---
@@ -47,7 +47,7 @@ metadata:
 ```bash
 bash tools/doc-lint.sh
 python3 tools/test-doc-lint.py
-python3 tools/test_script_safety.py
+python3 -m unittest discover -s tools -p 'test_*.py'
 ```
 
 可用 skill-creator 时，再运行其校验器：

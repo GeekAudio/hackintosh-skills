@@ -176,6 +176,8 @@ ESP 写盘后执行 `sync`、卸载、重挂与 sha 复验，再安排重启；�
 
 ### 1.5 重启后判据
 
+先查目标网卡的实际 `enX`；下方 `en0` 和 `D068` 是参考机器示例，不作为固定成功条件。
+
 ```bash
 networksetup -listallhardwareports | /usr/bin/grep -A2 Ethernet
 ifconfig en0
@@ -197,9 +199,9 @@ IO 注册表          → D068@0 (IOPCIDevice) → AppleIntelI210 → en0 (IOEth
 
 | 现象 | 含义 | 下一步 |
 |---|---|---|
-| `en0` 没出现，`kmutil` 也没有 I210 | kext 没加载 | `/var/log/system.log` 看 kext 报错；查 `Enabled`、`BundlePath`、依赖版本 |
-| `kmutil` 有 I210，但没有 `en0` | kext 加载了、驱动不了硬件 | I225 与 I210 寄存器不兼容 ⇒ 回滚，改走路线 B |
-| 出现 `en1` 而不是 `en0` | 驱动抢到了，但 `en0` 被别的网卡占着 | 见 `network-en0-order.md` |
+| 目标网卡接口没出现，`kmutil` 也没有 I210 | kext 没加载 | `/var/log/system.log` 看 kext 报错；查 `Enabled`、`BundlePath`、依赖版本 |
+| `kmutil` 有 I210，但目标网卡没有任何对应接口 | kext 加载了、未成功绑定或驱动目标硬件 | I225 与 I210 寄存器不兼容 ⇒ 回滚，改走路线 B |
+| 目标网卡是 `en1` 而不是 `en0` | 编号本身不表示失败，其他网卡可正常占用 `en0` | 按实际 `enX` 验证目标网卡，见 `network-en0-order.md` |
 | 速率显示 `2500baseT` | 不可能是这条路 | 说明 dext 还在跑，`e1000=0` 没生效 |
 | 出 panic | 硬件不兼容 | 立刻回滚（§1.7） |
 
@@ -270,9 +272,9 @@ sync
 2. 改 ESP 走**安全流程**：备份 → 改 → `plutil -lint` → `ocvalidate` → `sync` → 卸载重挂 → 复验 sha
 
 **★★ 纪律：一次只换一套** ——
-**同一台机器不要同时注入多套有线驱动**（`AppleIGC` + `SimpleVGBE` 会**互相抢设备**；
-原版 I210 与任何第三方 I210 驱动同理）。
-换驱动时先把旧的那套 `Enabled=false` 或删掉（判据见 `disks-and-kexts.md`）。
+**同一块网卡的不同驱动实现应避免同时绑定**，例如针对同一卡启用 `AppleIGC` 与 `SimpleVGBE`。
+多网卡机器可按各自设备使用不同驱动；先核对匹配表和实际绑定，不因同机存在多个驱动就禁用它们。
+替换同一卡的驱动时，确认原实现不再需要后再禁用或清理（判据见 `disks-and-kexts.md`）。
 
 **验证**：
 
@@ -282,14 +284,16 @@ networksetup -listallhardwareports      # ★ 确认 en0 归属（见 network-en
 system_profiler SPEthernetDataType | head -30
 ```
 
-> ★★ **换完必须复查 `en0`** —— 换驱动会改变挂载顺序，`en0` 可能换人 ⇒
-> `ROM` / iMessage / FaceTime / App Store 会**静默失效**（详见 `network-en0-order.md`）。
-> ★ **AirDrop / 接力不受影响**（它只看 `awdl0`，见 `airdrop-handoff.md`）。
+> 换完记录接口归属，并验证联网及原有 iServices。编号变化不等于服务必然失效，也不自动授权改 ROM 或重排接口，
+> 详见 [接口顺序](network-en0-order.md)。
+> AirDrop、Handoff 与 iServices 分别验证，不能只用 `awdl0` 或接口编号推断；见 [连续互通排障](airdrop-handoff.md)。
 
 ## 6. 安全提示
 
-- 第三方 kext 都**非 Apple 签名** ⇒ 需要 `SecureBootModel=Disabled`，SIP 视情况放宽
-  （§1 的 Apple 原版 kext 不受此限，但仍要 `e1000=0`）
+- 按具体构建、目标 macOS 与安装方式核对 `SecureBootModel` / SIP 要求；EFI 注入、系统侧安装和 root patch
+  分别判断，不能仅因「第三方 / 非 Apple 签名」就统一关闭保护。已有设置可用时保留；确需调整时记录依据、原值和恢复路径。
+  参考 [OpenCore SecureBootModel 定义](https://github.com/acidanthera/OpenCorePkg/blob/master/Docs/Configuration.tex)。
+  §1 的 Apple 原版仿冒路线也需按目标系统验证依赖、参数与实际绑定，签名本身不能证明方案适用。
 - 从 Releases / 第三方 EFI 取包时**必须验签名链或哈希**，别只看文件名
   （`SimpleGBE` 这类**已存档**的项目不会再修 bug）
 - 有线网卡**不影响 Wi-Fi**，但会影响 `en0` 归属与网络服务顺序 ⇒ 改完顺带看一眼「系统设置 → 网络」里的服务顺序

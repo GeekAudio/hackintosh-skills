@@ -1,121 +1,151 @@
 #!/bin/bash
-# 在 macOS 里屏蔽「除系统卷之外」的所有磁盘卷：/etc/fstab + noauto ⇒ 启动不自动挂载
-#   ⇒ 桌面 / 访达 / Spotlight 都不出现；手动仍可挂载（sudo diskutil mount <dev>）
-#
-# 用法:
-#   mask-other-disks.sh                 # 只打印计划（dry-run），不写任何东西
-#   mask-other-disks.sh --apply         # 写 /etc/fstab 并立即卸载被屏蔽的卷（需要 root）
-#   mask-other-disks.sh --apply --keep B97A1BB4-…    # 额外保留某些卷（可多次 --keep）
-#   mask-other-disks.sh --undo          # 删除 /etc/fstab（撤销全部屏蔽）
-#
-# ★ 铁律：EFI 分区（Partition Type = EFI）永不写入 fstab；写完后会做一次
-#   「按 UUID 找 ESP → 卸载 → 重挂 → 读 config.plist」的验证。
+# 用 fstab noauto 屏蔽非系统、非 EFI、非 APFS 卷；保留用户原有规则。
+# 用法：mask-other-disks.sh [--apply | --undo] [--keep <卷 UUID> ...]
+# 默认只打印计划；--apply 需 root 并卸载选中卷；--undo 只删除本工具的 managed block。
+# 未带本工具标记的旧规则不会自动删除，请核对旧备份后手工处理。
 set -euo pipefail
 
 APPLY=0; UNDO=0; KEEP=""
 while [ $# -gt 0 ]; do
   case "$1" in
-    --apply) APPLY=1;;
-    --undo)  UNDO=1;;
-    --keep)  KEEP="$KEEP ${2:-}"; shift;;
-    *) echo "未知参数: $1"; exit 2;;
+    --apply) APPLY=1; shift;;
+    --undo) UNDO=1; shift;;
+    --keep)
+      [[ "${2:-}" =~ ^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$ ]] || { echo "--keep 需要完整卷 UUID" >&2; exit 2; }
+      KEEP="$KEEP $(printf '%s' "$2" | tr 'a-f' 'A-F')"; shift 2;;
+    -h|--help) sed -n '2,5p' "$0" | sed 's/^# *//'; exit 0;;
+    *) echo "未知参数: $1" >&2; exit 2;;
   esac
-  shift
 done
-
+[ "$APPLY" -eq 0 ] || [ "$UNDO" -eq 0 ] || { echo "--apply 和 --undo 不能同时使用" >&2; exit 2; }
 FSTAB=/etc/fstab
-
-if [ "$UNDO" = 1 ]; then
-  echo "== 撤销屏蔽：删除 $FSTAB =="
-  if [ -f "$FSTAB" ]; then
-    cp -p "$FSTAB" "/tmp/fstab.bak-$(date +%Y%m%d-%H%M%S)"
-    if [ "$(id -u)" = 0 ]; then rm -f "$FSTAB"; else
-      osascript -e "do shell script \"/bin/rm -f $FSTAB\" with administrator privileges"; fi
-    echo "   已删除（旧内容备份在 /tmp）。重启后生效。"
-  else
-    echo "   $FSTAB 不存在，无需撤销。"
-  fi
-  exit 0
-fi
-
-echo "== 1) 枚举所有真实卷，挑出「非系统、非 EFI」的 =="
-TARGETS=""
-while IFS= read -r dev; do
-  info=$(diskutil info "$dev" 2>/dev/null) || continue
-  uuid=$(printf '%s\n' "$info" | awk -F': *' '/Volume UUID/{print $2}')
-  name=$(printf '%s\n' "$info" | awk -F': *' '/Volume Name/{print $2}')
-  fs=$(printf '%s\n'   "$info" | awk -F': *' '/File System Personality/{print $2}')
-  ptype=$(printf '%s\n' "$info" | awk -F': *' '/Partition Type/{print $2}')
-  mp=$(printf '%s\n'  "$info" | awk -F': *' '/Mount Point/{print $2}')
-  [ -n "$uuid" ] || continue                       # 无卷 UUID（合成卷/容器）跳过
-  if [ "$ptype" = "EFI" ]; then printf '   skip %-10s %-22s EFI 分区（永不屏蔽）\n' "$dev" "$name"; continue; fi
-  case "$fs" in *APFS*) printf '   skip %-10s %-22s APFS（系统卷）\n' "$dev" "$name"; continue;; esac
-  case "$mp" in /|/System/*) printf '   skip %-10s %-22s 系统挂载点\n' "$dev" "$name"; continue;; esac
-  case " $KEEP " in *" $uuid "*) printf '   keep %-10s %-22s 用户指定保留\n' "$dev" "$name"; continue;; esac
-  printf '   MASK %-10s %-22s %-6s %s\n' "$dev" "${name:-<无名>}" "${fs:-?}" "$uuid"
-  TARGETS="$TARGETS $uuid|$dev|${name:-unnamed}|${fs:-ntfs}"
-done <<EOF
-$(diskutil list | grep -oE 'disk[0-9]+s[0-9]+' | sort -u || true)
-EOF
-
-if [ -z "$TARGETS" ]; then echo "   （没有需要屏蔽的卷）"; fi
-
-echo
-echo "== 2) 计划写入 $FSTAB 的内容 =="
-{
-  echo "# 屏蔽非 macOS 卷 —— 只自动挂载系统卷（由 mask-other-disks.sh 生成，$(date +%Y-%m-%d)）"
-  echo "# ★★ EFI 分区不在此列！引导在它上面，安装 App 要靠它读写 config.plist ⇒ 永不屏蔽"
-  echo "# 临时访问：sudo diskutil mount /dev/diskXsY   撤销全部：sudo rm /etc/fstab 后重启"
-  for t in $TARGETS; do
-    u=${t%%|*}; rest=${t#*|}; d=${rest%%|*}; rest=${rest#*|}; n=${rest%%|*}; fs=${rest##*|}
-    printf 'UUID=%s none %s noauto   # %s (%s)\n' "$u" "$(echo "$fs" | tr 'A-Z' 'a-z')" "$n" "$d"
-  done
-} | tee /tmp/_fstab.new
-
-if [ "$APPLY" != 1 ]; then
-  echo
-  echo "== dry-run：没有写任何东西。确认后执行 =="
-  echo "   sudo bash \"$0\" --apply"
-  exit 0
-fi
-
-echo
-echo "== 3) 写入 $FSTAB 并立即卸载被屏蔽的卷 =="
-SCRIPT=/tmp/_mask-apply-$$.sh
-cat > "$SCRIPT" <<EOF
-#!/bin/bash
-cp -p "$FSTAB" /tmp/fstab.bak-\$(date +%Y%m%d-%H%M%S) 2>/dev/null || true
-cp /tmp/_fstab.new "$FSTAB"
-chmod 644 "$FSTAB"; chown root:wheel "$FSTAB"
-echo "== fstab 已写入 =="; cat "$FSTAB"
-echo
-echo "== 卸载被屏蔽的卷 =="
-for t in $(for x in $TARGETS; do printf '%s ' "${x%%|*}"; done); do
-  for d in \$(diskutil list | grep -oE 'disk[0-9]+s[0-9]+' | sort -u); do
-    u=\$(diskutil info "\$d" 2>/dev/null | awk -F': *' '/Volume UUID/{print \$2}')
-    if [ "\$u" = "$t" ]; then printf '  %s (%s) -> ' "\$d" "\$u"; diskutil unmount "\$d" 2>&1 | tail -1; fi
-  done
-done
-echo
-echo "== 现在 /Volumes =="; ls -1 /Volumes
-echo
-echo "== 验证 EFI 分区不受影响（按 UUID 找 ESP → 卸载 → 重挂 → 读 config）=="
-esp=""
-for d in \$(diskutil list | grep -oE 'disk[0-9]+s[0-9]+' | sort -u); do
-  i=\$(diskutil info "\$d" 2>/dev/null)
-  echo "\$i" | grep -q 'Partition Type:.*EFI' && esp="\$d"
-done
-if [ -n "\$esp" ]; then
-  echo "  ESP = \$esp"
-  diskutil unmount "\$esp" 2>&1 | tail -1
-  diskutil mount   "\$esp" 2>&1 | tail -1
-  ls -d /Volumes/EFI && ls -la /Volumes/EFI/EFI/OC/config.plist | tail -1
-  echo "  ↑ 能卸载、能挂载、config 可读 ⇒ EFI 未受影响"
+PY="${PYTHON:-python3}"
+WORK=$(mktemp -d)
+PENDING=""
+cleanup() { rm -rf "$WORK"; [ -z "$PENDING" ] || rm -f "$PENDING"; }
+trap cleanup EXIT
+fail() { echo "★ $*" >&2; exit 1; }
+sha() { shasum -a 256 "$1" | awk '{print $1}'; }
+TARGETS="$WORK/targets.tsv"; : > "$TARGETS"
+EXISTED=0
+if [ -e "$FSTAB" ]; then
+  [ -f "$FSTAB" ] && [ ! -L "$FSTAB" ] || fail "fstab 不是普通文件，拒绝替换"
+  cp -p "$FSTAB" "$WORK/original" || fail "无法读取原 fstab"
+  ORIGINAL=$(sha "$WORK/original") || fail "无法校验原 fstab"
+  EXISTED=1
 else
-  echo "  ★ 没找到 EFI 分区，请手工确认"
+  : > "$WORK/original"; ORIGINAL=""
 fi
-EOF
-chmod +x "$SCRIPT"
-if [ "$(id -u)" = 0 ]; then bash "$SCRIPT"; else
-  osascript -e "do shell script \"/bin/bash \\\"$SCRIPT\\\"\" with administrator privileges"; fi
-rm -f "$SCRIPT"
+
+if [ "$UNDO" = 0 ]; then
+  diskutil list > "$WORK/disks" || fail "无法枚举磁盘"
+  grep -oE 'disk[0-9]+s[0-9]+' "$WORK/disks" | sort -u > "$WORK/devices" || true
+  echo "== 非系统、非 EFI、非 APFS 卷的计划 =="
+  while IFS= read -r dev; do
+    info=$(diskutil info "$dev" 2>/dev/null) || fail "无法检查 ${dev}，未写入规则"
+    uuid=$(printf '%s\n' "$info" | awk -F': *' '/Volume UUID/{print $2}')
+    name=$(printf '%s\n' "$info" | awk -F': *' '/Volume Name/{print $2}')
+    fs=$(printf '%s\n' "$info" | awk -F': *' '/File System Personality/{print $2}')
+    ptype=$(printf '%s\n' "$info" | awk -F': *' '/Partition Type/{print $2}')
+    mp=$(printf '%s\n' "$info" | awk -F': *' '/Mount Point/{print $2}')
+    [ -n "$uuid" ] || continue
+    [[ "$uuid" =~ ^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$ ]] || fail "$dev 的卷 UUID 不合法"
+    uuid=$(printf '%s' "$uuid" | tr 'a-f' 'A-F')
+    [ "$ptype" != EFI ] || { echo "   skip $dev EFI"; continue; }
+    case "$mp" in /|/System/*) echo "   skip $dev 系统挂载点"; continue;; esac
+    case "$fs" in *APFS*) echo "   skip $dev APFS（保守保留）"; continue;; esac
+    case " $KEEP " in *" $uuid "*) echo "   keep $dev $name"; continue;; esac
+    # fstab 第三字段必须是文件系统类型，不能直接放带空格的显示名称。
+    case "$fs" in
+      NTFS|*NTFS*) fs=ntfs;; ExFAT|exfat) fs=exfat;; MS-DOS*|FAT*|msdos) fs=msdos;; *HFS*|hfs) fs=hfs;;
+      *) echo "   skip $dev 未支持的文件系统: $fs"; continue;;
+    esac
+    name=$(printf '%s' "${name:-unnamed}" | tr '\t\r\n' '   ')
+    printf '%s\t%s\t%s\t%s\n' "$uuid" "$dev" "$fs" "$name" >> "$TARGETS"
+    printf '   MASK %s %s (%s)\n' "$dev" "$name" "$uuid"
+  done < "$WORK/devices"
+fi
+
+# 按完整标记行移除/替换本工具区块；其余字节保留，标记损坏时拒绝写入。
+"$PY" - "$WORK/original" "$TARGETS" "$WORK/merged" "$UNDO" <<'PY'
+from pathlib import Path
+import sys
+original, targets, destination, undo = sys.argv[1:]
+begin = b"# BEGIN opencore-config-audit mask-other-disks"
+end = b"# END opencore-config-audit mask-other-disks"
+keep = []; inside = False; found = False
+for line in Path(original).read_bytes().splitlines(keepends=True):
+    marker = line.rstrip(b"\r\n")
+    if marker == begin:
+        if inside or found: raise SystemExit("fstab managed block 重复/嵌套，拒绝修改")
+        inside = True; found = True
+    elif marker == end:
+        if not inside: raise SystemExit("fstab managed block 结束标记孤立，拒绝修改")
+        inside = False
+    elif not inside:
+        keep.append(line)
+if inside: raise SystemExit("fstab managed block 缺少结束标记，拒绝修改")
+result = b"".join(keep)
+rows = Path(targets).read_text().splitlines()
+if undo == "0" and rows:
+    if result and not result.endswith(b"\n"): result += b"\n"
+    result += begin + b"\n"
+    for row in rows:
+        uuid, dev, fs, name = row.split("\t", 3)
+        result += f"UUID={uuid} none {fs} noauto   # {name} ({dev})\n".encode()
+    result += end + b"\n"
+Path(destination).write_bytes(result)
+PY
+
+if cmp -s "$WORK/original" "$WORK/merged"; then
+  echo "== 规则没有变化；未写入或卸载任何卷 =="
+  exit 0
+fi
+echo "== 合并后的 fstab（用户规则保留）=="
+cat "$WORK/merged"
+if [ "$APPLY" = 0 ] && [ "$UNDO" = 0 ]; then
+  echo "== dry-run：未写入 fstab、未卸载卷；确认后用 sudo bash \"$0\" --apply =="
+  exit 0
+fi
+[ "$(id -u)" = 0 ] || { echo "写入 fstab 需要 root；请用 sudo 运行同一命令" >&2; exit 2; }
+
+if [ "$EXISTED" = 1 ]; then
+  [ -f "$FSTAB" ] && [ ! -L "$FSTAB" ] || fail "计划后 fstab 类型变化，停止"
+  NOW=$(sha "$FSTAB") || fail "无法复读 fstab"
+  [ "$NOW" = "$ORIGINAL" ] || fail "计划后 fstab 被修改，停止以保留其他修改"
+  BACKUP=$(mktemp "${FSTAB}.oc-mask-backup.XXXXXX")
+  cp -p "$FSTAB" "$BACKUP" || fail "fstab 备份失败，未写入"
+  SAVED=$(sha "$BACKUP") || fail "fstab 备份不可读"
+  [ "$SAVED" = "$ORIGINAL" ] || fail "fstab 备份 SHA 不一致，未写入"
+  echo "   备份: $BACKUP"
+else
+  [ ! -e "$FSTAB" ] || fail "计划后新出现 fstab，停止以保留它"
+fi
+PENDING=$(mktemp "${FSTAB}.oc-mask-new.XXXXXX")
+cp "$WORK/merged" "$PENDING" || fail "fstab 临时文件写入失败"
+chmod 644 "$PENDING"; chown root:wheel "$PENDING"
+# 在原子替换前再次检查，避免备份/准备期间覆盖其他修改。
+if [ "$EXISTED" = 1 ]; then
+  [ "$(sha "$FSTAB")" = "$ORIGINAL" ] || fail "写入前 fstab 被修改，停止"
+else
+  [ ! -e "$FSTAB" ] || fail "写入前新出现 fstab，停止"
+fi
+mv -f "$PENDING" "$FSTAB" || fail "fstab 替换失败"
+PENDING=""
+[ "$(sha "$FSTAB")" = "$(sha "$WORK/merged")" ] || fail "写入后的 fstab SHA 不一致"
+sync || fail "fstab 已写入，但 sync 失败"
+if [ "$UNDO" = 1 ]; then
+  echo "== 已仅删除本工具区块；其他 fstab 规则保留，未卸载任何卷 =="
+  exit 0
+fi
+
+# 不执行动态子脚本，不重挂任意 ESP。仅重新核对选中卷的 UUID 后卸载。
+while IFS=$'\t' read -r uuid dev fs name; do
+  info=$(diskutil info "$dev" 2>/dev/null) || fail "规则已写入，但无法复核 ${dev}；未继续卸载"
+  actual=$(printf '%s\n' "$info" | awk -F': *' '/Volume UUID/{print $2}' | tr 'a-f' 'A-F')
+  [ "$actual" = "$uuid" ] || fail "规则已写入，但 $dev 的 UUID 已变化；未继续卸载"
+  if printf '%s\n' "$info" | grep -q 'Partition Type:.*EFI'; then fail "复核发现 $dev 是 EFI，拒绝卸载"; fi
+  if printf '%s\n' "$info" | grep -q 'Mounted:.*No'; then continue; fi
+  diskutil unmount "$dev" || fail "规则已写入，但卸载 $dev 失败；请核对部分完成状态"
+done < "$TARGETS"
+echo "== managed block 已写入，选中卷已卸载；EFI/APFS 卷未操作 =="

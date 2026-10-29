@@ -17,7 +17,7 @@
 | ③ 换 DEBUG OpenCore | macOS 里（改 ESP） | 能产出完整日志的引导器 | `scripts/oc-swap-build.sh` + 本文 §3 |
 | ④ 收集日志 | macOS 里 | OC 引导日志 + 内核日志 | `scripts/grab-logs.sh` + `logs-and-debug.md` |
 | ⑤ 修补 | macOS 里（改 ESP） | 逐项修正后的 config/SSDT/kext | [技能入口](../SKILL.md) 的对应专题 |
-| ⑥ 日常化 | macOS 里（改 ESP） | 快启动 + 安静屏幕的成品 | 本文 §6 + `scripts/oc-swap-build.sh release` |
+| ⑥ 日常化 | macOS 里（改 ESP） | 快启动 + 安静屏幕的成品 | 本文 §6 + `scripts/oc-swap-build.sh release <目标版本>` |
 
 ---
 
@@ -52,7 +52,8 @@
 
 ### 怎么换（`scripts/oc-swap-build.sh` 已封装）
 
-1. **确认当前版本**：`nvram 4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102:opencore-version`
+1. **确认目标 EFI 的版本**：对正在运行的引导器可读 `nvram 4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102:opencore-version`
+   - 离线副本从其记录、日志和二进制交叉核实；宿主 NVRAM 不代表目标版本。脚本要求显式传入目标版本及 `--efi` 路径。
    - `DBG-108-2026-09-27` → 版本 **1.0.8**、构建 **DEBUG**（`DBG-` 前缀）
    - `1.0.8-2026-09-27` → 版本 1.0.8、构建 RELEASE
 2. **下载同版本**的官方 `OpenCore-<ver>-DEBUG.zip`（或 `-RELEASE.zip`）
@@ -91,7 +92,7 @@
 
 **判读方法见 `logs-and-debug.md`**。三条最快的判据：
 
-1. **ACPI 报错 0 命中** ⇒ 没有"坏掉的 ACPI"，不用急着补 SSDT
+1. **ACPI 报错 0 命中** ⇒ 该次采集中未观察到这些报错；确认启动时间与采集覆盖，再结合原始表、设备树和症状判断，不能据此证明 ACPI 正确
 2. `OCB: Registering entry <名字>` ⇒ 选择器里**实际**有哪些启动项（"屏蔽"效果的唯一可靠依据）
 3. `OCABC: MAT support is 1` / `Only N/M slide values are usable!` ⇒ 直接决定 `EnableWriteUnprotector`、`ProvideCustomSlide` 该怎么设
 
@@ -121,7 +122,8 @@
 ### 6.1 换回 RELEASE
 
 ```bash
-scripts/oc-swap-build.sh release     # 自动从 NVRAM 推断版本；备份 + 替换 OpenCore.efi/BOOTx64.efi/官方同名 Drivers + 校验 sha
+scripts/oc-swap-build.sh release 1.0.8 --efi /path/to/EFI
+# 示例版本与路径须替换为已确认的目标；备份、替换官方同名文件并校验 sha
 # 重启后确认：
 nvram 4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102:opencore-version    # 期望 1.0.8-2026-09-27（没有 DBG- 前缀）
 ```

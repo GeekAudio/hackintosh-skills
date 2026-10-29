@@ -123,7 +123,7 @@ OCLP 来源配置中 Tahoe 条目的上限可能留空，表示没有上限。�
 | 项 | Sequoia / Tahoe 的差别 |
 |---|---|
 | `Kernel > Block > com.apple.iokit.IOSkywalkFamily` | 两版都要（`Min 23.0.0`），让第三方驱动接管 |
-| 蓝牙 NVRAM 两条 data（`bluetoothExternalDongleFailed` / `bluetoothInternalControllerInfo`） | 两版都要，且 `NVRAM > Add` 与 `Delete` 都要有 |
+| 蓝牙 NVRAM data（`bluetoothExternalDongleFailed` / `bluetoothInternalControllerInfo`） | 仅在所用蓝牙驱动要求时配置其规定值；需覆盖已有同名变量时才先列入 `NVRAM > Delete`，不能统一注入固定控制器数据 |
 | `USB` 端口映射（蓝牙端口 `UsbConnector=255` Internal） | 两版都要 |
 | `built-in` / `IONameMatch` | 两版都要 |
 
@@ -131,26 +131,23 @@ OCLP 来源配置中 Tahoe 条目的上限可能留空，表示没有上限。�
 
 | 部件 | 版本限制怎么处理 |
 |---|---|
-| **NVIDIA（NullMoth 驱动）** | **不用 `MinKernel`** —— 它装在 `/Library/Extensions` 从 AuxKC 加载，**不在 EFI 里**。<br>升级靠**换文件**：`/Library/NullMoth/kexts/26/NVAccel.kext` 覆盖 `26` 版，再 `kmutil create` 重建 AuxKC |
+| **NVIDIA（NullMoth 驱动）** | 对系统目录 / AuxKC 安装的驱动，`Kernel>Add` 的 `MinKernel` / `MaxKernel` 不负责分流。按[驱动作者](https://github.com/nullmoth/nvidia-macos-driver)对应版本安装器选择目标 macOS 的完整组件组合，不能只覆盖单个 `NVAccel.kext` 推定升级完成 |
 | Lilu / VirtualSMC / WhateverGreen / RestrictEvents / NVMeFix / USBToolBox / XHCI-unsupported / UTBMap / AMFIPass | 留空（通用）。**但要用「支持新系统」的新版本**——升级时顺手更新到最新 |
 | `BlueToolFixup` | 写 `Min 21.0.0`（跨版本通用，不需要分流） |
 
 ---
 
-## 3. ★★ 升级时序（照着做）
+## 3. 升级时序（按实际驱动路线选择）
 
 ### 阶段 A：升级**前**（在 macOS 15 上做）
 
-1. **先关 FileVault** —— 否则 OCLP 的 Post-Install 会拒绝打补丁（`Cannot patch due to the following reasons: FileVault is enabled`）。
+1. **需要 OCLP root patch 时先检查 FileVault 要求**；仅在所用补丁版本要求关闭时处理 —— 该类 Post-Install 可能拒绝打补丁（`Cannot patch due to the following reasons: FileVault is enabled`）。
    - `fdesetup status` 看状态；**若显示 `in progress`（正在加密）⇒ 只能等它跑完**，加密/解密迁移**不能并发**
-   - ⚠️ `fdesetup disable` **失败时仍返回退出码 0**，别只看 `$?`
+   - 检查 `fdesetup` 输出与后续 `status`，不要只凭退出码判断加密状态已改变
    - ⚠️ `fdesetup` 按**短名**（RecordName）匹配，不认 RealName
-2. **跑 OCLP 前置保护脚本**（★ **必做，不能跳**）—— 防 OCLP 打补丁时把时间戳为 `1970-01-01` 的 NVIDIA kext 搬去 `Relocated Extensions`：
-   ```bash
-   sudo bash prep-oclp-rootpatch.sh     # 只修 mtime、不改内容，并全目录备份
-   ```
+2. **仅使用 root patch 的机器检查补丁前置条件**。若同时安装 NullMoth 等第三方驱动，先备份系统卷补丁状态与驱动，并核对所用 OCLP 版本的清理规则、驱动安装器的共存说明及文件时间戳。历史案例中有旧时间戳驱动被移动；不能据此对所有扩展批量 `touch`。本技能未附带专用保护脚本，不依赖未提供的本地工具。
 3. **备份 EFI**（整个 `EFI` 文件夹，不只 config）+ 记下当前 `opencore-version` 与 `uname -r`。
-4. **准备 Tahoe 专用 kext**：从 **OCLP 3.0.0-rc.3+** 取 `AirPortBrcmNIC-Tahoe.kext`（或 Intel 的 `AirportItlwm-Tahoe`）。
+4. **升级前准备并校验版本分流**：按实际网卡路线取得兼容目标构建的 Tahoe kext，与现用版本使用不同外层目录；同步配置 §2 的 `Kernel>Add`、`MinKernel` / `MaxKernel` 和依赖。在 macOS 15 上 Tahoe 条目应因 `MinKernel=25.0.0` 而不加载；升级前完成完整备份及校验。
 5. **★ 确认机型不在白名单时，加绕过参数（不动机型）**：`-no_compat_check` + `revpatch=sbvmm`（§5.3）。
    > 这一步**只改 boot-args**。**不要**顺手把机型换成白名单里的 —— 那是另一件事（§5.2）。
 6. **★ 核对一遍「不许动」清单**：`PlatformInfo` 三处 `SystemProductName`、`BoardProduct`、三码 —— 全都没动。
@@ -162,8 +159,8 @@ OCLP 来源配置中 Tahoe 条目的上限可能留空，表示没有上限。�
 
 ### 阶段 C：升级**后**（在 macOS 26 上做）
 
-6. **补版本分流的 kext 条目**（§2.1）—— 装 `AirPortBrcmNIC-Tahoe.kext`，在 `Kernel > Add` 为该 Tahoe 专用条目设置 `MinKernel=25.0.0` / `MaxKernel=25.99.99`。重启，先让内核栈通。
-7. **重打 OCLP root patch**：`OpenCore-Patcher.app` → **Post-Install Root Patch** → Start Root Patching。
+6. **确认版本分流生效**（§2）—— 在 Darwin 25 上确认预先配置的 Tahoe 条目命中 `25.0.0–25.99.99`，旧系统专用条目不加载；按目标网卡检查实际驱动及依赖，不重复添加相同条目。
+7. **使用 OCLP 博通路线时重打 root patch**：`OpenCore-Patcher.app` → **Post-Install Root Patch** → Start Root Patching。
    应看到 **"Networking: Modern Wireless"**。
 8. **重启**，然后按 §6 验证。
 
@@ -200,8 +197,10 @@ OCLP 来源配置中 Tahoe 条目的上限可能留空，表示没有上限。�
 
 | 键 | 值 | 说明 |
 |---|---|---|
-| `Misc > Security > SecureBootModel` | **`Disabled`** | 第三方 kext 非 Apple 签名，必须 |
-| `csr-active-config` | 按需放宽 | 实测可用 `430A0000`（≈ `0x0A43`：UNTRUSTED_KEXTS + UNRESTRICTED_FS + KERNEL_DEBUGGER + UNRESTRICTED_NVRAM + UNAPPROVED_KEXTS + UNAUTHENTICATED_ROOT）。**OCLP 与第三方驱动都要求它非 0** |
+| `Misc > Security > SecureBootModel` | 按所用驱动 / 补丁路线确定 | 区分 EFI 注入、系统目录安装与 root patch。不能仅凭“第三方 kext”就要求关闭；使用需关闭 Apple Secure Boot 的补丁时按其文档配置 |
+| `csr-active-config` | 保留当前值，确有要求再调整 | OCLP root patch 的 SIP 位随系统、补丁和机型变化；以该版本前置检查为准。第三方驱动并不统一要求某个非零值，不复制参考机器的位掩码 |
+
+依据：[同版 OpenCore 配置文档](https://github.com/acidanthera/OpenCorePkg/blob/1.0.8/Docs/Configuration.tex)、[OCLP SIP 与 root patch 说明](https://dortania.github.io/OpenCore-Legacy-Patcher/POST-INSTALL.html#sip-settings)。恢复安全设置前先撤销不兼容的系统补丁并验证可启动，不能把重新开启 SIP 当成卸载补丁。
 
 ### 4.5 `Kernel > Patch` —— OCLP 的 FileVault 补丁（按需）
 
@@ -297,25 +296,33 @@ ls -lt /Volumes/EFI/opencore-*.txt | head
 
 | 坑 | 现象 | 正确做法 |
 |---|---|---|
-| **EFI 挂载必须提权** | `diskutil mount disk1s1` 报 `Volume on disk1s1 failed to mount` | **不是文件系统坏了**：macOS 26 的 `/Volumes` 权限变成 `drwxr-xr-x root wheel`，普通用户**建不了挂载点**。用 `osascript -e 'do shell script "mkdir -p /Volumes/EFI; diskutil mount disk1s1" with administrator privileges'` |
-| **FAT 换成 FSKit 实现** | 挂载选项里出现 `fskit` | 行为与旧 `msdosfs` 有差异，别按旧经验判断 |
-| **在 EFI 上删文件会留 `.Trashes`** | 挂载失败、`..' entry in /.Trashes/501/OC has incorrect start cluster` | `rm -rf` 在 FAT 上会被 safe-delete 转成「移到废纸篓」⇒ 坏目录项。**修法：`diskutil repairVolume diskXsY`** |
+| **EFI 挂载失败** | `diskutil mount <实际ESP设备>` 失败 | 先确认目标设备、实际错误、挂载点权限及卷是否已挂载；确为权限问题时按需提权。单条失败消息不能排除文件系统问题，也不据此固定使用 `disk1s1` |
+| **FAT 驱动实现差异** | 挂载选项里出现 `fskit` | 以当前挂载信息与实际驱动为准，再核对相关行为；不只凭 macOS 大版本猜实现 |
+| **FAT 报目录项错误** | 文件系统检查报告 `.Trashes` 等目录的错误 | Finder 移到废纸篓会使用 `.Trashes`；普通 `rm` 直接删除目录项，不能推定它被转成 safe-delete。先备份可读文件并只读检查，确需修复时再对已确认的卷执行修复 |
 | **`log show` 时间过滤失效** | `--start/--end` 报 `Wall Clock adjustment detected` 返回整个日志库 | 用**流式过滤**，见 `boot-timeline.md` |
 
 ---
 
-## 8. 两条 Wi-Fi 路线怎么选
+## 8. Wi-Fi 路线怎么选
 
-| | **OCLP 3.0.0-rc.3+（legacy 路线）** | AppleBCMWLANCompanion（BCMC） |
+下表比较已有的 OCLP 与 AppleBCMWLANCompanion 路线；具体芯片和系统构建仍按作者说明核对。
+
+| | OCLP legacy 无线路线 | AppleBCMWLANCompanion（BCMC） |
 |---|---|---|
-| root patch | **需要** | 不需要 |
-| **AWDL / AirDrop / 接力** | **保留** ✅ | **不支持** ❌（项目 `Documentation/Issues.md` 原文：*"AWDL is not currently available"*） |
-| SIP | 可放宽 | **要求开启 SIP**（与第三方显卡驱动**直接冲突**） |
-| VT-d / AppleVTD | 不需要 | **需要** |
-| OTA 升级 | 正常 | **会 kernel panic**（升级前必须先关掉） |
-| 成熟度 | prerelease，但**是唯一支持 Tahoe 的** | "Beta Testing — Not Recommended for Daily Use" |
+| root patch | 需要 | 不需要；既有 OCLP 无线补丁须按作者迁移流程撤销 |
+| AWDL / AirDrop | 按支持硬件与补丁组合验证 | 当前作者 Issues 仍列 AWDL 不可用；Handoff 不与 AirDrop 混为一谈 |
+| SIP / AMFI | 按补丁版本的前置检查调整 | 支持保持保护，作者建议干净系统与 SIP 开启；只有实际组件要求相冲突时才判定不可共存 |
+| VT-d / AppleVTD | 按当前设备与其它驱动需求配置 | 默认 IOMapper 路线需核对 VT-d；作者自 1.1.0 提供 `bcmc-disable-io-mapper` 替代选项，具有内存和性能代价 |
+| 系统更新 | 可能需完整系统下载，更新后核对并重打所需 root patch | 当前作者 Issues 记录 OTA panic；升级前按该版本说明停用并准备恢复 |
+| 选择依据 | 目标芯片、系统构建、所需功能与实际验证 | 同左，不能把项目存在等同于目标机器已通过验证 |
 
-> ⇒ **换博通卡的目的就是 AirDrop / 接力 ⇒ 选 OCLP。** 只有当 OCLP 失败时才退到 BCMC（那时 AirDrop 会没）。
+依据：[BCMC Getting Started](https://github.com/0xFireWolf/AppleBCMWLANCompanion/blob/main/Documentation/GettingStarted.md)、
+[BCMC Issues](https://github.com/0xFireWolf/AppleBCMWLANCompanion/blob/main/Documentation/Issues.md)、
+[OCLP 更新说明](https://dortania.github.io/OpenCore-Legacy-Patcher/UPDATE.html)。
+
+另有无需该系统卷补丁的实验候选：[SimpleBCM](https://github.com/laobamac/SimpleBCM) 作者仍要求重启实测；
+[AirportBrcmCompat](https://github.com/GeekAudio/AirportBrcmCompat) 的 1.0.1-rc1 记录了特定 BCM43602、25G241 / 25G332 与内核 UUID 范围的验证及待验项。
+这些证据不能推广为全部 Tahoe / 博通卡均可用，也不能再把 OCLP 称为唯一候选。先核对目标兼容范围，再逐级验证加载、联网和双向 AirDrop 实收。
 
 ---
 
@@ -323,9 +330,9 @@ ls -lt /Volumes/EFI/opencore-*.txt | head
 
 | 回滚什么 | 怎么做 |
 |---|---|
-| EFI 改动 | 用升级前的 EFI 备份整个覆盖回去；或 `add-tahoe-wifi-kext.sh --revert` 这类专用脚本 |
+| EFI 改动 | 用升级前的完整 EFI 备份恢复已确认的目标 ESP，核对文件和哈希；不依赖未附带的专用脚本 |
 | OCLP root patch | OCLP 的 **Revert Root Patches**（或 Uninstaller） |
-| 被搬走的 kext | `prep-oclp-rootpatch.sh --restore` |
+| 被移动的第三方 kext | 先查原安装器日志与搬移位置，按对应版本安装器重新安装或从已验证备份恢复，并重建其要求的内核集合；文件复制完成不代表实际加载 |
 | 整个系统 | 升级前的时间机器备份（**大版本升级前一定要做**） |
 
 ---
@@ -337,7 +344,7 @@ ls -lt /Volumes/EFI/opencore-*.txt | head
 | 升级后 Wi-Fi 完全消失 | **正常**。查 §2.1 的条目有没有 `MinKernel=25.0.0` 那条；`kmutil showloaded` 看 `AirPort.BrcmNIC` 在不在 |
 | `IOSkywalkFamily` 在，但 `IO80211FamilyLegacy` 不在 | 看 OC 日志（`opencore-*.txt`）里该 kext 的注入结果；确认 `Kernel > Block` 没把它自己挡住 |
 | root patch 打不上 | FileVault 是否真关了（`fdesetup status`）；是否用了 2.5.1（**它没有 Tahoe 支持**） |
-| 打补丁时 NVIDIA kext 不见了 | 没跑 §3 的前置保护脚本。去 `/Library/Relocated Extensions` 找回来 |
+| 打补丁时第三方 kext 不见了 | 查补丁与安装器日志及 `/Library/Relocated Extensions`；确认是被移动、安装未完成还是加载失败，再按 §9 恢复，不能只凭现象认定原因 |
 | **机型不被支持、开不了机** | 加 `-no_compat_check`（**别去换机型**，§5.3） |
 | **能开机但收不到系统更新** | 漏了 **`revpatch=sbvmm`**（§5.3）—— `-no_compat_check` 不解决这个问题 |
 | 开不了机（**如果**你换了机型） | **主板 OEM SSDT 解析不过**（ASUS 的 `xh_adls3` 这类表 ⇒ `HS06 AE_NOT_FOUND`，见 `smbios-and-serials.md` §2）；用 U 盘 EFI 启动并回退。**这也是「升级时不许改机型」这条约束的原因** |

@@ -4,7 +4,7 @@
 #         （输出写到调用者家目录 ~/boot-timeline-<时间>.txt）
 #
 # 顺序经过调整：先把「快且关键」的数据写出来（dmesg 里就有驱动的内核消息），
-# 最慢的 `log show` 放在最后，并且最多跑 60 秒就会自动中断，不会一直卡着。
+# 最慢的 `log show` 放在最后，并且最多跑 90 秒就会自动中断，不会一直卡着。
 # 只读，不修改任何东西。
 
 set -u
@@ -54,37 +54,47 @@ echo "    （已写入 ${OUT}  ，可以先看这一段）"
 # ---------- 4. 快：launchd 时间线 ----------
 step "4/5 launchd 启动时间线"
 H2 "launchd 时间线"
-{
-  echo "-- 关键服务首次出现 --"
-  for s in WindowServer loginwindow Dock Finder coreservicesd; do
-    t=$(grep -m1 "$s" /var/log/com.apple.xpc.launchd/launchd.log 2>/dev/null | cut -c1-23)
-    echo "  $s: ${t:-?}"
-  done
-  echo
-  echo "-- 每个时间点的事件数（前 240 秒；空档就是卡住的地方）--"
-} >> "$OUT" 2>&1
-python3 - >> "$OUT" 2>&1 <<'PY'
-import re, collections, datetime
+python3 - "${BOOT:-}" "$START" >> "$OUT" 2>&1 <<'PYLAUNCH'
+import collections, datetime, re, sys
 L = "/var/log/com.apple.xpc.launchd/launchd.log"
+try:
+    if sys.argv[1]:
+        t0 = datetime.datetime.fromtimestamp(int(sys.argv[1]))
+        origin = "本次开机"
+    else:
+        t0 = datetime.datetime.strptime(sys.argv[2], "%Y-%m-%d %H:%M:%S")
+        origin = "回退采集窗口（无法确定开机时刻）"
+except (ValueError, OverflowError):
+    print("  无法确定采集起点"); sys.exit(1)
 c = collections.Counter()
+services = {s: None for s in ('WindowServer', 'loginwindow', 'Dock', 'Finder', 'coreservicesd')}
 try:
     with open(L, encoding="utf-8", errors="replace") as f:
         for line in f:
             m = re.match(r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})", line)
-            if m: c[m.group(1)] += 1
-except Exception as e:
-    print("  读取失败:", e); raise SystemExit
-if not c: print("  无数据"); raise SystemExit
-ts = sorted(c); t0 = datetime.datetime.strptime(ts[0], "%Y-%m-%d %H:%M:%S")
+            if not m: continue
+            stamp = datetime.datetime.strptime(m.group(1), "%Y-%m-%d %H:%M:%S")
+            if stamp < t0: continue
+            if (stamp - t0).total_seconds() <= 240:
+                c[stamp] += 1
+            for service in services:
+                if service in line and (services[service] is None or stamp < services[service]):
+                    services[service] = stamp
+except OSError as error:
+    print("  读取失败:", error); sys.exit(1)
+print(f"-- 关键服务首次出现（{origin}之后）--")
+for service, stamp in services.items():
+    print(f"  {service}: {stamp or '未观察到'}")
+print(f"\n-- 相对{origin}的前 240 秒事件数；空档仅代表该日志未记录事件 --")
+if not c:
+    print("  窗口内无数据")
 prev = None
-for t in ts:
-    d = datetime.datetime.strptime(t, "%Y-%m-%d %H:%M:%S")
-    off = (d - t0).total_seconds()
-    if off > 240: break
-    gap = "" if prev is None else ("   <<< 停顿 %ds >>>" % (d - prev).total_seconds() if (d - prev).total_seconds() >= 5 else "")
-    print("   +%4ds  %5d 事件  %s%s" % (off, c[t], t, gap))
-    prev = d
-PY
+for stamp in sorted(c):
+    off = (stamp - t0).total_seconds()
+    gap = "" if prev is None or (stamp-prev).total_seconds() < 5 else f"   <<< 日志间隔 {(stamp-prev).total_seconds():.0f}s >>>"
+    print(f"   +{off:4.0f}s  {c[stamp]:5d} 事件  {stamp}{gap}")
+    prev = stamp
+PYLAUNCH
 
 # ---------- 5. 慢：unified log，放最后，60 秒超时 ----------
 # ⚠️ 两个坑：

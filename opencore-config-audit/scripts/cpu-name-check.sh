@@ -93,10 +93,17 @@ cfg() {
   echo
   # ★ bash 3.2：`$VAR` 后紧跟全角字符必须写成 `${VAR}`，否则变量名会被吞进去
   echo "=========== 3) config 核对（${CONFIG}） ==========="
-  [ -f "$CONFIG" ] || { echo "  找不到该文件，跳过"; return 0; }
+  [ -f "$CONFIG" ] || { echo "  找不到该文件" >&2; return 1; }
   python3 - "$CONFIG" <<'PY'
 import sys, plistlib
-d = plistlib.load(open(sys.argv[1], "rb"))
+try:
+    with open(sys.argv[1], "rb") as source:
+        d = plistlib.load(source)
+    if not isinstance(d, dict):
+        raise ValueError("顶层应为字典")
+except (OSError, ValueError, plistlib.InvalidFileException) as error:
+    print(f"  config 读取失败: {error}", file=sys.stderr)
+    sys.exit(1)
 pi = d.get("PlatformInfo", {})
 g  = pi.get("Generic", {}) or {}
 pt = g.get("ProcessorType", "<缺>")
@@ -142,7 +149,7 @@ verdict() {
 case "$ONLY" in
   name) names ;;
   args) args ;;
-  *)    names; args; cfg; verdict ;;
+  *)    names; args; cfg || exit 1; verdict ;;
 esac
 
 [ "$WARN" -eq 0 ] || exit 1

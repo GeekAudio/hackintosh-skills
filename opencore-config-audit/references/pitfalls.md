@@ -7,7 +7,7 @@
 | 用 `ScanPolicy` 屏蔽后 **Windows 启动不了** | `ScanPolicy` 是**安全策略**（限制扫描不受信来源），不是显示开关 | 保持 `ScanPolicy=0`；少显示用 `HideAuxiliary` / `Misc>Entries` |
 | 以为 `ocvalidate` 过了就没问题 | 它只查 schema / 类型 / 必填 / 顺序 | 取值是否**符合文档**要逐键人工比对（见 `official-docs-method.md`） |
 | 改了 SSDT **文件名**后担心表身份变了 | 表身份由**内容**解析决定，不由文件名 | 改名安全；只要同步改 `ACPI>Add>Path` |
-| 把 `NVRAM>Add` 的键写进去却不生效 | 文档规则：**只有同时在 `Delete` 里**才会覆盖已存在的变量 | Add 的每个键都要在 `Delete` 里出现 |
+| 把 `NVRAM>Add` 的键写进去却不生效 | Add 为不存在的变量提供默认值；要覆盖已有值时才需先 Delete | 先读现值；仅将明确需要覆盖的键加入 Delete，不能把所有 Add 项都机械删除重写。见 [官方定义](https://github.com/acidanthera/OpenCorePkg/blob/master/Docs/Configuration.tex) |
 | `plutil` 报 `Key path not found NVRAM.Delete.0.<GUID>` | `NVRAM>Delete` 是 **dict（GUID→数组）**，不是数组 | 键路径写 `NVRAM.Delete.<GUID>` |
 | `plutil -remove 'Kernel.Add.15'` 连删几条后删错 | 删数组元素后**索引会前移** | **从高索引往低删** |
 | 把 `-wegnoigpu` / `-v` 这类开关当成"日志开关" | 它们影响的是**另一段**（macOS 图形栈 / macOS verbose），与 OC 段无关 | 刷屏归因先分清 OC 段 vs macOS 段（见 `logs-and-debug.md`） |
@@ -41,7 +41,7 @@
 | 症状 | 原因 | 正确做法 |
 |---|---|---|
 | 用 Bash `grep` 查中文/多模式，得出"文件里没有" | Bash `grep` 对 `\|` 交替与中文给过**假阴性** | 用 **Grep 工具（ripgrep）** 复核 |
-| 会话被中断后，工作区文件少了一整节 | **turn aborted 会回滚工作区文件的改动** | 中断后先复查文件是否还在（报告/脚本/备份） |
+| 会话被中断后，工作区文件少了一整节 | 中断时可能只完成部分写入；文件是否保留或回退取决于实际操作 | 中断后先复查文件是否还在（报告/脚本/备份） |
 | `git push \| sed` 之后拿不到退出码 | 管道吃掉了退出码 | 别把 `git push` 接进管道；需要过滤就先存文件 |
 | GitHub API 报 `SSL_ERROR_SYSCALL` | API 路径拼接错误 | 路径**必须以 `/` 开头**（`/repos/...`，不是 `repos/...`） |
 | 以为"ID 重复 = 上传了两次" | 内容寻址：相同内容返回同一 ID | 先比对 sha256 再判断 |
@@ -53,7 +53,7 @@
 
 | 症状 | 原因 | 正确做法 |
 |---|---|---|
-| **用 U 盘引导一次后，硬盘上的 OpenCore 启动项从 BIOS 启动菜单消失，只剩 Windows** | `Misc>Boot>LauncherOption=Full` 让 OpenCore 每次开机维护「自己那条」启动项，而它**只按文件路径后缀（`OpenCore.efi`）认项、不看设备** ⇒ 从 U 盘启动时把硬盘那条**重指到 U 盘**；拔盘后设备不存在 ⇒ 固件清理 | **两个 ESP 都改 `LauncherOption=Disabled`** + 保留 `\EFI\BOOT\BOOTx64.efi` 兜底 ⇒ 详见 `boot-entries.md` |
+| **用 U 盘引导一次后，硬盘上的 OpenCore 启动项从 BIOS 启动菜单消失，只剩 Windows** | `Misc>Boot>LauncherOption=Full` 让 OpenCore 每次开机维护「自己那条」启动项，而它**只按文件路径后缀（`OpenCore.efi`）认项、不看设备** ⇒ 从 U 盘启动时把硬盘那条**重指到 U 盘**；拔盘后设备不存在 ⇒ 固件清理 | 按 [启动项专题](boot-entries.md) 区分固定硬盘与临时 U 盘：避免 U 盘维护硬盘条目；硬盘是否保留 `Full` 取决于固件与启动项需求，并保留 fallback 路径 |
 | 想手工 `bcfg boot add/rm` 但改不动 | `UEFI>Quirks>RequestBootVarRouting=true` 会**保护 NVRAM** | 先跑 `OpenControl.efi disable`，之后再 reboot 或 `OpenControl restore` |
 | 在 **ASUS** 板上手工建 `Boot0000` | 源码注释：ASUS 把 `Boot0000` 当「已删除」处理 | **别用 `Boot0000`** —— 会导致条目重复、甚至 BIOS 变砖 |
 | `nvram -p` 里看不到 `Boot####`，以为没有启动项 | `nvram -p` **不列出** `Boot####` | 按 `GUID:名字` 单独读：`nvram 8BE4DF61-93CA-11D2-AA0D-00E098032B8C:BootOrder` |

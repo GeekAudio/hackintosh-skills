@@ -42,8 +42,13 @@ Tahoe 改了 USB 类的属性名，**旧 map 键名不再被读**：
 
 | 旧键（≤ Sequoia） | 新键（Tahoe） | 值类型 |
 |---|---|---|
-| `UsbConnector` | **`usb-port-type`** | Data，**1 字节** |
+| `UsbConnector` | **`usb-port-type`** | **Integer**（连接器类型编号，例如 `3` / `255`） |
 | `port` | **`usb-port-number`** | Data，**4 字节小端** |
+
+连接器类型与端口编号的类型不同：[USBMap 生成代码](https://github.com/corpnewt/USBMap/blob/master/USBMap.py)
+将 `UsbConnector` / `usb-port-type` 写为整数，将 `port` / `usb-port-number` 写为 Data。
+[USBToolBox 1.2.0 的转换](https://github.com/USBToolBox/kext/blob/1.2.0/USBToolBox/USBToolBox.cpp)
+复制原属性对象，不能靠改键名修正错误类型；手改后用 `plutil -p` 核对类型。
 
 - **`USBToolBox.kext` ≥ 1.2.0**（2025-06-13，官方标 *Tahoe support (WIP)*）会自动写新键
   ⇒ **低于 1.2.0 的版本在 Tahoe 上就是不生效**（issue #15 的根因就是这个，不是「Tahoe 不支持」）。
@@ -182,8 +187,11 @@ RHUB 命名空间里存在 `SS10` 不代表板子上真有第 10 个 SS 口（�
 | **`UTBMap.kext`** | `USBToolBox/kext`（≥1.2.0）+ tool 生成 | 与 `USBToolBox.kext` 配套；Tahoe 需 1.2.0+ |
 | **`USBMap.kext`** | `corpnewt/USBMap` | 独立，不需要 USBToolBox.kext；Tahoe 用 `tahoe-test` 分支 |
 
-★★ **`XHCI-unsupported.kext` 只给「非原生控制器」用**（ASMedia / Fresco / 部分第三方卡）。
-板载 Intel 控制器**不需要**它；乱加会让本来正常的口反而出问题。
+**`XHCI-unsupported.kext` 按 PCI ID 与目标 macOS 的原生匹配判断，不能按厂商一刀切。**
+[作者 README](https://github.com/RehabMan/OS-X-USB-Inject-All#how-to-install) 列出的典型对象包括
+Intel X99、200、300 系列；[实际匹配表](https://github.com/RehabMan/OS-X-USB-Inject-All/blob/master/XHCI-unsupported.kext/Contents/Info.plist)
+也包含 Intel `8086` ID。先查目标系统 `AppleUSBXHCIPCI.kext/Contents/Info.plist` 是否已匹配该控制器，
+再判断是否需要兼容注入；不要把该 kext 当作任意 ASMedia / Fresco 控制器的通用驱动。
 
 ## 6. ★★★ 验证：看「端口有没有注册」，不看「kext 有没有加载」
 

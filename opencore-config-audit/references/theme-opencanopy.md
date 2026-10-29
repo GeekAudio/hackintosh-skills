@@ -114,24 +114,32 @@ EFI/OC/Resources/
 
 ### 3.1 强制图标（缺了 OpenCanopy 起不来）
 
-来自 OpenCanopy 章节的 **mandatory** 标记 + `Flavours.md` 的「System Icons / Required」：
+来自 OpenCanopy 章节的 **mandatory** 标记、`Flavours.md` 的「System Icons / Required」，
+并以 [OpenCore 1.0.8 `GuiApp.c`](https://github.com/acidanthera/OpenCorePkg/blob/1.0.8/Platform/OpenCanopy/GuiApp.c)
+与 [`GuiApp.h`](https://github.com/acidanthera/OpenCorePkg/blob/1.0.8/Platform/OpenCanopy/GuiApp.h) 的尺寸常量及 `AllowLessSize` 核对。
+表中的“最大”同时限制宽、高，允许更小的正数尺寸；不是要求图像填满上限。
 
 | 图标 | 尺寸（1x） | 用途 |
 |---|---|---|
 | `HardDrive.icns` | 128×128 | 通用可引导系统（**Required，缺了 OpenCanopy 不启动**） |
 | `ExtHardDrive.icns` | 128×128 | 外置盘上的可引导系统（**Required**） |
-| `Cursor.icns` | 最大 144×144 | 鼠标指针 |
+| `Cursor.icns` | 最小 4×4，最大 144×144 | 鼠标指针 |
 | `Selected.icns` | 144×144 | 选中项背景 |
 | `Selector.icns` | 最大 144×40 | 选中框 |
 | `SetDefault.icns` | 最大 144×40 | 「设为默认」指示（**宽度必须与 `Selector` 一致**） |
 | `Left.icns` | 40×40 | 向左滚动 |
 | `Right.icns` | 40×40 | 向右滚动 |
-| `BtnFocus.icns` | — | 关机/重启按钮的焦点框 |
-| `Dot.icns` | — | 密码输入的小圆点 |
-| `Enter.icns` | — | 密码输入的确认符号 |
-| `Lock.icns` | — | 密码锁 |
-| `Password.icns` | — | 密码输入区域 |
-| `Restart.icns` / `ShutDown.icns` | — | 额外的重启/关机按钮 |
+| `BtnFocus.icns` | 最大 144×144 | 关机/重启按钮的焦点框 |
+| `Dot.icns` | 最大 10×10 | 密码输入的小圆点 |
+| `Enter.icns` | 最大 75×30 | 密码输入的确认符号 |
+| `Lock.icns` | 最大 144×144 | 密码锁 |
+| `Password.icns` | 最大 288×30 | 密码输入区域；不能套用 144×144 的统一上限 |
+| `Restart.icns` / `ShutDown.icns` | 最大 128×128 | 额外的重启/关机按钮 |
+
+例如 `Selector` / `SetDefault` 都为 40×20 且同宽是允许的；不要把高度 40 当成固定值。
+2x 资源的固定尺寸、最大尺寸与 `Cursor` 下限按比例翻倍；其它可变图标只要求实际像素为正。
+同一缩放级别的 `Selector` 与 `SetDefault` 仍须同宽。
+检查器检查所有图标集的必需 1x 图，并核对已提供的 2x 图尺寸；缺少 2x 图不代表已验证 HiDPI 可用。
 
 ### 3.2 官方图标集**提供**的可选图标（OcBinaryData 有）
 
@@ -248,16 +256,17 @@ UEFIShell:Shell  →  UEFIShell.icns  →  Shell.icns  →  Tool.icns  →  Hard
 
 ### 5.1 标签（`Resources/Label`）
 
-- 文件名后缀 `.lbl`（1x）/ `.l2x`（2x）；**全部标签都是必需的**
-- 文档原话：**所有标签高度必须正好 12 px**，宽度不限；字体是 Helvetica 12 pt × 缩放因子
+- 文件名后缀 `.lbl`（1x）/ `.l2x`（2x）；使用 `PickerAttributes` 的通用标签图像时，需要当前缩放级别的完整标签。资源树检查器按完整资源包检查两种缩放。
+- 标签在 **1x** 下高度为 **12 px**，2x 标签按比例为 **24 px**；其它尺寸与生成要求按同版本 OpenCanopy 文档核对
 - 生成工具：官方自带的 **`disklabel`**（预渲染标签）与 **`icnspack`**（打 `.icns`）
 - 标签清单：`EFIBoot`（通用系统）、`Apple`、`AppleRecv`、`AppleTM`、`Windows`、`Other`、`ResetNVRAM`、
-  `SIPDisabled`、`SIPEnabled`、`Shell`、`FirmwareSettings`、`Tool`
+  `SIPDisabled`、`SIPEnabled`、`Shell`、`FirmwareSettings`、`Tool`、`NetworkBoot`；最后一项也在上述 `GuiApp.c` 的 `mLabelNames` 中
 - 没有预渲染标签时的兜底顺序：`.contentDetails`（或 `.disk_label.contentDetails`）里的文字 → 条目名本身
 
 ### 5.2 字体（`Resources/Font`）
 
-- 格式 = **AngelCode binary BMF**（`.bin`）
+- 每种缩放需要一对文件：`Font_1x.bin` + `Font_1x.png`，以及 `Font_2x.bin` + `Font_2x.png`。格式为 **AngelCode binary BMF v3** 数据与对应 PNG 字形图集
+- 检查器检查这四个文件的存在和签名；签名正确不代表字体块、图集与实际渲染已完整验证
 - 官方推荐生成链：**dpFontBaker**（用 CoreText 效果最好）→ **fonverter** 导出二进制
 - 用 `UEFI>Output>ConsoleFont` 指定字体文件；文本渲染器与缩放见 §1.4 / §6.6
 
@@ -266,7 +275,7 @@ UEFIShell:Shell  →  UEFIShell.icns  →  Shell.icns  →  Tool.icns  →  Hard
 - 放 `.mp3`；`Misc>Boot>PickerAudioAssist` 打开「语音辅助」（读条目名）
 - 配合 `UEFI>Audio` 那组设置（§1.4）
 - **条目音效**由 **Flavour** 决定（§4）—— 这也是 `0x0080` 的作用之一
-- 「开机启动音」属于 `UEFI>Audio` 的 `AudioBeep`/`AudioTone` 范畴，**与主题是两件事**
+- 「开机启动音」由 **`UEFI>Audio>PlayChime`** 控制（`Auto` / `Enabled` / `Disabled`），与主题图标是不同设置；`Auto` 还受 `StartupMute` NVRAM 变量影响。底层需已配置 `AudioDxe.efi`、正确的音频设备和通道，以及对应声音资源。字段以[同版本官方文档](https://github.com/acidanthera/OpenCorePkg/blob/1.0.8/Docs/Configuration.tex)为准，不添加不存在的 `AudioBeep` / `AudioTone` 键。
 
 ### 5.4 背景与配色
 
@@ -326,7 +335,7 @@ grep -a "OCUI:" /Volumes/EFI/opencore-*.txt | tail -40      # OC 加载图标时
 | 被裁切 | `.icns` 里的 1x 尺寸不符合规范（见 §3.1 的尺寸列） |
 | `Selector` / `SetDefault` 宽度不一致 | 文档要求 `SetDefault` **必须与 `Selector` 同宽** |
 | 模糊 | HiDPI（`UIScale=2`）但没有 @2x 资源 |
-| 标签被拉伸 | 标签**高度必须正好 12 px**（宽度不限） |
+| 标签被拉伸 | 核对对应缩放资源：**1x 高 12 px，2x 高 24 px** |
 
 ### 6.6 文字太大 / 太小 / 位置怪
 
@@ -341,11 +350,13 @@ grep -a "OCUI:" /Volumes/EFI/opencore-*.txt | tail -40      # OC 加载图标时
 | 检查 | 说明 |
 |---|---|
 | `Resources/Audio/` | 有 `.mp3` |
+| `UEFI>Drivers` | 需要使用音频时，已启用与 OpenCore 同版的 `AudioDxe.efi` |
 | `UEFI>Audio>AudioSupport` | 开着 |
 | `UEFI>Audio>AudioDevice` | 设备路径正确（可从 OC 日志的 `OCAU: 1/3 …` 行里抄） |
 | `UEFI>Audio>AudioOutMask` | 输出通道位掩码；`-1` = 全部通道（日志里 `HDA: | Port widget @ … (bitmask N)` 可查） |
 | `UEFI>Audio>MinimumAudibleGain` | 系统音量低于它会**不播放**（`-128` = 不限制） |
 | `Misc>Boot>PickerAudioAssist` | 语音辅助总开关 |
+| `UEFI>Audio>PlayChime` | 启动音策略；它与读条目的语音辅助分别设置 |
 | 条目音效 | 由 **Flavour** 决定（要 `0x0080`） |
 
 ### 6.8 改完不生效

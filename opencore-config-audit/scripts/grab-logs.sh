@@ -60,7 +60,7 @@ OUT="$OUT/kernel-log-acpi.txt"
   echo "=== 抓取时间 ==="; date
   echo "=== 开机时间 ==="; sysctl -n kern.boottime
   echo
-  echo "=== A) ACPI 报错（0 命中 = ACPI 没坏）==="
+  echo "=== A) ACPI 报错（0 命中仅表示本次采集未观察到，不代表 ACPI 正确）==="
   /usr/bin/log show --start "$START" --style compact 2>&1 \
     | grep -aiE "acpi error|ae_not_found|ae_already|ae_error|namespace lookup|ACPI Exception|Error evaluating" | head -40
   echo

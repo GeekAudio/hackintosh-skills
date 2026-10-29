@@ -2,7 +2,7 @@
 
 黑苹果 OpenCore 配置审查与维护技能，适用于支持 `SKILL.md` 的代理环境；仓库同时提供 WorkBuddy / CodeBuddy 插件市场清单。
 
-以目标机器的配置、同版本官方文档与日志为依据，完成可回滚、可复验的维护。当前技能为 `opencore-config-audit`，版本 **0.43.1**。
+以目标机器的配置、同版本官方文档与日志为依据，完成可回滚、可复验的维护。当前技能为 `opencore-config-audit`，版本 **0.44.0**。
 
 ## 能力与使用
 
@@ -61,7 +61,7 @@ hackintosh-skills/
 ```bash
 bash tools/doc-lint.sh
 python3 tools/test-doc-lint.py
-python3 tools/test_script_safety.py
+python3 -m unittest discover -s tools -p 'test_*.py'
 ```
 
 该检查覆盖元数据一致性、文档和脚本的可发现性、本地引用及已记录的内容冲突。脚本变更还应检查 Bash 语法，并在临时目录用夹具验证相应行为；维护技能本身不需要修改真实 EFI。

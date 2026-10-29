@@ -53,14 +53,14 @@
 | `bios-audit.ps1` | **Windows 侧 BIOS 审查（只读）** —— 在 Windows 里先跑这个 |
 | `fetch-opencore-docs.sh` | 取同版官方包 + 建配置键库 |
 | `oc-verify.sh` | 一键校验（`plutil` + `ocvalidate` + 引用完整性 + sha） |
-| `oc-swap-build.sh` | RELEASE ↔ DEBUG 换构建 |
+| `oc-swap-build.sh` | 同版本 RELEASE ↔ DEBUG，须显式给出目标版本与 EFI 路径 |
 | `oc-edit-safe.sh` | `begin` / `finish` 备份与复验；`OC_DOCS_DIR` 指定唯一版本包，`OC_ARCHIVE_DIR` 指定存档目录 |
 | `grab-logs.sh` | 抓引导日志与内核日志 |
 | `boot-timeline.sh` | 启动耗时总览 |
 | `find-boot-gap.sh` | 启动停顿窗口精查 |
-| `mask-other-disks.sh` | 按 UUID 屏蔽非系统卷 |
+| `mask-other-disks.sh` | 按 UUID 预览 / 屏蔽非系统卷；`--undo` 只撤销自身标记区块 |
 | `cpu-freq-probe.sh` | CPU 实际频率探针 |
-| `e-cores-check.sh` | **小核（E 核）体检**（拓扑 / 频率 / `CpuTopologyRebuild` 加载 + 判读） |
+| `e-cores-check.sh` | CPU 拓扑与 CTR 加载检查；`--expected-threads N` 对照已确认的 BIOS 预期，频率探针按需运行 |
 | `kext-inventory.sh` | **kext 清单体检**（版本 / 构建元数据 / sha256 / 启用引用；`--save` 保存报告，`--host-nvram` 才另读宿主版本） |
 | `cpu-name-check.sh` | **CPU 显示名体检**（名字对照 / `rev*` 参数 / `RestrictEvents` / `ProcessorType`） |
 | `mem-check.sh` | 校验内存注入摆位 |
@@ -68,11 +68,11 @@
 | `oc-theme-check.sh` | **Resources 树合规检查**（必需图标 / 真实像素尺寸 / 标签 / 字体 / 音频） |
 | `oc-fetch-iconset.sh` | 从官方 OcBinaryData 取图标集 / 字体 / 标签 / 音频 |
 
-## 参考文档（33 份）
+## 参考文档
 
 按主题挑：`toolchain.md`（**工具链：`iasl` / `gfxutil` 从哪来、缺了怎么降级**）· `bios-settings.md`（BIOS）· `lifecycle.md`（全流程）· `os-upgrade-15-to-26.md`（升系统）·
-`nvidia-driver.md` · `amfi-and-tcc.md`（**App 拿不到权限 → tcc-helper**）· `intel-wifi.md` · `mediatek-wifi.md`（**含原生 Sunrise 打包方案**） · `broadcom-wifi.md`（四类网卡/显卡）· `airdrop-handoff.md`（**AirDrop / 接力：只看 `awdl0`，与 `ROM`/`en0`/UUID 无关**）·
-`applealc-custom.md`（**声卡 / macOS 26 恢复 AppleHDA / 定制 layout 前先取 Windows 侧数据：HDAU 或 HDAudDev.dll 脚本**）· `hidpi.md`（显示）· `intel-turbo.md`（睿频）· `e-cores.md`（**开/关小核**）· `cpu-name.md`（**CPU 显示名**）· `memory-injection.md`（内存）· `boot-failure-debug.md`（**装不上/进不去系统**）· `boot-timeline.md` / `logs-and-debug.md`（日志）· `boot-entries.md`（启动项）·
+`nvidia-driver.md` · `amfi-and-tcc.md`（**AMFI 相关权限故障，确认根因后按需使用 tcc-helper**）· `intel-wifi.md` · `mediatek-wifi.md`（**含原生 Sunrise 打包方案**） · `broadcom-wifi.md`（按芯片与系统选路线）· `airdrop-handoff.md`（**AirDrop / 接力：区分蓝牙发现、AWDL 与实际互通证据**）·
+`applealc-custom.md`（**声卡 / macOS 26 的音频路线 / 用 HDAU GUI 或 Linux dump 收集定制证据**）· `hidpi.md`（显示）· `intel-turbo.md`（睿频）· `e-cores.md`（**开/关小核**）· `cpu-name.md`（**CPU 显示名**）· `memory-injection.md`（内存）· `boot-failure-debug.md`（**装不上/进不去系统**）· `boot-timeline.md` / `logs-and-debug.md`（日志）· `boot-entries.md`（启动项）·
 `acpi-ssdt.md`（**ACPI 热补丁样例库索引**）· `disks-and-kexts.md` · `kext-and-oc-update.md`（**更新 kext / OC**）· `official-docs-method.md` · `rapidefi-first-efi.md` ·
 `smbios-and-serials.md`（换机型 + 三码）· `network-en0-order.md`（`en0` 归属）· `ethernet-drivers.md`（有线网卡）· `ecosystem-sources.md`（**权威来源与工具索引**）· `laobamac-toolkit.md`（工具索引）· `pitfalls.md`（踩过的坑）· `theme-opencanopy.md`（选择器主题）· `machine-facts.md`（参考机器事实）
 

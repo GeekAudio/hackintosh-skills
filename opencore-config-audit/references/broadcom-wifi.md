@@ -2,8 +2,9 @@
 
 > 依据：一次 15.8.1 → 26.7.1 的实战记录（本机 ASUS Z690，见 `machine-facts.md`）+
 > OCLP 的 `efi_builder/networking/wireless.py`（Modern Wireless 分支）逐字对齐的写法。
-> **★ 本流程必须按 macOS 版本分开走** —— 苹果从 Sequoia 起把 Broadcom Wi-Fi 驱动删了，
-> 而 Sequoia 与 Tahoe 的补法**不是同一套**。
+> **按卡型、macOS 与补丁版本选择路线**。OCLP 的 Modern Wireless 检测将这些旧 Broadcom 卡的
+> 原生支持截止于 Sonoma 之前；不能推广为所有 Broadcom 卡都在 Sequoia 才失去支持。
+> 依据：[OCLP Modern Wireless](https://github.com/dortania/OpenCore-Legacy-Patcher/blob/main/opencore_legacy_patcher/sys_patch/patchsets/hardware/networking/modern_wireless.py)。
 
 ## 0. 先认清卡
 
@@ -17,7 +18,7 @@
 
 - ★ **蓝牙不走 PCIe**：卡上那条 9-pin 内部 USB 线不接就只有 Wi-Fi、没有蓝牙
 - ★ **BCM20703 固件在卡上** ⇒ 一般**不需要** `BrcmPatchRAM3` / `BrcmFirmwareData`（那是给非原厂博通卡的）
-- ★ 拔掉/屏蔽**原来的 Intel 网卡**（例：AX201，蓝牙 `8087:0026`）：两个蓝牙控制器会让 macOS 犯迷糊
+- 多个无线 / 蓝牙控制器并存时，先确认实际绑定与用户需要；仅在证据指向控制器竞争或原设备确实不再使用时禁用对应设备 / 专用驱动。
 
 ## 1. ★★ 按系统分路线（核心）
 
@@ -56,7 +57,7 @@
 [2] IO80211FamilyLegacy.kext      MinKernel 23.0.0
 [3] AirPortBrcmNIC.kext（plugin） MinKernel 23.0.0 / MaxKernel 24.99.99   ← Sequoia
 [4] AirPortBrcmNIC-Tahoe.kext     MinKernel 25.0.0                        ← Tahoe
-[5] BlueToolFixup.kext            （蓝牙必需，macOS 12+）
+[5] BlueToolFixup.kext            （是否需要，按具体蓝牙控制器与当前作者说明核对）
 ```
 
 - **顺序依据（来自 kext 自己的 `OSBundleLibraries`）**：`IO80211FamilyLegacy` 依赖
@@ -66,29 +67,41 @@
 - Tahoe 那条的字段（照 OCLP 3.0.0 的写法）：
   `BundlePath=AirPortBrcmNIC-Tahoe.kext` / `ExecutablePath=Contents/MacOS/AirPortBrcmNIC` /
   `PlistPath=Contents/Info.plist` / `MinKernel=25.0.0` / `Arch=x86_64`
-- ★ **`itlwm.kext` 必须禁用**（Intel 网卡驱动，会和博通冲突）
+- 不将 Intel 驱动与 Broadcom 驱动的并存本身判为冲突；确认原 Intel 设备不再使用后再清理其专用驱动。
+  互斥要求针对同一设备的不同实现，见 [Intel 换卡说明](intel-wifi.md)。
 
-### 2.3 NVRAM（`7C436110-…-FE41995C9F82`，**data 类型**）
+### 2.3 NVRAM：按控制器与驱动要求核对
+
+先读取现值和实际蓝牙控制器，已正常工作时保留。不能把某台机器的非零
+`bluetoothInternalControllerInfo` 当作所有 BCM20703 / Sonoma / Sequoia 的必填值。
+
+[BrcmPatchRAM 的 BlueToolFixup 说明](https://github.com/acidanthera/BrcmPatchRAM#bluetoolfixupkext)
+对至少 Intel 蓝牙给出的示例是以下 data（十六进制表示），**这不自动构成当前 Broadcom 控制器的注入要求**：
 
 ```
 bluetoothExternalDongleFailed   = 00
-bluetoothInternalControllerInfo = 000000000000000089653a552efd
+bluetoothInternalControllerInfo = 0000000000000000000000000000   # 14 字节全零
 ```
 
-（Sonoma/Sequoia 起蓝牙必需的「控制器信息」注入；缺了蓝牙打不开）
+确有作者要求或故障证据时，按目标控制器确定值；不要复制参考机器的控制器身份。
+新变量可通过 `NVRAM > Add` 提供默认值，只有明确要覆盖已有值时才先列入 `NVRAM > Delete`。
+依据：[OpenCore NVRAM Add 定义](https://github.com/acidanthera/OpenCorePkg/blob/master/Docs/Configuration.tex)。
 
 ### 2.4 USB 端口映射（最容易翻车的一步）
 
 用 `USBToolBox.kext` + `UTBMap.kext` 时，**没写进映射表的端口会被直接禁用**：
 
-- 蓝牙所在端口（按自己 `ioreg` 实读，例：**HS11**）的 `UsbConnector` 设为 **`255`** (Internal)
-- **移除原 Intel 蓝牙端口**（例：HS14）；`port-count` 相应减 1
+- 蓝牙所在端口按实际 `ioreg` 与插拔验证确定，连接器类型 `UsbConnector` / `usb-port-type` 使用 **Integer `255`** (Internal)。
+- 原 Intel 蓝牙端口只有在设备不再使用且该口无需保留时才移除。**`port-count` 重新取保留端口中的最大端口号，不能按删除条目数减一**；
+  例如删 HS14 但 SS25 仍保留，值仍为 25。依据：[USBMap 计算](https://github.com/corpnewt/USBMap/blob/master/USBMap.py)。
 - 验证（读的是**端口对象上的实际值**，不是只看配置文件）：
   ```bash
   ioreg -p IOUSB -w0 -l | grep -i -A3 "bluetooth"     # 应见 Bluetooth USB Host Controller / BCM20703
   ```
 
 ### 2.5 `built-in` 注入（Dortania 的 `en0` / iServices 要求）
+
+先查现有 built-in 与实际设备路径；下面路径仅为参考机器示例，不能直接复制到另一主板。
 
 ```
 DeviceProperties → Add →
@@ -104,13 +117,13 @@ DeviceProperties → Add →
 
 ## 3. 用户态：OCLP root patch（两版都要）
 
-**为什么必须打**：实测系统里 `/System/Library/Extensions/IO80211Family.kext` **是个空壳**
-（`IOKitPersonalities` 空字典、连 `Contents/MacOS` 都没有），全盘 `find -iname "*AirPortBrcm*"` 为空
-⇒ 苹果在 Sequoia 把博通 Wi-Fi 驱动整个删了。**内核层**靠上面注入的 kext 补回来，
-**用户态框架**（`IO80211.framework` / `wifip2pd` / `WiFiPeerToPeer.framework`）必须靠 **root patch**。
+对所述 OCLP Modern Wireless 路线，除内核组件外还需恢复对应用户态组件
+（`IO80211.framework` / `wifip2pd` / `WiFiPeerToPeer.framework`）。
+先核对具体卡型、目标系统构建与 OCLP 发行版是否支持；单机目录内容不是所有 Broadcom 卡的统一判据。
+依据：[OCLP 补丁清单](https://github.com/dortania/OpenCore-Legacy-Patcher/blob/main/opencore_legacy_patcher/sys_patch/patchsets/hardware/networking/modern_wireless.py)。
 
 ```
-1) ★ 先跑保护脚本（见 §3.1）
+1) 备份并核对现有第三方驱动是否受本次 OCLP 清理影响（见 §3.1）
 2) 装 OCLP（Sequoia 用 2.5.1+；Tahoe 用 3.0.0-rc.3+）—— 必须走 .pkg 装
    （它的 privileged-helper 靠 SUID 提权，root patch 依赖这个）
 3) 打开 OpenCore-Patcher.app → Post-Install Root Patch → Start Root Patching
@@ -122,29 +135,20 @@ DeviceProperties → Add →
 
 > 网卡与补丁变化后分别验证联网、iServices 与所需连续互通功能。接口编号变化不等于故障，正常有线 `en0` 与无线 `en1` 可以并存；不要为 AirDrop 重排接口或改 ROM。见 [接口顺序](network-en0-order.md) 与 [连续互通](airdrop-handoff.md)。
 
-### 3.1 ★★ 打补丁前必须先跑保护脚本（否则 NVIDIA 驱动会失效）
+### 3.1 root patch 前检查现有系统侧驱动
 
-OCLP 打补丁前会执行 `clean_auxiliary_kc()`（`sys_patch/kernelcache/kernel_collection/support.py`）：
+先备份完整 EFI、相关系统侧驱动和版本 / 哈希清单，核对**所用 OCLP 版本**的
+[AuxKC 清理逻辑](https://github.com/dortania/OpenCore-Legacy-Patcher/blob/main/opencore_legacy_patcher/sys_patch/kernelcache/kernel_collection/support.py)。
+当前代码既可能删除先前补丁记录中的 kext，也会在特定系统上迁移 mtime 早于 2021-10-01 的 `/Library/Extensions/*.kext`。
+仅改时间戳不能阻止前一种清理。
 
-```python
-for file in Path("/Library/Extensions").glob("*.kext"):
-    if datetime.fromtimestamp(file.stat().st_mtime) < datetime(2021, 10, 1):
-        # → 移动到 /Library/Relocated Extensions
-```
+参考机器的 NullMoth 四个 kext 曾因 epoch 时间戳被迁移。目标机器若确有同类情况，
+优先按相关驱动作者 / OCLP 版本的兼容流程处理；确需调整时间戳时，只针对已核实、备份且仍需使用的目标 kext。
+**不要为绕过清理而 touch 整个 `/Library/Extensions` 中的旧驱动**，也不假定存在一份本技能未附带的保护脚本。
 
-而 NullMoth NVIDIA 那 4 个 kext（`NVRM` / `NVAccel` / `NVRMFB` / `NVRMAGDC`）的 **mtime 是 epoch 0**
-⇒ **会被搬走 ⇒ NVIDIA 驱动失效**。
-
-**处置**：先跑保护脚本，它做两件事 ——
-① 把整个 `/Library/Extensions` 备份出来；② 把 mtime 早于 2021-10-01 的 kext 目录 **`touch` 成当前时间**
-（**只改时间戳、不改内容**，不影响加载）。跑完打印复查结果，全 ✅ 才继续。
-
-打完补丁后**务必复查**：
-
-```bash
-ls -1 /Library/Extensions/*.kext                  # NVIDIA 4 件套还在
-ls -1 "/Library/Relocated Extensions" 2>/dev/null # 应该为空/不存在
-```
+打补丁后对照清单检查原有驱动是否仍在、内容与哈希是否符合预期，检查 `/Library/Relocated Extensions` 的实际迁移项，
+再核对 AuxKC 构建结果。失败时按备份恢复或停止于可恢复状态，不反复叠加补丁。
+root patch 的安全设置按具体补丁要求调整并记录；不能仅因使用 Broadcom 卡就无条件关闭 SIP / SecureBootModel。
 
 ## 4. 验证判据
 
@@ -152,31 +156,31 @@ ls -1 "/Library/Relocated Extensions" 2>/dev/null # 应该为空/不存在
 |---|---|
 | `kmutil showloaded --list-only \| grep 80211` | 4 行：`IOSkywalkFamily`、`corecapture`、`IO80211FamilyLegacy`、`AirPort.BrcmNIC` |
 | `ioreg` 里驱动是否绑上卡 | `"IONameMatched" = "pci14e4,43ba"`、`"IOClass" = "AirPort_BrcmNIC"` |
-| ★ Wi-Fi 是否真的活 | **看 `ifconfig en1`（要有 `inet` + `status: active`）**，或 `ioreg -n en1 -r -l -w0 \| grep -E "IO80211SSID\|IO80211BSSID\|IOControllerEnabled"` |
+| Wi-Fi 联网 | 先用 `networksetup -listallhardwareports` 确定实际 `enX`，再结合关联、IP / DHCP、路由与实际连接测试；不固定要求 `en1` |
 | AWDL（AirDrop/接力） | `ifconfig` 里有 **`awdl0`**（AirLink）与 **`llw0`**（LowLatency）且 UP/RUNNING |
 | 蓝牙 | `system_profiler SPBluetoothDataType` **秒回**；`Chipset: BCM_20703A2`、`Transport: USB` |
 | 蓝牙死锁是否根除 | `log show --last 3m --predicate 'process == "bluetoothd"' \| grep -c "Couldn't find IOBluetoothHCIController"` = **0** |
 
 > ★★ **别只看 `system_profiler SPAirPortDataType` 判 Wi-Fi 死活**：重启后驱动要读卡、关联、DHCP，
 > 十几秒才起来。本机就出现过「验证时返回空 ⇒ 以为失败，其实只是还没初始化」的假警报。
-> **`ifconfig en1` 才是硬判据。**
+> 使用实际接口名综合验证，不能只用某条命令或固定的 `en1` 作为成功 / 失败判据。
 
 ## 5. 国家码 / 速率：什么时候才需要 `AirportBrcmFixup`
 
 | 场景 | 做法 |
 |---|---|
 | 系统已自动协商出正确的 `IO80211CountryCode`（本机 = `CN`，信道表 1–13 / 36–64 / 149–165 与中国划分完全吻合） | **不要动**（人工干预只会帮倒忙） |
-| AP 用了 **100–140（DFS）** 信道，或要突破发射功率 | 才需要 `AirportBrcmFixup.kext` + `brcmfx-country=US`（或 HK/KR） |
+| 预期信道不可用 | 核对实际地区、AP 国家码、网卡支持及驱动协商结果；只有确认错误识别时才评估 AirportBrcmFixup，参数须符合实际使用地区，不以伪装地区突破功率限制 |
 | 速率不到理论值 | 先查 AP 的空间流数：BCM43602 是 **3×3**，若 AP 只有 2×2 就只能 2 流（3×3 卡配 2×2 AP，867 Mbps 属正常） |
 
 ## 6. 代价与回滚
 
 | 项 | 代价 |
 |---|---|
-| OCLP 换掉 `IOSkywalkFamily` | **所有 DriverKit 网卡驱动失效** ⇒ Intel i225/i226 必须改用 `AppleIGC.kext`（IOKit 驱动） |
-| OCLP root patch | **不能用增量 OTA**；**每次系统更新后都要重打**（且每次都要先跑 §3.1 的保护脚本） |
+| OCLP 换掉 `IOSkywalkFamily` | 可能影响依赖该栈的 DriverKit 网卡驱动；核对当前系统、依赖和加载日志。I225/I226 按[有线网卡专题](ethernet-drivers.md)选择已验证组合，不因此强制切换 AppleIGC |
+| OCLP root patch | 更新可能需要完整系统下载并重新打补丁；按所用 OCLP 版本的更新说明执行，更新前按 §3.1 核对前置条件与驱动备份 |
 | 加回蓝牙/Wi-Fi kext | 启动会变慢一些（当初屏蔽蓝牙/Wi-Fi 换来 137 s→91 s，现在要还一部分） |
-| 回滚 | 改 config + 换 kext 之前先备份；稳妥做法是「脚本 + `--revert`」+ ESP/工作区双备份 |
+| 回滚 | 修改前备份完整 EFI 与工作区；EFI 从已验证备份恢复，系统 root patch 用所用版本的 Revert Root Patches。仅在实际工具明确提供撤销命令时使用它 |
 
 ## 7. 实测事实（可作参考值）
 

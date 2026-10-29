@@ -192,7 +192,7 @@ iasl -v        # 期望：Intel ACPI Component Architecture … Compiler version
 | 工具 | 用途 | 命令行替代 |
 |---|---|---|
 | **ProperTree** | 改 plist 主力（带 OC 快照 / 清理） | `plutil` + `/usr/libexec/PlistBuddy` |
-| **OCAT / OCAuxiliaryTools** | 跨平台 config 编辑器 + 版本升级 | `oc-swap-build.sh` + 官方包 |
+| **OCAT / OCAuxiliaryTools** | 跨平台 config 编辑器 + 版本升级 | 官方 Sample / 文档 + 同版 ocvalidate；`oc-swap-build.sh` 仅切换同版本构建 |
 | **MaciASL** | ACPI IDE（语法着色、树导航、在线补丁库） | `iasl` 命令行；★ MaciASL 需要 `iasl` 二进制（README：编译后放进项目目录作 `iasl-stable` / `iasl-dev`） |
 | **Hackintool** | ACPI 表导出、USB、设备树、`layout-id` 速查 | `ioreg` / `ACPIe` / `SysReport` |
 | **IORegistryExplorer** | 图形化 IOReg（Apple 官方 Additional Tools for Xcode） | `ioreg -l -p IOService` |
@@ -207,7 +207,7 @@ iasl -v        # 期望：Intel ACPI Component Architecture … Compiler version
 |---|---|---|
 | `bios-audit.ps1`（本仓库） | 只读 BIOS 审查 | `bios-settings.md` |
 | **HDAU.exe** | 声卡 codec 全量取数（GUI） | `applealc-custom.md` §3.0 |
-| **HDAudDev.dll** | 同上，脚本化（`SendVerbLong` 直连，免管理员） | `applealc-custom.md` §3.0.1 |
+| **HDAudDev.dll** | 采集器开发参考；本技能未附完整脚本，不能直接当作可运行取数工具 | `applealc-custom.md` §3.0.1；需要现成路线时用 HDAU GUI / Linux dump |
 | `SSDTTime.bat` | 自动生成常用 SSDT（Windows 侧可直接 dump DSDT） | `acpi-ssdt.md` |
 | `RWEverything` | 读 ACPI / EC | — |
 | `USBToolBox` | USB 映射（Windows 模式） | `disks-and-kexts.md` |

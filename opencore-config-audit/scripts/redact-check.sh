@@ -1,93 +1,106 @@
 #!/bin/bash
-# redact-check.sh —— 发布前敏感信息自检（只读）
-#
-# 用途：把 skill 目录打包 / 上传到任何公开位置**之前**，扫一遍不该出现的东西。
-#
-# 为什么要做：平台上传时会先跑一次 preflight 检查，其中一类确认项就是 `credential`
-#   —— 检测到疑似凭据会要求确认，甚至直接拦下。更根本的是：**上传/推送即公开**，
-#   三码、网卡 MAC 这类东西等同于这台机器的身份凭证（iMessage / FaceTime 认的就是它们）。
-#
-# 用法：
-#   bash redact-check.sh <目录> [更多目录...]
-#   bash redact-check.sh .
-#
-# 退出码：0 = 没发现问题；1 = 有命中（需要处理）
-# 只读，不修改任何东西。
+# 发布前敏感信息自检（只读）。用法: redact-check.sh <目录> [更多目录...]
+# 退出码: 0 无命中，1 有命中，2 输入/读取失败。只输出位置，避免再次打印敏感值。
+set -eu
+exec "${PYTHON:-python3}" - "$@" <<'PYSCAN'
+import os, plistlib, re, sys
+from pathlib import Path
 
-set -u
+if len(sys.argv) < 2:
+    print("用法: redact-check.sh <目录> [更多目录...]", file=sys.stderr)
+    sys.exit(2)
+# 只豁免 UUID 本身，不豁免同一行的其他内容。
+public_guids = set("4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102 4D1EDE05-38C7-4A6A-9CC6-4BCCA8B38C14 7C436110-AB2A-4BBB-A880-FE41995C9F82 E6B92AC5-B7DB-4B0D-B1B5-8A0E0A0E0A0E 8BE4DF61-93CA-11D2-AA0D-00E098032B8C A17579F0-4FEC-4936-9364-249460863BE5 6994AD04-93EF-11D0-A3CC-00A0C9223196".split())
+serial_key = r"(?:SystemSerialNumber|BoardSerialNumber|IOPlatformSerialNumber|SerialNumber|SystemSerial|BoardSerial|serial|MLB)"
+serial = re.compile(r"(?i)\b" + serial_key + r"\b[\s\"'`]*[:=][\s\"'`]*([A-Z0-9]{8,})(?![A-Z0-9])")
+xml_serial = re.compile(r"(?is)<key>\s*" + serial_key + r"\s*</key>\s*<string>\s*([^<]+)\s*</string>")
+uuid = re.compile(r"\b[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\b", re.I)
+patterns = [
+    ("MAC 地址", re.compile(r"\b(?:[0-9a-f]{2}:){5}[0-9a-f]{2}\b", re.I)),
+    ("密钥 / token", re.compile(r"gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|BEGIN [A-Z ]*PRIVATE KEY|(?:api[_-]?key|access[_-]?token|client[_-]?secret|passwd|password)[\s\"']*[:=][\s\"']*[^\s\"',;<>]{8,}", re.I)),
+    ("凭据路径", re.compile(r"\.ssh/id_|\bid_rsa\b|\.(?:pem|p12)\b|\.netrc\b|credentials\.json")),
+    ("邮箱", re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")),
+    ("私有 IP", re.compile(r"\b(?:10\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3})\.\d{1,3}\b")),
+]
 
-if [ "$#" -eq 0 ]; then
-  echo "用法: bash redact-check.sh <目录> [更多目录...]"
-  exit 2
-fi
+def placeholder(value):
+    # 明确的占位值；真实值中碰巧有 X 不应被整体豁免。
+    value = str(value).strip()
+    return not value or bool(re.fullmatch(r"[Xx0*? -]+|<[^>]+>|⟨[^⟩]+⟩|\$\{[^}]+\}", value))
 
-DIRS=("$@")
+hits, errors, seen = set(), [], set()
+def record(path, line, label):
+    hits.add((str(path), line, label))
 
-# 白名单：这些 UUID 是 Apple / OpenCore / UEFI / 微软规范里的标准 GUID（公开常量），不是本机数据
-#   —— 每台机器都一样，出现在文档里不构成泄露。新增公开常量请加到这个列表并注明来源。
-ALLOW='4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102|4D1EDE05-38C7-4A6A-9CC6-4BCCA8B38C14|7C436110-AB2A-4BBB-A880-FE41995C9F82|E6B92AC5-B7DB-4B0D-B1B5-8A0E0A0E0A0E|8BE4DF61-93CA-11D2-AA0D-00E098032B8C|A17579F0-4FEC-4936-9364-249460863BE5|6994AD04-93EF-11D0-A3CC-00A0C9223196'
-# 注释：后两条是 Windows HD Audio 私有接口类 GUID 与 KS 媒体类 GUID（微软公开，HDAU/HDAudDev 文档路线用）
+def scan_line(path, number, line):
+    for match in serial.finditer(line):
+        if not placeholder(match.group(1)):
+            record(path, number, '三码')
+    for label, pattern in patterns:
+        if pattern.search(line):
+            record(path, number, label)
+    if any(m.group().upper() not in public_guids for m in uuid.finditer(line)):
+        record(path, number, 'UUID')
 
-TOTAL=0
+def walk_plist(value, path):
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if re.fullmatch(serial_key, key, re.I) and isinstance(item, str) and not placeholder(item):
+                record(path, 0, "三码")
+            if isinstance(item, str):
+                scan_line(path, 0, f"{key}: {item}")
+            if key.upper() == 'ROM':
+                if isinstance(item, bytes) and len(item) == 6 and any(item):
+                    record(path, 0, 'ROM 地址')
+                if isinstance(item, str) and re.fullmatch(r'[0-9A-Fa-f]{12}', item) and not placeholder(item):
+                    record(path, 0, 'ROM 地址')
+            walk_plist(item, path)
+    elif isinstance(value, list):
+        for item in value:
+            walk_plist(item, path)
+    elif isinstance(value, str):
+        scan_line(path, 0, value)
 
-# 注意：这里必须用全局 DIRS，不能用 "$@" —— 函数内的 "$@" 是函数自己的参数
-check() {   # check <标签> <正则> <严重度>
-  local label="$1" re="$2" sev="$3"
-  local out
-  out=$(grep -rnIE --binary-files=without-match --exclude=redact-check.sh "$re" "${DIRS[@]}" 2>/dev/null \
-        | grep -vE "$ALLOW" | head -20)
-  if [ -n "$out" ]; then
-    echo "  [${sev}] ${label}"
-    printf '%s\n' "$out" | sed 's/^/        /' | cut -c1-170
-    echo
-    TOTAL=$(( TOTAL + 1 ))
-  fi
-}
-
-for DIR in "${DIRS[@]}"; do
-  if [ ! -d "${DIR}" ]; then
-    echo "跳过（不是目录）: ${DIR}"
-    continue
-  fi
-  echo "══════════════════════════════════════════════════════════════"
-  echo " 扫描: ${DIR}"
-  echo "══════════════════════════════════════════════════════════════"
-
-  # ── 高：身份凭证类（等同于机器身份，绝不能公开）──
-  check "网卡 MAC 地址（含 ROM 用的 en0 MAC）" \
-        '([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}' "高"
-
-  check "三码（serial / MLB，上下文型匹配）" \
-        '(?i)(serial|MLB|BoardSerial|SystemSerial)[^A-Za-z0-9]{0,6}[A-Z0-9]{8,}' "高"
-
-  check "密钥 / token" \
-        '(gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|BEGIN [A-Z ]*PRIVATE KEY|(?i)(api[_-]?key|access[_-]?token|client[_-]?secret|passwd|password)[[:space:]]*[:=][[:space:]]*[^[:space:]]{8,})' "高"
-
-  check "凭据文件路径" \
-        '(\.ssh/id_|id_rsa|\.pem\b|\.p12\b|\.netrc|credentials\.json)' "高"
-
-  # ── 中：可识别到具体机器 / 人的信息 ──
-  check "卷 UUID（已排除 Apple / UEFI 标准 GUID）" \
-        '[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}' "中"
-
-  check "邮箱地址" \
-        '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' "中"
-
-  check "内网 / 私有 IP" \
-        '\b(10\.[0-9]{1,3}|192\.168\.[0-9]{1,3}|172\.(1[6-9]|2[0-9]|3[01])\.[0-9]{1,3})\.[0-9]{1,3}\b' "中"
-
-  echo
-done
-
-echo "══════════════════════════════════════════════════════════════"
-if [ "$TOTAL" -eq 0 ]; then
-  echo " ✅ 没有命中"
-  echo "    （自动扫描只是兜底，发布前仍建议人工扫一眼：有没有明显是本机专有的值）"
-  exit 0
-else
-  echo " ⚠️  有 ${TOTAL} 类命中 —— 处理干净再发布 / 上传"
-  echo "    · 高：**必须**删掉或换成 ⟨占位符⟩（三码、MAC、密钥）"
-  echo "    · 中：换成 ⟨占位符⟩（卷 UUID、主机名），对读者也更清楚"
-  echo "    · 邮箱：确认是不是你愿意公开的"
-  exit 1
-fi
+for arg in sys.argv[1:]:
+    root = Path(arg)
+    if not root.is_dir():
+        errors.append(f"不是目录: {root}"); continue
+    def onerror(error):
+        errors.append(f"遍历失败: {error.filename}")
+    for parent, dirs, files in os.walk(root, onerror=onerror):
+        dirs[:] = [d for d in dirs if d != '.git']
+        for name in files:
+            path = Path(parent) / name
+            if name == 'redact-check.sh' or path.resolve() in seen:
+                continue
+            seen.add(path.resolve())
+            try:
+                data = path.read_bytes()
+            except OSError:
+                errors.append(f"读取失败: {path}"); continue
+            if data.startswith(b'bplist00') or b'<plist' in data[:512]:
+                try:
+                    walk_plist(plistlib.loads(data), path)
+                except Exception:
+                    errors.append(f"plist 解析失败: {path}")
+                if data.startswith(b'bplist00'):
+                    continue
+            if b'\x00' in data:
+                continue
+            content = data.decode('utf-8', errors='replace')
+            for match in xml_serial.finditer(content):
+                if not placeholder(match.group(1)):
+                    record(path, content.count('\n', 0, match.start()) + 1, '三码（XML 字段）')
+            for number, line in enumerate(content.splitlines(), 1):
+                scan_line(path, number, line)
+for path, line, label in sorted(hits):
+    print(f"  [{label}] {path}:{line or 'plist'}")
+for error in errors:
+    print(error, file=sys.stderr)
+if errors:
+    sys.exit(2)
+if hits:
+    print(f"⚠️ 有 {len(hits)} 处命中；发布前核实并替换为占位符。")
+    sys.exit(1)
+print("✅ 没有命中（自动扫描不能代替人工审阅）")
+PYSCAN

@@ -76,8 +76,12 @@ finish)
   SAVED=$(shasum -a 256 "$BASE_F" | awk '{print $1}')
   [ "$SAVED" = "$BASE" ] || { echo "★ begin 备份 SHA 与基线不符，停止 finish"; exit 1; }
 
+  # 固定本轮校验的内容；后续不能把并发写入的新内容重新定义为基准。
+  CURRENT=$(shasum -a 256 "$CFG" | awk '{print $1}')
   echo "== 1) 语法与官方校验 =="
   plutil -lint "$CFG" || { echo "plutil 校验失败 —— 建议回滚备份"; exit 1; }
+  LIVE=$(shasum -a 256 "$CFG" | awk '{print $1}')
+  [ "$LIVE" = "$CURRENT" ] || { echo "★ 语法校验期间 config 被并发修改，停止 finish；保留外部写入"; exit 1; }
 
   DOCS="${OC_DOCS_DIR:-$WORK/_oc-docs-audit}"
   OVS=()
@@ -96,6 +100,8 @@ finish)
   fi
   OV="${OVS[0]}"
   "$OV" "$CFG" || { echo "   ★ ocvalidate 校验失败，停止同步、存档与重挂；先修复配置"; exit 1; }
+  LIVE=$(shasum -a 256 "$CFG" | awk '{print $1}')
+  [ "$LIVE" = "$CURRENT" ] || { echo "★ 官方校验期间 config 被并发修改，停止 finish；保留外部写入"; exit 1; }
 
   echo
   echo "== 2) 语义差异（相对基线备份）=="
@@ -121,7 +127,12 @@ PY
 
   echo
   echo "== 3) 同步工作区镜像 =="
-  cp -p "$CFG" "$WORK/_oc-current.plist" && echo "   → $WORK/_oc-current.plist"
+  cp -p "$CFG" "$WORK/_oc-current.plist" || { echo "★ 镜像写入失败，停止 finish"; exit 1; }
+  LIVE=$(shasum -a 256 "$CFG" | awk '{print $1}')
+  [ "$LIVE" = "$CURRENT" ] || { echo "★ 镜像复制期间 config 被并发修改，停止 finish；保留外部写入及部分副本"; exit 1; }
+  MIRROR=$(shasum -a 256 "$WORK/_oc-current.plist" | awk '{print $1}')
+  [ "$MIRROR" = "$CURRENT" ] || { echo "★ 镜像 SHA 不一致，停止 finish"; exit 1; }
+  echo "   → $WORK/_oc-current.plist"
 
   echo
   echo "== 4) 版本存档 =="
@@ -130,11 +141,16 @@ PY
   N=$(ls -1 "$ARCH"/config.plist.v[0-9]* 2>/dev/null | sed -En 's|.*/config\.plist\.v([0-9]+)-.*|\1|p' | sort -n | tail -1 || true)
   N=$(( ${N:-0} + 1 ))
   DST="$ARCH/config.plist.v$N-$LABEL"
-  cp -p "$CFG" "$DST" && echo "   → $DST"
+  cp -p "$CFG" "$DST" || { echo "★ 存档写入失败，停止 finish"; exit 1; }
+  ARCHIVED=$(shasum -a 256 "$DST" | awk '{print $1}')
+  [ "$ARCHIVED" = "$CURRENT" ] || { echo "★ 存档 SHA 不一致，停止 finish"; exit 1; }
+  echo "   → $DST"
 
   echo
   echo "== 5) 落盘复验（sync → 卸载 → 重挂 → 复验 sha）=="
-  NEW=$(shasum -a 256 "$CFG" | awk '{print $1}')
+  NEW="$CURRENT"
+  LIVE=$(shasum -a 256 "$CFG" | awk '{print $1}')
+  [ "$LIVE" = "$CURRENT" ] || { echo "★ sync 前 config 被并发修改，停止 finish；保留外部写入及已生成副本"; exit 1; }
   sync
   if [ -n "$ESP_DEV" ]; then
     diskutil unmount "$ESP_DEV" >/dev/null 2>&1 || { echo "   ★ 无法卸载 ${ESP_DEV}，未完成落盘复验"; exit 1; }
@@ -142,9 +158,11 @@ PY
       osascript -e "do shell script \"diskutil mount $ESP_DEV\" with administrator privileges" >/dev/null 2>&1 || \
       { echo "   ★ 无法重挂 ${ESP_DEV}，未完成落盘复验"; exit 1; }
     AFTER=$(shasum -a 256 "$CFG" 2>/dev/null | awk '{print $1}' || true)
-    if [ "$AFTER" = "$NEW" ]; then echo "   ✓ 重挂后 sha 一致：$NEW"
-    else echo "   ★ 重挂后 sha 不一致（期望 ${NEW}，得到 ${AFTER:-读不到}）—— 检查 ESP 是否挂上"; exit 1; fi
+    if [ "$AFTER" = "$CURRENT" ]; then echo "   ✓ 重挂后 sha 一致：$CURRENT"
+    else echo "   ★ 重挂后 sha 不一致（期望 ${CURRENT}，得到 ${AFTER:-读不到}）—— 可能并发修改或落盘失败，保留现状并检查 ESP"; exit 1; fi
   else
+    AFTER=$(shasum -a 256 "$CFG" 2>/dev/null | awk '{print $1}' || true)
+    [ "$AFTER" = "$CURRENT" ] || { echo "★ sync 后 config 与已校验内容不一致，可能并发修改；保留外部写入及已生成副本"; exit 1; }
     echo "   (无法确定 ESP 设备，跳过卸载/重挂；sha = $NEW)"
   fi
   echo

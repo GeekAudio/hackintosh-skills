@@ -54,7 +54,7 @@ App 有「Turn verbose on/off」按钮（= 加/删 boot-args 的 `-v`）。
 
 | 键 | 值 | 为什么 |
 |---|---|---|
-| `csr-active-config` | `<430A0000>` | 驱动测试用的 SIP 值（kext 非 Apple 签名） |
+| `csr-active-config` | 作者测试值 `<430A0000>`（所需位 `0x0A43`） | 核对目标发行版安装要求与当前 SIP；不要把该值套用到其他 kext，或无差别覆盖已有设置 |
 | `boot-args` | `nvfb=1 nvaccel=1 nvfbheads=4 -nvkmsnosmooth amfi_get_out_of_my_way=0x1 amfi=0x80 ipc_control_port_options=0` | 开 framebuffer + 加速器、4 个显示头；AMFI 参数让 WindowServer 能加载驱动 bundle |
 
 **其他设置**
@@ -65,7 +65,7 @@ App 有「Turn verbose on/off」按钮（= 加/删 boot-args 的 `-v`）。
 | `Booter → Quirks → ResizeAppleGpuBars` | 保持现值（HOW-IT-WORKS 用 `-1`） | 大 BAR 可能卡在 PCI configuration |
 | `Kernel → Add` | `Lilu.kext` 与 `AMFIPass.kext` **必须启用**（Lilu 在前、AMFIPass 在后） | ★★ **AMFIPass 才是让 WindowServer（platform binary）加载 ad-hoc 签名驱动的那一环**；缺了它 = 没有 Metal 设备 + 黑屏只剩鼠标（上游安装脚本有实测日志）。安装器会自动下载并校验 SHA |
 | `Kernel → Block` | `com.apple.iokit.IONDRVSupport`，`Exclude` | 否则固件 framebuffer 会抢走 display index 0 |
-| `Misc → Security → SecureBootModel` | `Disabled` | Apple 安全启动拒绝非 Apple 签名的 kext |
+| `Misc → Security → SecureBootModel` | 当前作者手动安装要求为 `Disabled` | 这是该驱动及安装方式的要求，按目标发行版 README 核实；不能仅凭第三方签名推导其他驱动也必须关闭 |
 | BIOS | Above 4G Decoding **ON**、CSM **OFF** | 卡要映射 4 GB 以上的内存 |
 | SMBIOS | 能跑 macOS 15 且带独显的机型（1401 用 `MacPro7,1`；测试过 `iMacPro1,1`） | macOS 26 会拒绝 `iMacPro1,1`，`MacPro7,1` 两个版本都能跑 |
 
@@ -93,7 +93,11 @@ system_profiler SPDisplaysDataType | head -20     # 应显示你的 GeForce、Me
 
 1. 选择器选 **`1401: Remove NVIDIA driver`**（按 Y 确认，再选 macOS）—— 它会加 `-nvoff` + 写 NVRAM 标志 `nullmoth-remove=1`，macOS 起来后 LaunchDaemon `com.nullmoth.recover` 执行 `--remove` 并自动重启
 2. 或选择器选 **`1401: Start once without NVIDIA driver`**（`-nvoff`，只影响这一次启动）
-3. 或从别的系统里，把 `EFI/OC/config.plist` 的 boot-args 加上 `-nvoff`，并在 `Kernel>Block` 里屏蔽 `com.apple.NVRM*`
+3. 或从别的系统确认实际启动 EFI 后，在 boot-args 追加作者支持的 `-nvoff`。若仍需 `Kernel > Block`，
+   从实际安装的各 kext 的 `CFBundleIdentifier` 逐项填写精确标识；例如
+   [v2.6.4 NVRM](https://github.com/nullmoth/nvidia-macos-driver/blob/v2.6.4/kexts/NVRM/Info.plist) 是 `com.nullmoth.NVRM`，
+   **不要使用 `com.apple.NVRM*` 或把通配字符串当作 bundle identifier**。优先采用
+   [作者的恢复入口](https://github.com/nullmoth/nvidia-macos-driver/blob/main/docs/HOW-IT-WORKS.md)。
 4. 开机 logo（`NullMothLogo.efi`）默认关闭；**它可能让固件到不了选择器**，若选择器不出现，从别的系统里把 `NullMothLogo.efi` 关掉（boot-args 救不了「选择器之前就挂住」的情况）
 
 ## 5. 常见故障对照（官方 TROUBLESHOOTING 摘要）
@@ -132,9 +136,10 @@ system_profiler SPDisplaysDataType | head -20     # 应显示你的 GeForce、Me
 
 ## 8. 安全提示
 
-装这个驱动必须放宽系统安全边界：`SecureBootModel=Disabled` + `csr-active-config` 放宽 SIP + AMFI 参数（`amfi_get_out_of_my_way`），
-且 `Lilu.kext` / `AMFIPass.kext` 必须启用。
-这是**有意降低系统安全性**换图形加速，只在明确需要时做；不装驱动时把这几项恢复原值。
+执行前核对[目标发行版 README](https://github.com/nullmoth/nvidia-macos-driver/blob/main/README.md) 的实际要求。
+当前手动安装说明列出 `SecureBootModel=Disabled`、SIP 所需位、AMFI 参数以及 Lilu / AMFIPass；
+这组要求限定于该驱动及安装方式，不是第三方 kext 的统一模板。只在本次驱动安装的授权范围内调整，
+保留原值和恢复路径；卸载时恢复对应基线，但先确认其他现用补丁是否仍依赖这些设置。
 
 > ★★ **关 AMFI 有一个隐性代价**：**TCC 权限弹窗会全部失效** ——
 > 语音 / 摄像头类 App 会「报没权限 + 不弹窗 + 隐私列表里也没有它」。

@@ -1,209 +1,99 @@
-# Intel 睿频（Turbo Boost）诊断与调优案例
+# Intel 睿频（Turbo Boost）诊断与 CPUFriend 数据检查
 
-> 依据：一次完整实战闭环（**诊断 → 排除 → CPUFriend 修复 → 全量机型 profile 对比 →
-> iMac19,1 实验翻车回滚 → 最终定案**）+ CPUFriend 官方 `Instructions.md` / `Tools/ResourceConverter.sh`
-> + `X86PlatformPlugin` 全部 76 份 `Mac-*.plist` 的实测解码。
-> 案例使用 CPU-S、Intel Power Gadget 与自写探针交叉印证；工具选择按目标 CPU、系统支持和用户偏好决定。
+依据：[CPUFriend 使用说明](https://github.com/acidanthera/CPUFriend/blob/master/Instructions.md)、
+[FrequencyVectors 结构定义](https://github.com/acidanthera/CPUFriend/blob/master/Tools/FrequencyVectors.bt)
+与 [iMac20,x XCPM QoS 的作者讨论](https://github.com/dortania/bugtracker/issues/190)。
+CPUFriend 负责注入数据，不保证某份数据适合目标 CPU；没有明确的电源管理异常时不新增它。
 
-## 0. 先诊断，再评估是否需要 CPUFriend
+## 1. 先确认现象
 
-[CPUFriend 官方说明](https://github.com/acidanthera/CPUFriend/blob/master/Instructions.md) 提醒：不清楚是否需要时通常无需使用 CPUFriend，原生电源数据多能工作。先按 §1–2 确认限频现象、温度、功耗及当前注入，再评估是否修改。
+记录 CPU 型号、当前 SMBIOS、P/E 核与超线程设置、macOS / Darwin 版本，以及是否已注入 CPUFriend 数据。
+使用目标系统支持的工具，在相同负载和散热条件下比较频率、耗时、温度与功耗。
 
-下面是参考机器对自有 profile 删除 `hwp` 的一次实验结果，不是所有 CPU / SMBIOS 的推荐配置；不要直接套用数值或删除该项。
-
-| 项 | 该案例的值 |
+| 检查 | 用途与限制 |
 |---|---|
-| 注入的数据 | **你自己机型那份 profile**（例：`iMac20,1` ⇒ `Mac-CFF7D910A743CAAF.plist`），**只把 `hwp` 一项删掉** |
-| `FrequencyVectors` 段数 | **1 段**（每段恒 7668 B） |
-| `Frequencies` 上限 | `4500`（**1 段族的天花板**） |
-| `CPUFloor` | 按自己 CPU 的最低档设（例：i7-12700K 用 `1300`） |
-| **`hwp`** | **已删除** ← ★★ **最关键的一项** |
-| 实测频率 | 单线程 **4.28–4.35 GHz**；8 线程 **4.29–4.35 GHz**，八核一致、无振荡 |
+| CPU-S / Intel Power Gadget（可用时） | 对照频率、温度与功耗；先确认工具支持当前 CPU 与系统 |
+| `scripts/cpu-freq-probe.sh` | 辅助采样；它是基准推算，不是硬件频率计，不能单独证明限频根因 |
+| `sysctl machdep.xcpm.cpu_thermal_level` | 结合温度和负载排查热限制；键不可用时记录限制，不补造读数 |
+| `machdep.xcpm.hard_plimit_max_100mhz_ratio` 等 | 仅在键存在且含义适用于目标 CPU 时解释，不能把一台机器的值当默认 |
+| `uptime`、`iostat`、`vm_stat` | 辅助核实后台负载、存储与内存压力 |
+| `sysctl -n kern.boottime` | 确认是否已在上次修改后重启 |
 
-这些参数只说明该案例如何验收。目标机器应以自身基线、稳定性、负载频率与功耗验证，不能用这组参数定义通用「最佳」。
+例如 i7-12700K 的历史记录里有约 2.3 GHz 与约 4.3 GHz 两组测量。
+它们只描述当时的机器、负载及工具输出，不能据此认定其它机器的正常频率或性能比例。
+先排除散热、功耗、后台任务、BIOS 和拓扑因素，再评估 profile。
 
-### 0.1 跨机型 profile 的实验结果（示例）
+## 2. 确认 profile 与注入来源
 
-参考机器测试了以下两份其他机型的 profile，均出现性能下降；不能据此推断所有跨机型 profile 都有相同结果：
+系统数据位于 `IOPlatformPluginFamily.kext/Contents/PlugIns/X86PlatformPlugin.kext/Contents/Resources/Mac-<board-id>.plist`。
+按目标系统版本与当前 board-id 取原始文件，在工作区保存原件和 sha256；不要修改系统自带的 profile。
 
-| 试过的 | 结果 |
-|---|---|
-| `iMac19,1`（上限 5000，看着诱人） | **1.97 GHz**（暴跌 ~54%，比历史最低还低）⇒ 已回滚 |
-| `MacPro7,1`（原生 `hwp='on'`） | **2.3 GHz**（约一半性能） |
+- `FrequencyVectors` 是数据数组，不是单个 bytes；逐段检查，不只比较最外层键或段数。
+- `Frequencies`、`CPUFloor`、`pmspFile` 的差异不足以证明某份 profile 更快或兼容。
+- 已有 DataProvider 时，解出 `cf-frequency-data`，确认其来源及与原始 profile 的实际差异。
+- 切换 SMBIOS 后重新核对数据适用性；原本未使用 CPUFriend 的机器不因此自动新增它。
 
-⇒ **电源管理 profile 这类改动，默认不动** —— 除非你有明确的判据说明现在这份是错的。
-（上表是一次实测的结果，你自己的机器要自己测一遍，别拿这些数字当结论。）
+## 3. 固定布局：不能删除字节来“去掉 hwp”
 
-官方 `Instructions.md` 的警告是对的（**原话**）：
+CPUFriend 的 `FrequencyVectors.bt` 对 version 2 的 `xcpmio_vectors_t` 定义为固定布局：
 
-> *"most likely NOT required"*
-> *"Do not use CPUFriend for data customization until one knows clearly what power management data really is"*
-> *"If possible, changing SMBIOS … can be more reasonable"*
-
-## 1. 先确认现象（三种工具互相印证）
-
-| 工具 | 看什么 | 实测（修复前，示例） |
+| 字段 | 数量 | packed 大小 |
 |---|---|---|
-| **★ CPU-S**（社区工具，v4.3.2） | `设备型号` / `处理器型号` / **`当前睿频状态`** / 频档数量 / 测得频率列表 | `MacPro7,1` / `12thGen i7-12700K` / **`未睿频`** / 10 档 / 只测到 `100 / 700–1500 MHz` |
-| Intel Power Gadget | CORE `MAX/AVG/MIN/REQ`、PKG 功耗、温度 | `MAX 3.9 / AVG 2.25 / MIN 0.7 / REQ 2.97 GHz`；PKG 58 W；50 ℃ |
-| 自写探针（`scripts/cpu-freq-probe.sh`） | 单线程 / 8 线程实测频率 | 单线程 2.24–2.54、8 线程 2.2–2.3 GHz |
+| `version` | 1 | 4 B |
+| `vector` | 32 | 每项 180 B |
+| `qos` | 16 | 每项 83 B |
+| `vars` | 16 | 每项 36 B |
 
-**CPU-S 的读法**：最关键是 **「当前睿频状态」** —— 显示 **未睿频**、且频率列表只到 1.5 GHz 就是被限频；
-修好后应显示**已睿频**，且频率列表覆盖到高倍频档。
+合计 **7668 B**，`vars` 从偏移 **7092** 开始。`hwp` 若存在，是 `vars` 中某个定长记录的名字；
+每条记录含 16 B 名称、4 B 类型与 16 B 值，并不是可任意删除的文本片段。
+其它格式或版本应按对应结构解析，不能靠字符串搜索和猜偏移改写。
 
-**参考基线（i7-12700K）**：单核睿频 **5.0 GHz** / 全核约 **4.7 GHz** / 基础频率 **3.6 GHz**
-⇒ 测到 2.3 GHz 意味着**连基础频率都没跑到**，约一半性能。
+**不要删除 `hwp` 字符串、删掉一段字节或让后续数据整体前移。**
+旧记录中“缩短 165 B”的描述无法满足该布局，不能作为修法或可复用的已验证 profile；
+旧备份名中的“已去 hwp”也不能证明其中数据正确。
 
-> ★ **自写基准的坑**：clang `-O2` 会把展开的依赖加法律**折叠**（曾算出 8.34 / 11.03 GHz 的荒谬值）。
-> 要测频率必须用**内联汇编钉住**（`cpu-freq-probe.sh` 用的就是 `mulsd` 固定 4 周期延迟的依赖链）。
+作者讨论中出现过把 `hwp` 的值由 `on` 改为 `off` 的实验，同时提醒可能降低响应性。
+这是有适用条件的实验，不是通用调优步骤。只有已明确字段类型、目标值含义和当前问题时才考虑修改：
 
-## 2. 先排除，别急着动 profile
+1. 用对应版本的结构定义解码原始向量，确认版本、每个字段与数组边界。
+2. 修改确认过的字段值，**保持结构总长、记录大小与其它字段偏移不变**；不按固定字符串偏移批量替换。
+3. 重新解码候选，逐字段 / 逐字节对照原件，证明差异仅限计划项；无法做到时保留原始数据。
 
-| 项 | 判据 |
-|---|---|
-| 热降频 | `sysctl machdep.xcpm.cpu_thermal_level` 应为 **0**（三项全 0、温度不高即为正常） |
-| XCPM 上限被限 | `machdep.xcpm.hard_plimit_max_100mhz_ratio` / `soft_...` / `bootpst`（**按自己的 CPU 算**：值 ×100 MHz = 上限；例 i7-12700K 为 `49` ⇒ 4.9 GHz） |
-| 日志风暴 / 后台负载 | `uptime`、`iostat`、`vm_stat`（★ 若 `ps` / `top` 被环境策略禁用，用这三个替代） |
-| 只是刚开机 | 先看是否只发生在前 10–15 分钟 |
-| ★★ **改了 profile 但没重启** | 见 §7 —— **最常见的「修了没好」** |
+长度正确只是必要条件，不能证明字段值或电源管理行为正确。
 
-## 3. 定位根因：机型 profile 的 `FrequencyVectors` + `hwp`
+## 4. 需要注入时使用官方转换器
 
-profile 来自 **`X86PlatformPlugin.kext/Contents/Resources/Mac-<board-id>.plist`**（数量随 macOS 版本变，某个版本里是 **76 份**，
-去重后 **62 份不同数据**）。
+在工作区对完整的机型 plist 操作，按官方工具生成 DataProvider：
 
-**★ 全部差异只有 5 个维度**：
-
-| 维度 | 说明 |
-|---|---|
-| `pmspFile` | 1–16，插件内部的索引 |
-| `CPUFloor` | 1300 / 1200 / 1000 / 800 / 无 |
-| `Frequencies` | 档位表，**值 = 段索引**（不是 MHz 表本身） |
-| `FrequencyVectors` | **每段恒 7668 B**；**段数 = 复杂度** |
-| **`hwp`** | ★★ **打包在向量二进制内部**，**不是 plist 键** ⇒ `plutil` / `PlistBuddy` 搜不到（见 §4） |
-
-格式：`FrequencyVectors` 是 `xcpmio_vectors_t` 的**紧凑（packed）序列化**
-⇒ 可用「解回应为 **7668 B/段**」来**校验注入数据有没有被截断**。
-
-> ⚠️ **两个解析坑**（都踩过）：
-> ① `FrequencyVectors` 的值是 **bytes 对象的 list**（`[b'\x02\x00…']`），**不是单个 bytes**
-> ⇒ 判「没有 FrequencyVectors」多半是脚本写错了；
-> ② `hwp` **不是 plist 键**，在 76 份 plist 里 `grep hwp` **命中 0 处** —— 别因此以为它不存在。
-
-## 4. ★★★ `hwp` 的真实位置与删除方法（最关键的一步）
-
-`hwp` **不在 plist 里**，而在 **7668 B 向量二进制内偏移 ~7128 的「变量名表」里**，形如
-
-```
-… io_core_cst_lim … hwp "on" …
+```bash
+/path/to/CPUFriend/Tools/ResourceConverter.sh --kext /path/to/candidate-profile.plist
 ```
 
-- **禁用方法 = 删除这一项**（不是改名！改名会留字符串、长度也变）；删掉后**其后所有项前移**。
-- 改好那份：比原生段少 **7128–7544 共 165 字节**，段内 `hwp` 出现次数 **1 → 0**，
-  原生段从 `hwp` 开始、现装那份直接从 `io_core_cst_lim` 开始。
-- **这就是标准 CPUFriend 用法**：注入「删掉 `hwp` 的同机型 profile」覆盖系统自带的那份，
-  **强制 macOS 走传统 XCPM P-state 而不是 HWP** ⇒ 实测单线程 4.33 GHz 就是它带来的。
+转换器在当前工作目录产生 `CPUFriendDataProvider.kext`。`cf-frequency-data` 应是**完整 plist**，
+不是裸 `FrequencyVectors`。使用生成的属性和目录结构，不手工拼装缺字段的 Info.plist。
 
-> ★★ **判「这份 DataProvider 有没有作用」必须逐字节比向量二进制** ——
-> 只比 `pmspFile` / `Frequencies` / 段数 / plist 键就下结论会**判错**
-> （曾因此误判成「no-op」，后来逐字节比对才订正）。
+- `Kernel > Add` 保持依赖顺序：`Lilu` → `CPUFriend` → `CPUFriendDataProvider`。
+- DataProvider 是无代码 kext，`ExecutablePath` 为空；不要要求它出现在已加载可执行 kext 的列表中。
+- `Comment` 使用可打印 ASCII；具体限制以同版本官方文档 / `ocvalidate` 为准。
+- 改前备份原 DataProvider 和 config；新文件与 `Kernel > Add` 引用一起检查。
+- `plutil -lint`、同版 `ocvalidate`、启用文件引用检查、语义 diff 均通过后，再按
+  [技能入口](../SKILL.md#修改与复验) 的流程同步和复验。
 
-## 5. ★ 选型决策：76 份 profile 的五族（换机器时照此挑）
+`ocvalidate` 不解读 `cf-frequency-data` 内的电源管理语义，不能替代第 3 节的结构与差异检查。
 
-**第一分水岭 = 段数**：
+## 5. 重启后验收与回退
 
-| 族 | 特征 | 份数 | 实测结果 |
-|---|---|---|---|
-| **A** | 无档位 + **1 段** + 无 `hwp` | 25（`iMacPro1,1`） | **4.28–4.35 GHz ✓** |
-| **B** | 无档位 + **1 段** + **有 `hwp`** | 2（`MacPro7,1`） | **2.3 GHz ✗** |
-| **C** | 有档位 + **1 段** | 5（`iMac20,1` / `20,2`，上限 4500） | **4.33 GHz ✓（i7-12700K 实测）** |
-| **D** | 有档位 + **多段（2–5）** | 32（`iMac19,1` 4 段、MBP 全系） | **1.97 GHz ✗ 实测翻车** |
-| **E** | **0 段** | 12 | 无向量，不可用 |
+数据在启动时读取。写入后必须重启，再确认实际 CPUFriend 加载、目标机型及当前注入状态。
+重复修改前的同机负载，比较耗时、频率、温度、功耗和稳定性；不把历史 4.3 GHz 或跨平台跑分当验收线。
+结果变差或出现新 panic 时回退完整的已知可用配置和 DataProvider，不继续叠加变量。
 
-**★ 两条由天然对照得出的因果**（不是推测）：
+若无法启动，用预先准备的已知可用 EFI 恢复备份；写盘失败或复验失败不意味着原盘从未被改变。
 
-- **`iMacPro1,1` vs `MacPro7,1` 只差 `hwp` 一项**（其余键 / 段数 / `pmspFile` / `CPUFloor` 全同）
-  ⇒ 无 `hwp` = 4.3 GHz，有 `hwp` = 2.3 GHz —— **`hwp` 的作用被单独孤立出来**。
-- **`iMac19,1` vs `iMac20,1` 只差「4 段 vs 1 段」**（键集 / `CPUFloor` / `hwp` 全同）
-  ⇒ **崩溃真因 = 多段 CFL 向量表，不是 `hwp`**（订正：此前把锅往 `hwp` 上引是错的）。
+## 6. BIOS 与拓扑线索
 
-**★★ 结构性死路**：**所有上限 5000 的 profile 都是 3–5 段，没有 1 段的**
-⇒ **「抬上限到 5000」与「结构兼容」在这类机器上不可兼得**。
-⇒ **1 段族的天花板就是 4500**，1 段族机型已到顶；**想再榨，没有 profile 可用**。
+对于支持 HWP 的目标 CPU，若 panic 明确涉及 `xcpm_hwp_enable` / MSR `0x770`，
+核对 BIOS 的 Intel Speed Shift 设置与实际 HWP 能力；不能把该线索推广为所有 Intel CPU 的前提。
+禁用某个 profile 字段也不能证明内核从此不会访问 HWP。
 
-## 6. 修法：CPUFriend + CPUFriendDataProvider（官方机制）
-
-1. **取 profile plist**：默认应取**你自己机型那份**（`Mac-<你的 board-id>.plist`），
-   再用官方 `Tools/ResourceConverter.sh` 生成 `CPUFriendDataProvider.kext`：
-   - 把**整个机型 plist 做 base64** 塞进 `IOKitPersonalities/CPUFriendDataProvider/cf-frequency-data`
-   - 另需：`IOClass=AppleACPICPU`、`IONameMatch=processor`、`IOProbeScore=1100`、`OSBundleRequired=Root`
-   - ★ **`ExecutablePath` 必须为空**
-   - ★ 官方 `Instructions.md`：`cf-frequency-data` 里放的是 **complete plist**（不是裸 `FrequencyVectors`）
-2. **★ 删掉 `hwp`**（§4）—— 这是一台机器有别于「什么都不做」的关键一步
-3. `Kernel → Add` 加两条，**顺序：Lilu → CPUFriend → CPUFriendDataProvider → VirtualSMC**
-   - ★ **`CPUFriend.kext` 必须排在 `Lilu.kext` 之后**（它是 Lilu 插件）
-4. ★ **`ocvalidate` 对 `Kernel>Add>Comment` 有字符限制**：
-   `iMacPro1,1 ... (no HWP) ~2.3GHz` 会被判 `illegal character`（逗号 / 括号 / 波浪号至少其一）
-   ⇒ 注释只留 **字母数字、空格、连字符、点号**
-5. 校验：`FrequencyVectors` 解回应为 **7668 B/段**；`ocvalidate` = No issues found；卸载重挂后 sha 一致
-
-> **最小改动技巧**：想试另一份 profile 时，**复制现用的 `Info.plist`，只替换 `cf-frequency-data`**
-> ⇒ diff 只有一处，回滚直接拷回文件即可。
-
-## 7. ★★ 改完必须重启（「修了没好」的头号原因）
-
-- profile 是**开机时读进内存**的 ⇒ **不重启，内存里跑的仍是旧的那份**。
-- 踩过：回滚到正确值之后一直没重启，实测单线程仍是 **2.22 GHz**（应 4.28–4.33）
-  ⇒ **ESP 上早就是正确值，修法只是「重启」**。
-- **判据**：`sysctl -n kern.boottime` —— **比你的改动时间还早 ⇒ 没重启**。
-- ★ 顺带一条实证：**即使「卸载重挂复验 sha」失败，ESP 写入仍会落盘**
-  （有害 profile 那次 sha 确为候选值，证明写进去了）⇒ **别拿「没复验成功」当「没写进去」**。
-
-## 8. 验证（重启后）
-
-- **★ CPU-S**：`当前睿频状态` 应从「未睿频」变成**已睿频**，频率列表覆盖到高倍频
-- **探针**：`scripts/cpu-freq-probe.sh` —— 参考基线（i7-12700K）**单线程 4.28 / 8 线程 4.29–4.35 GHz**，
-  且**八核高度一致、无振荡**
-- **比数值更重要的改善**：修复前 8 个核频率**忽高忽低（低频档 ↔ 满频振荡）**；
-  修复后 **8 核一致**，振荡消失 —— **这才是「卡顿 / 掉帧」的直接来源**
-- 同时复查：机型没变、`Processor Name` 正确、`CPUFriend (1.3.0)` 已加载且在 Lilu 之后、**无新 panic**、
-  `machdep.xcpm.mode=1`、`hard_plimit_max=49`
-- **换了机型且已使用 DataProvider ⇒ 重新核对其来源与适用性**；需要时重建，未使用 CPUFriend 的机器不因此新增它
-
-## 9. 还想追满频（4.3 → 5.0 GHz）？
-
-**此路不通，别再花时间**（§0.1 + §5）：
-
-- 剩余差距不是 profile 上限能解释的 —— `hard_plimit_max = 49`（4.9 GHz）本就没锁，
-  说明 **`Frequencies` 未必是真正的频率天花板**；换 profile 的收益**未被证实**且**风险已实测**。
-- 真正的原因更可能是 **功耗墙 PL1/PL2** 或 **OS 侧差异**：
-  同 CPU 在 macOS 上普遍比 Windows / Linux 低约 **2.4×**（Geekbench 7 官网榜同 `Family 6 Model 151` 对照）
-  ⇒ **差距在 OS 侧，不在硅片，也不在 CPUFriend**。
-- ★ 官方立场明确：**「不确定就别用 CPUFriend」**，若已无卡顿 ⇒ **不建议继续叠加风险**。
-
-## 10. ★ 硬前提：BIOS 的 Speed Shift 必须开
-
-`Intel(R) Speed Shift Technology` **必须 `Enabled`**（**`Auto` 也可能等效关闭**）：
-
-```
-HWP 不可用 ⇒ wrmsr(0x770,1) 触发 #GP ⇒ xcpm_hwp_enable 崩（panic type 13）
-```
-
-有过两次「SpeedShift 又被关过」导致的 panic
-⇒ **遇到 `X86PlatformShim` / `xcpm_hwp_enable` 相关 panic，第一件事查 BIOS 这一项**。
-
-> ★ **别混淆**：BIOS 里的 HWP（Speed Shift）**要开着**（否则 panic），
-> 而 macOS 侧则**刻意不走 HWP**（走传统 XCPM P-state）
-> ⇒ 组合 = **固件开 HWP + macOS 走传统 XCPM**，这是验证过的正确解，**不要去「修」**。
-
-## 11. 现状与回退
-
-- **该案例最终保留的配置**：`CPUFriend 1.3.0` + `CPUFriendDataProvider`
-  （数据 = **`iMac20,1` 自己的 profile 且已删 `hwp`**），**sha `5952ea56…`**；
-  现用备份 `_CPUFriendDataProvider-最佳-iMac20,1-已去hwp-20261015-172126/`
-- **备用（免手工编辑）**：`iMacPro1,1` **原生无 `hwp`**（A 族），实测同样 4.28–4.35 GHz，
-  可直接替换（`_CPUFriendDataProvider-iMacPro11-备用/`）
-- **回退** = 把备份的 `Info.plist` 拷回 `EFI/OC/Kexts/CPUFriendDataProvider.kext/Contents/`（或 U 盘 EFI 救援）
-- **探针脚本**：`scripts/cpu-freq-probe.sh`（i7-12700K 上 4.28–4.35 GHz 属正常）
-- 小核（E 核）那一档是**另一件事** ⇒ `e-cores.md`
-- ★ 排除 `CpuTopologyRebuild` 与 `-v` 的已知冲突后再判断「是不是 profile 改坏了」（`e-cores.md` §4.3）
+混合架构的核心暴露与 CTR 拓扑属于另一组变量，见 [小核专题](e-cores.md)。
+该项目记录了 CTR 与 verbose `-v` 的随机启动失败问题；确认是否命中该已知问题后再归因到 profile。

@@ -149,7 +149,7 @@
 | **CSM** | 只有「NVIDIA 6xx / AMD 2xx 及更老、且 GOP ROM 未刷」时才临时需要 | **其它一切情况都关**（默认答案就是关） |
 | **Global C-state Control**（AMD） | 一般开着 | 出现待机不稳定时试关 |
 | **Power Supply Idle Control**（AMD） | 一般 `Auto` | 某些 Ryzen 待机重启 ⇒ 试 `Typical Current Idle` |
-| **★ E 核（Efficient Core）数量**（Intel 12 代+） | **想让 macOS 用上 4 个小核** ⇒ `All`（**必须**同时 `ProvideCurrentCpuInfo=true` + `CpuTopologyRebuild.kext`） | **求稳** ⇒ 设 **`0`**（关小核，macOS 只见 P 核）⇒ 详见 `e-cores.md`。★ 无论开还是关，**`Active Performance Cores` 都留 `All`、HT 留 `Enabled`** |
+| **★ E 核（Efficient Core）数量**（Intel 混合架构） | 需要全部活动核心时选 `All`；Alder/Raptor Lake 的 `ProvideCurrentCpuInfo` 与可选 CTR 拓扑处理见 `e-cores.md` | 仅在用户选择或当前排障有依据时关闭；核数及 HT 按目标配置核实，不默认套用 4 个 E 核 |
 | **Multi-Monitor / Primary Display** | 取决于用哪块 GPU 输出 | — |
 | **DMA Protection / Kernel DMA Protection** | Win11 需要 | 与 macOS 无关，但**可能干扰**第三方驱动，出问题先试关 |
 
@@ -178,7 +178,7 @@
 | 环境 | 怎么做 | 判据 |
 |---|---|---|
 | **OpenCore 引导界面** | 官方自带 **`ControlMsrE2.efi`**（在 `EFI/OC/Tools/`，选择器里按空格显示工具）。也可用社区的 `VerifyMsrE2` / `CFGLOCK` | 输出 `MSR 0xE2 is LOCKED` / `This firmware has UNLOCKED MSR` |
-| **macOS** | `sudo wrmsr 0xE2 0x0`（需 `msr-tools`） | 报 `cannot set MSR 0x000000e2` ⇒ **是锁着的** |
+| **macOS** | 无通用的内置只读 MSR 检查接口；优先用上述 OpenCore 工具核实 | 不用 `wrmsr` 写零来“检测”，那是写寄存器操作 |
 | **Windows** | ⚠️ 读 MSR 需要特权工具（RWEverything / HWiNFO 等），**PowerShell 读不了** | 见 §6「无法直接读取」一节 |
 
 > ★ 官方提醒：**某些固件只在部分核心上锁这个寄存器** —— 所以只看一个核的结果可能不准。
@@ -192,8 +192,11 @@
    **找不到 ⇒ 该固件可能没有这个选项，流程到此为止**
 3. 用 UEFITool 的 **Extract Body** 导出它所在的 `Setup.bin`（PE32 Image Section）
 4. 对导出的文件跑 IFR-Extractor：`./ifrextract Setup.bin Setup.txt`
-5. 在 `Setup.txt` 里找 **`CFG Lock, VarStoreInfo (VarOffset/VarName)`** —— 拿到 **VarStore GUID** 与 **offset**
-6. 用该 GUID + offset 直接改这个 UEFI 变量（或在 OpenCore 里用 `NVRAM > Add` 写），再重启验证
+5. 在 `Setup.txt` 里找 **`CFG Lock, VarStoreInfo (VarOffset/VarName)`**，核对所属 VarStore、变量名、GUID、字节偏移及字段大小。必须使用目标主板**当前 BIOS 版本**的结果，不能抄其它板或旧版本的 offset。
+6. 按[同版 OpenCore 官方 CFG Lock 说明](https://github.com/acidanthera/OpenCorePkg/blob/1.0.8/Docs/Configuration.tex)选择专用工具：在工具与固件适配时用 `setup_var` 修改该字段（官方示例 `setup_var <实际偏移> 0x00`），或在受支持平台用 `ControlMsrE2.efi unlock`。先备份固件设置并明确恢复方式；无法确认变量及工具适配时停止，改评估 §5.3 的 quirk。
+7. 重启后再用 `ControlMsrE2.efi` 检查各核心的锁状态。
+
+**不能用 `NVRAM > Add` 代替字节偏移修改。** Add 按 GUID 和变量名提供整个变量值，没有 VarOffset 语义；把字段的一个字节当成整个 Setup 变量写入不是上述流程。
 
 ### 5.3 兜底（不推荐，但能用）
 
@@ -327,11 +330,11 @@ powershell -ExecutionPolicy Bypass -File .\bios-audit.ps1 -OutFile C:\bios-audit
 
 | BIOS 里做不到 / 不想动 | OpenCore 侧对应 | 说明 |
 |---|---|---|
-| 关不掉 VT-d | `Booter → Quirks → DisableIoMapper = true` | ★ **官方首选**（不影响其它系统用 VT-d） |
+| 关不掉 VT-d | `Kernel → Quirks → DisableIoMapper = true` | ★ **官方首选**（不影响其它系统用 VT-d） |
 | 关不掉 CFG Lock | `Kernel → Quirks → AppleXcpmCfgLock = true` | ⚠️ 官方说尽量避免 |
 | 关不掉 CSM（老卡） | 无 —— 需先刷 GOP ROM | |
 | Above 4G 关掉（ASUS WS-X299-PRO / AMD 某些板） | boot-args 加 `npci=0x3000` | ★ **两者不能同时** |
-| ReBAR 开着但驱动不认 | `Booter → ResizeAppleGpuBars` / `UEFI → ResizeGpuBars` | 见 `nvidia-driver.md` |
+| ReBAR 开着但驱动不认 | `Booter → Quirks → ResizeAppleGpuBars` / `UEFI → Quirks → ResizeGpuBars` | 见 `nvidia-driver.md` |
 | iGPU 没驱动 | boot-args `-wegnoigpu`（或 BIOS 里直接关核显） | 本机实测能省 ~60 s 开机时间 |
 | BIOS 有 Fast Boot 但不想关 | ❌ 无替代 | 必须关 |
 

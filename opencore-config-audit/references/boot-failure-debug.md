@@ -57,7 +57,7 @@
 |---|---|
 | **`can't perform kext scan: no kext summary`** | 先保存完整启动日志；这条信息本身不足以锁定具体 kext 或排除 GPU。结合发生阶段、相邻错误与最近改动判断 |
 | **立刻重启、什么都看不到** | 先收集重启前日志 / panic，回到 §0.1 确认形态，不直接归因为看门狗 |
-| **`X86PlatformShim` / `xcpm_hwp_enable` panic（type 13）** | ★★ **第一件事查 BIOS 的 `Intel(R) Speed Shift Technology` 是否 `Enabled`**（**`Auto` 也可能等效关闭**）—— `wrmsr(0x770,1)` #GP（`intel-turbo.md` §10） |
+| **`X86PlatformShim` / `xcpm_hwp_enable` panic（type 13）** | ★★ **第一件事查 BIOS 的 `Intel(R) Speed Shift Technology` 是否 `Enabled`**（**`Auto` 也可能等效关闭**）—— `wrmsr(0x770,1)` #GP（`intel-turbo.md` §6） |
 | **刚改完 kext 就挂** | 用 `scripts/kext-inventory.sh` 对照改动前清单；★ 查 `Kernel>Add` **引用缺失** / **顺序**（`Lilu` 必须最前） |
 
 ## 5. ④ 内核中后期 / 用户态

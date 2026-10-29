@@ -96,7 +96,7 @@ nvram 4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102:opencore-version
 这不证明所有版本、所有驱动的内容必定不同。
 
 [oc-swap-build.sh](../scripts/oc-swap-build.sh) 用于同版本 RELEASE / DEBUG 切换；
-先查看帮助与 dry-run，不把它当成任意跨版本迁移工具。
+显式给出已确认的目标版本和 EFI 根目录，先审阅打印的计划再确认；不把它当成任意跨版本迁移工具。
 
 ### 4.3 升级到新版本时的额外检查
 

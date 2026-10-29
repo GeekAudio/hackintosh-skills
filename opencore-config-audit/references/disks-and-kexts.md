@@ -27,11 +27,11 @@ UUID=<卷UUID> none ntfs noauto   # 卷名
 要点：
 
 - **一律用卷 UUID**，不要用 `/dev/diskXsY`（盘号会漂）。取 UUID：`diskutil info <dev> | awk -F': *' '/Volume UUID/{print $2}'`
-- `fstab` 第 4 字段的 vfstype 与实际文件系统一致（NTFS 写 `ntfs`，exFAT 写 `exfat`）；因为带 `noauto`，它不会被真正挂载，写错也不致命
+- `fstab` 第 3 字段是 vfstype（NTFS 写 `ntfs`，exFAT 写 `exfat`），第 4 字段是挂载选项（这里是 `noauto`）；按实际文件系统填写并检查字段
 - **同盘的其它分区互不影响**（fstab 按卷 UUID 匹配）⇒ 屏蔽同一块盘上的 Windows 卷不会影响该盘的 EFI 分区
-- 撤销：`sudo rm /etc/fstab` 后重启；临时访问：`sudo diskutil mount /dev/diskXsY`（或把该行注释掉再重启）
+- 撤销：只删除自己新增的行；用脚本添加时运行 `scripts/mask-other-disks.sh --undo`，它只删除自身标记区块，保留用户的其他规则。临时访问：`sudo diskutil mount /dev/diskXsY`（或把该行注释掉再重启）
 - 写完**立即生效**：按 UUID 找到设备后逐个 `diskutil unmount`；确认 `/Volumes` 只剩 `Macintosh HD`
-- ★ 写完**必须验证 EFI 仍可挂载**：按 UUID 找 ESP → `diskutil unmount` → `diskutil mount` → 能读 `config.plist`
+- 写入前后核对目标 UUID 与分区类型，确认没有 EFI 分区或用户要求保留的卷；已挂载的 ESP 可只读检查。磁盘屏蔽本身无需额外挂卸载 ESP。
 
 脚本：`scripts/mask-other-disks.sh`（自动排除 EFI，可重复执行）。
 
@@ -50,20 +50,20 @@ ls -1 /Volumes            # 屏蔽生效后应只剩 Macintosh HD（+ 需要时�
 1. `Kernel>Add` 全部条目（`BundlePath` / `Enabled` / `Comment`）
 2. `EFI/OC/Kexts/` 目录实际文件
 3. 两者的差集：
-   - **孤儿文件**（目录里有、`Add` 里没有）⇒ 一定没用，可删
+   - **未直接引用的文件** ⇒ 先核对完整 `BundlePath`、嵌套插件、依赖和备用 EFI 用途；确认未被使用后才列为清理候选
    - **引用但文件不存在** ⇒ 死条目，要么补文件要么删条目
    - **`Enabled=false` 的条目** ⇒ 候选删除对象，逐个判断
 
 ### 2.2 删除判据（满足其一才删）
 
 - 驱动对应的**硬件已经换了**（例：Intel 无线/蓝牙驱动，但机器已换成 Broadcom 网卡）
-- 功能**已被其它开关覆盖**（例：`CpuTopologyRebuild` vs `Kernel>Quirks>ProvideCurrentCpuInfo=true`）
+- 功能**已由另一组件提供且有作者说明与目标机器验证**。`CpuTopologyRebuild` 与 `ProvideCurrentCpuInfo` 职责不同，不能把后者当成前者的通用替代
 - 相关功能**你的配置不用**（例：`AppleALC` 但用外置声卡、且没注入 layout-id）
 - 长期 `Enabled=false` 且注释写着"for isolation / for comparison"的临时项
 
-### 2.3 「不能删」清单（判断时对照）
+### 2.3 依赖核对清单（按实际功能保留）
 
-| kext | 为什么不能删 |
+| kext | 需要核对的功能 / 依赖 |
 |---|---|
 | `Lilu` | 所有插件的宿主 |
 | `VirtualSMC` + `SMCProcessor`/`SMCSuperIO` | SMC 模拟与传感器 |
@@ -73,7 +73,7 @@ ls -1 /Volumes            # 屏蔽生效后应只剩 Macintosh HD（+ 需要时�
 | `NVMeFix` | NVMe 电源管理/兼容性 |
 | `AMFIPass` | 配合 AMFI boot-args |
 | 无线三件套（`IOSkywalkFamily` + `IO80211FamilyLegacy` + 对应 `AirPortBrcmNIC*`） | Broadcom 卡在新版 macOS 上的必需组合（OCLP 路线），**删了就没 WiFi** |
-| `XHCI-unsupported` | 非原生 USB 控制器（ASMedia 等） |
+| `XHCI-unsupported` | 是否命中目标控制器的 PCI ID；RehabMan 版本包含多种 Intel 芯片组，见 USB 专题 |
 | `BlueToolFixup` | 部分 Broadcom 蓝牙 |
 | `CPUFriend` + DataProvider | 定制 CPU 电源数据 |
 

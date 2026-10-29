@@ -3,8 +3,8 @@
 > 依据：**`CpuTopologyRebuild` 官方 README**（`b00t0x/CpuTopologyRebuild`，逐条引用，见 §8）
 > + **本机 10-15 实测**（`ProvideCurrentCpuInfo` 行为、BIOS 项名、Geekbench 7 官网同 CPU 榜对照）。
 > ★ **先说结论**：**「关小核」和「开小核」是两种取舍，不是谁对谁错** ——
-> **关掉最稳**（macOS 本来也调度不好 E 核，关掉几乎不损失）；**开着多 4 核 4 线程**（但要靠 `CpuTopologyRebuild`
-> 收拾拓扑，且官方明写**与 `-v` 有冲突**，见 §4.3）。
+> 关掉会减少可用核心；开启后的收益取决于目标 CPU、拓扑与负载。需要时评估 `CpuTopologyRebuild`，
+> 其官方记录了 **`-v` 随机启动失败问题**，见 §4.3。
 
 ## 0. 术语与机制
 
@@ -24,21 +24,24 @@
 ## 1. 先判现状（先量再动）
 
 ```bash
-sysctl -n hw.ncpu hw.physicalcpu hw.logicalcpu        # 16 = 只有 P 核；20 = P+E 都暴露
-sysctl -n hw.nperflevels                              # 1 = 只有一种核；2 = P/E 两级都识别
-sysctl -n hw.perflevel0.physicalcpu                   # P 核数（示例：8）
-sysctl -n hw.perflevel1.physicalcpu                   # E 核数（示例：4；关小核时该键不存在）
-sysctl -n machdep.cpu.core_count                      # 见 §4.2 的 -ctrfixcnt
+sysctl -n hw.ncpu hw.physicalcpu hw.logicalcpu   # 当前逻辑 / 物理数量，结合目标型号与 BIOS 解释
+sysctl -n machdep.cpu.core_count machdep.cpu.thread_count
+sysctl -n hw.nperflevels                       # x86 为单一 SMP 类型，不能据此判断 E 核
 ```
 
-`scripts/e-cores-check.sh` 一次跑完上面全部，并给判读。
+**Intel 上不能用 ARM 式 perflevel 验收。** XNU 的
+[`ml_get_cpu_types()`](https://github.com/apple-oss-distributions/xnu/blob/main/osfmk/i386/machine_routines.c)
+在 x86 返回单一 SMP 类型；CTR 重建 SMT 拓扑，没有建立 Apple Silicon 式的 P/E perflevel。
+因此 `hw.nperflevels=1`、不存在 `hw.perflevel1`，都不能推出 E 核已关闭。
 
-| `hw.nperflevels` | `hw.ncpu` | 含义 |
-|---|---|---|
-| **1** | 16 | macOS 只看到一种核 ⇒ **E 核没暴露**（BIOS 关着，或 `ProvideCurrentCpuInfo=false`） |
-| 2 | 20 | P / E 两级都识别 ⇒ **小核已开**（再往下看拓扑重建成什么样） |
+先确认目标 CPU 的 P/E 数量、BIOS 的活动核心与 HT 设置，再对照暴露的逻辑线程数。
+例如 i7-12700K 在全部核心和 HT 都启用时预期 20 个逻辑线程；只有 8P+HT 时为 16。
+这组数字只适用于该示例，不能拿 20 当成所有 Intel CPU 的阈值。
+CTR 默认 SMT 伪装及 `ctrsmt=full` 还会影响显示的物理核数，见 §4。
 
-★ **`hw.nperflevels=1` 时不要急着「修」** —— 见 §7，那可能是**刻意选的稳定态**（本机就选了这一档）。
+`scripts/e-cores-check.sh --topo` 显示读数但不猜 E 核开关；已确认预期时可运行
+`scripts/e-cores-check.sh --topo --expected-threads 20`（20 换成目标值）。
+数量匹配仍需结合 BIOS、实际拓扑及同机负载测试，不能单独证明调度正确。
 
 ## 2. 关小核（推荐给「求稳 / 不想折腾」）
 
@@ -52,10 +55,9 @@ sysctl -n machdep.cpu.core_count                      # 见 §4.2 的 -ctrfixcnt
 | ASRock | `Advanced → CPU Configuration → **Active E Cores**` → `0` |
 
 - **配置侧不用动**：`ProvideCurrentCpuInfo` 保持原样即可；`CpuTopologyRebuild` 留 `Enabled=false`（或删条目）。
-- **收益**：Alder Lake 在 macOS 上调度 E 核本就是雷区（§7.2），关掉**几乎不损失性能**（macOS 本来也用不满）。
-- **代价**：少 4 核 / 少 4 线程 —— 但**如果原本就没被用上，关掉等于零代价**。
-- ★ **硬前提不动**：`Active Performance Cores` = `All`、`Hyper-Threading` = `Enabled`、
-  **`Intel Speed Shift Technology` 保持 `Enabled`**（关它会 `wrmsr(0x770,1)` #GP panic，见 `intel-turbo.md` §7）。
+- **取舍**：减少暴露的异构核心，可能简化特定故障的排查，但不保证性能或稳定性一定改善。
+- **代价**：失去被关闭 E 核的计算容量；数量按目标型号确认。修改前后的影响需要同机、同负载比较。
+- 本次仅改变 E 核时，保留既有可用的 P 核、HT 和 Speed Shift 设置，避免同时引入变量。若 panic 明确涉及 HWP，按 `intel-turbo.md` §6 核实。
 
 ## 3. 开小核（求性能 / 愿意收拾拓扑）
 
@@ -67,7 +69,7 @@ sysctl -n machdep.cpu.core_count                      # 见 §4.2 的 -ctrfixcnt
 3. **可选但推荐**：`Kernel > Add` 加 **`CpuTopologyRebuild.kext`**，**紧跟 `Lilu` 之后**
    （它是 Lilu 插件，`OSBundleLibraries` 要求 `as.vit9696.Lilu ≥ 1.2.0`）⇒ 顺序 `Lilu → CpuTopologyRebuild → …`。
 
-重启后应看到 `hw.nperflevels=2`、`hw.ncpu=20`、`perflevel1.physicalcpu=4`（§1）。
+重启后按 §1 对照目标逻辑线程数与 CTR 拓扑。例如上述 i7-12700K 满配为 20 个逻辑线程；不要求 `hw.nperflevels` 变成 2。
 
 ★ **`ProvideCurrentCpuInfo` 与 `-ctrfixcnt` 的例外**：若用了 `-ctrfixcnt`，**必须**同时装
 `AppleMCEReporterDisabler.kext`，否则**起不来**（§4.2）。
@@ -120,12 +122,12 @@ NVRAM 域 = **`4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102`**（OpenCore 的 `NVRAM > A
 
 ## 5. 验证（改完重启后）
 
-1. `scripts/e-cores-check.sh` —— 拓扑 + 频率 + 判读（**重点看 `hw.nperflevels` 是否变 2**）。
+1. `scripts/e-cores-check.sh` —— 记录数量与 CTR 状态；已确认目标预期时加 `--expected-threads N`。不以 Intel 的 perflevel 数量判断 E 核。
 2. **`kextstat` / `kmutil showloaded`** 里应有 `org.b00t0x.CpuTopologyRebuild`，且**在 Lilu 之后**。
 3. **`ocvalidate` = No issues found**（改过 `Kernel>Add` 必跑）。
 4. **跑分对照**：Geekbench 单核 / 多核，与「关小核」时的基线**同机对比**（别跨机器比，见 §7.3）。
-5. ★ **频率别掉**：`scripts/cpu-freq-probe.sh` —— 基线单线程 ≈ 4.28、8 线程 ≈ 4.29–4.35 GHz；
-   若开小核后频率掉了，说明拓扑重建与 XCPM 打架，回滚。
+5. 使用 `scripts/cpu-freq-probe.sh` 等目标系统支持的工具，在相同负载下与修改前基线比较。
+   频率或耗时变差时同时检查温度、功耗与拓扑，必要时回退，不把单次变化直接认定为 XCPM 冲突。
 
 ## 6. 回滚（三条，任选一条即可）
 
@@ -137,15 +139,15 @@ NVRAM 域 = **`4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102`**（OpenCore 的 `NVRAM > A
 
 ### 7.1 关小核时的现状（实测）
 
-- macOS 只见 **8 核 16 线程**：`hw.ncpu=16`、`hw.nperflevels=1`、`hw.perflevel0.physicalcpu=8`；
-  而 `CPUID.1FH` 报**逻辑处理器 20**（sub0 SMT=2 / sub1 Core 级=20，无 Module/Tile 级）⇒ **E 核在硅片上存在，只是没喂给 macOS**。
+- 当时 macOS 报 **8 核 16 线程**：`hw.ncpu=16`、`hw.physicalcpu=8`；`hw.nperflevels=1` 只是 x86 的 SMP 读数，不是关小核证据。
+  `CPUID.1FH` 曾报 20 个逻辑处理器；该记录与 OS 数量需要结合当时 BIOS 状态核实，不能仅凭它判断当前活动 E 核。
 - `CpuTopologyRebuild` 当时在 `Kernel>Add` 里但 **`Enabled=false`** ⇒ 官方所说「配合 `ProvideCurrentCpuInfo`」的收益拿不到。
 
 ### 7.2 ★ 为什么「关掉」也可能是对的
 
 - Alder Lake 在 macOS 上**调度 E 核本就是雷区**（内核没有完整的混合调度支持）；
 - 「多 4 个核」不等于「快 4 核」—— 若内核把 E 核当 P 核派活，单线程 / 时延敏感任务反而变慢；
-- ⇒ **关掉是「低风险默认」**；要开就必须连 `CpuTopologyRebuild` 一起上，并且接受 §4.3 的 `-v` 冲突。
+- 因此按用户目标与同机证据选择，不默认替用户关闭小核。若使用 CTR，另核实 §4.3 的已知冲突。
 
 ### 7.3 榜上对照（**有局限，别当铁证**）
 

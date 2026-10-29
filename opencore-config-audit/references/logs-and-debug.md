@@ -82,9 +82,9 @@ osascript -e 'do shell script "/bin/bash <脚本>" with administrator privileges
 
 | 抓什么 | 说明 |
 |---|---|
-| `grep -aiE "acpi error\|ae_not_found\|ae_already\|namespace lookup\|Error evaluating"` | **0 命中 = ACPI 没坏**，这是「还要不要补 SSDT」的第一判据 |
+| `grep -aiE "acpi error\|ae_not_found\|ae_already\|namespace lookup\|Error evaluating"` | 0 命中仅表示这份日志未观察到这些报错；先确认来自本次启动、采集覆盖与权限，再结合原始 ACPI、IORegistry 和实际症状判断是否需要 SSDT |
 | `(AppleACPIPlatform) FACP/FACS/DSDT/XSDT …` | macOS 侧实际解析到的表清单（与 OC 日志对照；能证明某张表"到底在不在"） |
-| `(AppleACPIPlatform)` 里**没有** DMAR | 说明固件未暴露 VT-d |
+| `(AppleACPIPlatform)` 里**没有** DMAR | 该日志未观察到 DMAR；需对照固件 ACPI 转储确认，不能凭日志缺行断定 VT-d 状态 |
 | `(AppleAHCIPort) … COMRESET did not proceed` + `PxSSTS 0x4` | 该端口 **PHY offline**（空端口）；先看 `ioreg -r -c IOAHCIDevice` 有没有子设备再下结论 |
 | `(AppleUSBXHCI) createPorts: speed index N has inconsistent speed IDs` | 常见无害 |
 | `Previous shutdown cause:` | 上次关机是否正常 |
