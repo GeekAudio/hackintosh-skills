@@ -122,7 +122,7 @@ system_profiler SPDisplaysDataType | head -20     # 应显示你的 GeForce、Me
 - boot-args 实配：`nvrmsettle=1500 nvfbsample=1 nvfb=1 nvaccel=1 nvfbheads=4 -nvkmsnosmooth -no_compat_check revpatch=sbvmm,cpuname revcpu=1`
 - `ResizeGpuBars=13` + `ResizeAppleGpuBars=-1`；代价 = **开机黑屏 ~21 s**（改 `-1` 约 10 s）
 - 开机到 WindowServer **15 s**（无回归）；`NVAccel: configureDevice 10de:2206 — RM owns the card (NVRM.kext)` 是正常行
-- 核显要用 `-wegnoigpu` 屏蔽（WhateverGreen），否则核显会留在 PCI 树里参与 AGDC 判定
+- 当时采用独显单独工作的方案，用 WhateverGreen 的 `-wegnoigpu` 屏蔽未适配核显。需要保留 Xe-LP 核显时另按 [WhateverXe 专题](intel-xe-graphics.md) 评估混合 GPU、插件互斥与实际接线；不能沿用禁用目标核显的设置，也不能推定与 NVIDIA 驱动已验证共存
 - 曾经踩过的显示问题：显示器被报成 **30.5"** —— 真因是驱动没填 `IODisplayModeInformation.imageWidth/imageHeight`（已修，PR #199）
 - 已知未解决：无 HDMI/DP 音频、雷电 eGPU 无显示、笔记本内屏不加速
 

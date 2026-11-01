@@ -137,6 +137,8 @@ OCLP 来源配置中 Tahoe 条目的上限可能留空，表示没有上限。�
 
 ---
 
+Xe-LP 使用 WhateverXe 时，另核对[核显专题](intel-xe-graphics.md)的目标系统构建、Mod AMFIPass 与配套图形包；系统升级前复核图形载荷和签名链，单改 kext 的 MinKernel 不完成图形包迁移。
+
 ## 3. 升级时序（按实际驱动路线选择）
 
 ### 阶段 A：升级**前**（在 macOS 15 上做）
@@ -221,7 +223,7 @@ Count / Skip / Limit = 0
 | **`-no_compat_check`** | ★ **机型不在新版白名单里时必需**（见 §5）—— 解决「能不能启动」 |
 | **`revpatch=sbvmm`** | ★ **同上，解决「能不能收到/安装系统更新」**（见 §5.3）—— 这个容易被漏掉 |
 | `revpatch=cpuname` + `revcpu=1` + `revcpuname=<名字>` | CPU 名称显示（如 `revcpu=1`） |
-| `-wegnoigpu` | 藏掉无驱动的核显（否则 `IOGraphicsFamily` bring-up 会等它，实测慢 ~60 s） |
+| `-wegnoigpu` | 仅用于明确不使用核显且仍需 WhateverGreen 的方案；需要 Xe-LP 核显时查 [WhateverXe](intel-xe-graphics.md)，不能把历史禁用案例作为升级默认值 |
 | `-v` | **按用户已有偏好执行，未要求调整时保留**（见 `lifecycle.md` §6.3） |
 
 > 用 `revpatch=` / `revcpu=` 需要 **`RestrictEvents.kext`**（Lilu 插件）。

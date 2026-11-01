@@ -127,13 +127,15 @@ fAutoGoSettleMs = bar1Placed ? 500 : 100000;   // BAR1 未放置 ⇒ 盲睡 100 
 > **Ampere 及更新的卡（如 `10de:2206`）不在范围 ⇒ 必须手工保留**。且 `100000` 这个默认值在 1.15.0 里**原封不动**。
 > 判断你的卡在不在范围内：`device-id` 首位是 `1E`/`1F`/`21`（Turing）才被覆盖，其余一律手工加。
 
-### 3.2 「剩下的 ~60 秒」（无驱动 iGPU 拖累 `IOGraphicsFamily`，B 段）
+### 3.2 历史案例：「剩下的 ~60 秒」（未适配 iGPU，B 段）
 
 **症状**：加了 `nvrmsettle` 后仍慢。
 
 **根因**：主板枚举到的**无驱动 Intel UHD 770** 让 `IOGraphicsFamily` bring-up 等它。
 **解法**：boot-args 加 **`-wegnoigpu`**（藏掉核显）⇒ **91 s → 27 s**。最终 **137 s → 28 s**。
 上游 issue **#35**（closed/DONE）。
+
+此处是当时仅使用独显的禁用方案，不能据此认定 UHD 770 永远不可适配。需要核显功能时先核对 [WhateverXe](intel-xe-graphics.md) 的 PCI ID / 接口范围；不要为缩短启动时间直接隐藏目标核显。
 
 > 注意区分：本机 10-09 曾观察到「**带核显开机 15 s 到 WindowServer，无 91 s 回归**」——
 > 即 `GPUCDetect` 这个状态**不是**「空档」的充分条件。**要看具体秒数，不要看单个状态标志。**

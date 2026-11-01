@@ -31,7 +31,8 @@
 | Linux | Debian 10+、Ubuntu 20.04 LTS ~ 24.04 LTS；硬件采集能力与 Windows 不同 |
 
 - 目标 macOS 覆盖 **High Sierra 10.13 ~ Tahoe 26**
-- 平台模板：Intel 台式机 0–15 代；笔记本 0–10 代（**11 代及以上核显无法驱动**）；NUC；HEDT（X58/X79/X99/X299/X599）；AMD（Bulldozer/Jaguar、Ryzen、Threadripper）
+- 平台模板：Intel 台式机 0–15 代；笔记本 0–10 代（这是工具的模板范围）；NUC；HEDT（X58/X79/X99/X299/X599）；AMD（Bulldozer/Jaguar、Ryzen、Threadripper）
+- 模板范围不等于核显兼容结论。部分 11 代以后 **Xe-LP** 可评估 [WhateverXe 专题](intel-xe-graphics.md)，仍须按 PCI ID、系统和接线核对；不代表 RapidEFI 自动生成了完整 WEX / 图形包配置。
 - ⚠️ README 明确建议：**在 Windows 上运行前先关掉 360、腾讯电脑管家、火绒等安全软件**，否则生成/复制文件可能被拦截
   —— 这等于**临时降低系统防护**，属于「知道自己在做什么」的操作：只在运行工具期间关，做完立刻恢复
 
@@ -73,8 +74,8 @@
 3. **平台相关 SSDT**：按官方 `Docs/AcpiSamples/` 逐条对照你机器的设备再决定加不加（见 `acpi-ssdt.md`）
 4. **显卡**：
    - NVIDIA **Turing 及更新** ⇒ 按 `nvidia-driver.md` 补它要求的设置（`nvfb/nvaccel` boot-args、`ResizeGpuBars`、`IONDRVSupport` 屏蔽等）
-   - AMD/Intel 核显 ⇒ 按 Dortania 对应页面处理（本 skill 不覆盖）
-   - 要屏蔽核显 ⇒ `-wegnoigpu`（WhateverGreen）
+   - Intel Xe-LP ⇒ 按 [WhateverXe 专题](intel-xe-graphics.md) 核对硬件与显示接线、插件互斥和图形包；其它 Intel / AMD 核显按其驱动作者与 Dortania 对应页面处理
+   - 仅在明确不用核显且仍用 WhateverGreen 的方案中评估 `-wegnoigpu`；需要 WEX 核显时不能照抄该禁用项
 
 ## 6. 接进本 skill 的安全流程
 

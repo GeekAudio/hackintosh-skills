@@ -23,6 +23,8 @@
 [OpenCorePkg 官方发布](https://github.com/acidanthera/OpenCorePkg/releases)。
 开发构建的命名与版本规则以对应构建记录为准。
 
+使用 [WhateverXe 核显路线](intel-xe-graphics.md) 时，分别核对 WEX 与 WhateverXe Graphics 的独立发布、AppleIntelTGLCompat ABI、Mod AMFIPass 及目标 OS。不能只更新 EFI 中的 WEX 就声称系统图形载荷也已更新；跨系统的 pkg 安装分别进行，按用户授权范围处理。
+
 ### 0.2 参考案例：按 commit 构建的配套 kext
 
 参考机器曾把以下构建误当成异常版本，替换成较早的上游 release 后又回滚。

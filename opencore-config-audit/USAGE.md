@@ -23,8 +23,10 @@
 | 精简 | 「kext 精简一下，不用的删掉」「屏蔽一下其它磁盘」 |
 | **更新 kext / OC** | 「把所有 kext 更新到最新」「OpenCore 要不要升级」「这个 kext 是不是官方的」 |
 | 装驱动 | 「装 NVIDIA 驱动」「Intel 无线网卡怎么配」「我这块 MT7922 能用吗」「MT7921 能上网吗」「MT7922 Reno/RZ616 怎么装」「原生 Sunrise 要装什么」「博通网卡怎么配」「有线网卡/2.5G 网卡怎么驱动」 |
+| **Intel Xe 核显** | 「WhateverXe 怎么配」「UHD 770 能驱动吗」「Iris Xe 内屏能不能用」「核显只有显示、没有 Metal」 |
 | **AirDrop / 接力** | 「隔空投送搜不到设备」「AirDrop 用不了」「接力不工作」「Handoff 没反应」「是不是 ROM 填错了」「`awdl0` 没有」 |
-| 调 CPU | 「CPU 频率被压住了」「睿频怎么开」「换了 CPUFriend 数据反而更慢了」「睿频改完没效果」 |
+| **AMD CPU** | 「Ryzen 温度怎么看」「AMD Power Gadget 没数据」「SMCAMDProcessor 怎么配」「AMD P-State / 风扇怎么检查」 |
+| 调 Intel CPU | 「CPU 频率被压住了」「睿频怎么开」「换了 CPUFriend 数据反而更慢了」「睿频改完没效果」 |
 | **CPU 名字不对** | 「关于本机显示 Xeon W，但我的是 i7」「处理器名称怎么改」「CPU 型号显示错了」 |
 | **App 拿不到权限** | 「麦克风没权限」「不弹权限窗」「隐私设置里没有这个软件的开关」「装完显卡驱动后语音软件用不了」 |
 | **App 打不开 / 任何来源** | 「无法验证开发者」「已损坏，应移到废纸篓」「任何来源怎么开」「未知来源装不上」「`spctl` 怎么关」 |
@@ -71,8 +73,8 @@
 ## 参考文档
 
 按主题挑：`toolchain.md`（**工具链：`iasl` / `gfxutil` 从哪来、缺了怎么降级**）· `bios-settings.md`（BIOS）· `lifecycle.md`（全流程）· `os-upgrade-15-to-26.md`（升系统）·
-`nvidia-driver.md` · `amfi-and-tcc.md`（**AMFI 相关权限故障，确认根因后按需使用 tcc-helper**）· `intel-wifi.md` · `mediatek-wifi.md`（**含原生 Sunrise 打包方案**） · `broadcom-wifi.md`（按芯片与系统选路线）· `airdrop-handoff.md`（**AirDrop / 接力：区分蓝牙发现、AWDL 与实际互通证据**）·
-`applealc-custom.md`（**声卡 / macOS 26 的音频路线 / 用 HDAU GUI 或 Linux dump 收集定制证据**）· `hidpi.md`（显示）· `intel-turbo.md`（睿频）· `e-cores.md`（**开/关小核**）· `cpu-name.md`（**CPU 显示名**）· `memory-injection.md`（内存）· `boot-failure-debug.md`（**装不上/进不去系统**）· `boot-timeline.md` / `logs-and-debug.md`（日志）· `boot-entries.md`（启动项）·
+`intel-xe-graphics.md`（**WhateverXe：Xe-LP 核显、配套图形包、接口与系统边界**）· `nvidia-driver.md` · `amfi-and-tcc.md`（**AMFI 相关权限故障，确认根因后按需使用 tcc-helper**）· `intel-wifi.md` · `mediatek-wifi.md`（**含原生 Sunrise 打包方案**） · `broadcom-wifi.md`（按芯片与系统选路线）· `airdrop-handoff.md`（**AirDrop / 接力：区分蓝牙发现、AWDL 与实际互通证据**）·
+`applealc-custom.md`（**声卡 / macOS 26 的音频路线 / 用 HDAU GUI 或 Linux dump 收集定制证据**）· `hidpi.md`（显示）· `amd-cpu.md`（**AMD Zen 电源管理 / 监控 / AMD Power Gadget**）· `intel-turbo.md`（Intel 睿频）· `e-cores.md`（**开/关小核**）· `cpu-name.md`（**CPU 显示名**）· `memory-injection.md`（内存）· `boot-failure-debug.md`（**装不上/进不去系统**）· `boot-timeline.md` / `logs-and-debug.md`（日志）· `boot-entries.md`（启动项）·
 `acpi-ssdt.md`（**ACPI 热补丁样例库索引**）· `disks-and-kexts.md` · `kext-and-oc-update.md`（**更新 kext / OC**）· `official-docs-method.md` · `rapidefi-first-efi.md` ·
 `smbios-and-serials.md`（换机型 + 三码）· `network-en0-order.md`（`en0` 归属）· `ethernet-drivers.md`（有线网卡）· `ecosystem-sources.md`（**权威来源与工具索引**）· `laobamac-toolkit.md`（工具索引）· `pitfalls.md`（踩过的坑）· `theme-opencanopy.md`（选择器主题）· `machine-facts.md`（参考机器事实）
 

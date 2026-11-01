@@ -95,7 +95,7 @@
 |---|---|
 | `AMD_Vanilla`（fork） | **AMD 平台跑原生 macOS** 的 OpenCore 补丁 |
 | `NootedRed`（fork） | **AMD Vega 核显支持补丁**（★ 作者标注 **No commercial use**） |
-| `SMCAMDProcessor`（fork） | **AMD 处理器电源管理 / 监控**（VirtualSMC 插件） |
+| `SMCAMDProcessor`（fork） | 上游为 [trulyspinach/SMCAMDProcessor](https://github.com/trulyspinach/SMCAMDProcessor)：主驱动 AMDRyzenCPUPowerManagement 与 VirtualSMC 桥是两个组件，依赖 / 配置见 [AMD CPU 专题](amd-cpu.md) |
 
 > 下列几项是 Intel 平台**用不到**的，**仅供参考**；AMD 机器才需要。
 

@@ -68,8 +68,10 @@
 | **MediaTek** | **`laobamac`** —— `SimpleMtkWlan` / `SimpleMtkBtFw` | `mediatek-wifi.md` |
 | **有线网卡** | **`Mieze`** —— `LucyRTL8125Ethernet` ★296 · `IntelMausiEthernet` ★413 · `RTL8111_driver_for_OS_X` ★717 · `IntelLucy` ★76 · `RTL812xLucy` ★22<br>**`Shaneee`** —— `AppleIGB` ★30<br>**`laobamac`** —— `SimpleVGBE` 等 | `ethernet-drivers.md` |
 | **声卡** | **Acidanthera**（`AppleALC`）· ★★ **`5T33Z0`**（`AppleALC-Guides` —— **定制 layout 的实操主参考**、17 个现成 dump、`alc-verb`；另有 `OCLP4Hackintosh` 的 `Audio_Tahoe.md`）· **`perez987`**（`AppleHDA-gone-on-macOS-26-Tahoe` 指南）· **`Mirone`**（`MyKextInstaller`）· **`laobamac`**（`SimpleLoader` / `SimpleHDA` / `SimpleVoodooHDA`）· **`chris1111`**（VoodooHDA 脚本上游） | `applealc-custom.md` |
+| **Intel Xe-LP 核显** | **`b00t0x/WhateverXe`**（Lilu 插件）+ `WhateverXe-Graphics`（图形载荷与 AuxKC）；按 GPU / 接口区分实验实现和实机证据 | [核显专题](intel-xe-graphics.md) |
 | **NVIDIA** | **`NullMoth`** —— `nvidia-macos-driver` ★3.0k | `nvidia-driver.md` |
-| **AMD 核显 / CPU** | `NootedRed`（Vega）· `AMD_Vanilla` · `SMCAMDProcessor` | `laobamac-toolkit.md` §8 |
+| **AMD CPU** | [trulyspinach/SMCAMDProcessor](https://github.com/trulyspinach/SMCAMDProcessor)：AMDRyzenCPUPowerManagement + 可选 VirtualSMC 桥 + AMD Power Gadget；系统启动的 AMD_Vanilla 补丁另行核对 | [AMD CPU 专题](amd-cpu.md) |
+| **AMD 核显 / 平台** | `NootedRed`（Vega）· `AMD_Vanilla` | `laobamac-toolkit.md` §8 |
 | **USB Wi-Fi（外置）** | **`chris1111`** —— `Wireless-USB-*` 系列 ★1k+ | — |
 | **老显卡补丁** | **`chris1111`** —— `Geforce-Kepler-patcher` ★378 · `Legacy-Video-patch` ★197；`non-metal-frameworks` | `nvidia-driver.md` |
 

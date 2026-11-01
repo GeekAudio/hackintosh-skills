@@ -81,10 +81,12 @@
 | Execute Disable Bit | |
 | EHCI/XHCI Hand-off | |
 | OS type: **Windows 8.1/10 UEFI Mode**（部分主板要选 **Other OS**） | |
-| DVMT Pre-Allocated (iGPU Memory): **64MB 或更高** | 有核显时 |
+| DVMT Pre-Allocated (iGPU Memory): **64MB 或更高** | 按实际驱动要求；[WhateverXe](intel-xe-graphics.md) 优先 **96MB**，固定 60MB 时另有专用配置 |
 | SATA Mode: **AHCI** | |
 
 ### 2.2 AMD（Zen）
+
+AMD CPU 的电源管理 / 监控和 AMD Power Gadget 见 [专题](amd-cpu.md)；不能用传感器插件替代内核兼容补丁，也不把 P-State / 风扇调节当成 BIOS 审查的默认操作。
 
 **Disable**：Fast Boot、Secure Boot、Serial/COM Port、Parallel Port、**CSM**、**IOMMU**
 > ★ 特殊：**3990X** 有 128 线程，macOS 内核只支持 64 ⇒ 必须**关超线程**（Dortania 明确建议）。
@@ -132,7 +134,7 @@
 | **EHCI/XHCI Hand-off** | USB 控制权交接给 OS | 安装期 USB 键鼠 / 安装介质没反应 | 官方：**仅当不拔 USB 就卡引导时**才需要 |
 | **OS Type = Windows 8.1/10 UEFI Mode**（或 **Other OS**） | 让固件按 UEFI 方式初始化 | 可能退回 legacy 路径 | 部分主板必须选 "Other OS" |
 | **SATA Mode = AHCI** | macOS 只认 AHCI | 看不到 SATA 盘 | |
-| **DVMT Pre-Allocated ≥ 64MB** | 给核显足够显存 | 核显花屏 / 黑屏 | **有核显时**才需要 |
+| **DVMT Pre-Allocated** | 按目标核显驱动预留内存 | 核显花屏 / 黑屏 | 常规参考 ≥64MB；[WhateverXe](intel-xe-graphics.md) 优先96MB，不能混用DVMT特例 |
 | **★ Intel Speed Shift Technology** | macOS 用 HWP 调度 | ★★ **`wrmsr(0x770,1)` #GP panic**（本机实测硬前提） | **官方与 Dortania 都没写**，社区经验 |
 | **Resizable BAR / Re-Size BAR Support** | 大 BAR 驱动路线需要 | 大 BAR 驱动拿不到 BAR | **看情况**，见 §3.3 |
 
@@ -142,7 +144,7 @@
 |---|---|---|
 | **Re-Size BAR Support** | 你的驱动/卡需要大 BAR（如 NVIDIA 驱动），且 `ResizeGpuBars` 已配好 | 驱动版本或卡不支持大 BAR 时；出现黑屏/起不来时先试关 |
 | **XMP / DOCP / EXPO** | 内存超频档，**稳定就开着** | 出现内存相关不稳定、睡眠异常时关掉回 JEDEC |
-| **Internal Graphics / iGPU** | 核显有驱动、要用（如 `WhateverGreen` + 核显硬解） | 核显无驱动 ⇒ **关掉更干净**（或留开但加 `-wegnoigpu` 藏起来） |
+| **Internal Graphics / iGPU** | 根据用户目标启用；传统 Intel 路线与 [WhateverXe Xe-LP 路线](intel-xe-graphics.md) 分别核对 | 仅在明确不使用核显时关闭 / 禁用；不要因 CPU 代数直接认定无驱动，WhateverGreen 与 WEX 不能同开 |
 | **Thunderbolt** | 装好系统、TB 设备配置好之后 | 安装期（见 §3.1） |
 | **Legacy USB Support** | **装系统期间**（U 盘 / USB 键鼠） | 装好后可关，能省一点 POST 时间 |
 | **Above 4G Decoding** | 绝大多数主板 | **ASUS WS-X299-PRO**（官方点名）；AMD 的 Gigabyte/Aorus/ASRock 上若坏驱动 ⇒ 关它 + 改 `npci=0x3000` |
@@ -344,6 +346,6 @@ powershell -ExecutionPolicy Bypass -File .\bios-audit.ps1 -OutFile C:\bios-audit
 
 - **引导失败 / 卡住** → `logs-and-debug.md`（先看 OC 日志）；**耗时** → `boot-timeline.md`
 - **NVIDIA 大 BAR 与 ReBAR** → `nvidia-driver.md`
-- **核显 / iGPU** → 见 §3.3 与 `boot-timeline.md` 的 `-wegnoigpu`
+- **核显 / iGPU** → Intel Xe-LP 先查 [WhateverXe](intel-xe-graphics.md)；明确不用核显时才看 §3.3 与 `boot-timeline.md` 的禁用案例
 - **内存条与插槽核对** → `memory-injection.md`（脚本的 §6.2 顺带输出槽位）
 - **改 ESP 的安全流程** → [技能入口的修改与复验](../SKILL.md#修改与复验) + `scripts/oc-edit-safe.sh`

@@ -66,8 +66,10 @@ ls -1 /Volumes            # 屏蔽生效后应只剩 Macintosh HD（+ 需要时�
 | kext | 需要核对的功能 / 依赖 |
 |---|---|
 | `Lilu` | 所有插件的宿主 |
-| `VirtualSMC` + `SMCProcessor`/`SMCSuperIO` | SMC 模拟与传感器 |
-| `WhateverGreen` | 显卡修正；`-wegnoigpu` 也靠它 |
+| `VirtualSMC` 与按平台选择的传感器插件 | 核心 SMC 仿真与 CPU / 主板读数分别判断；AMD CPU 数据桥见 [AMD CPU 专题](amd-cpu.md)，不以 Intel SMCProcessor 替代 |
+| `AMDRyzenCPUPowerManagement` / `SMCAMDProcessor` | AMD 主驱动与可选桥，桥依赖前者；移除主驱动不能留下启用的孤立桥，已有控制设置先恢复 |
+| `WhateverGreen` | 显卡修正；`-wegnoigpu` 也靠它。与 [WhateverXe](intel-xe-graphics.md) 互斥，按实际驱动路线保留 |
+| `WhateverXe` | 仅适用 Xe-LP 路线，依赖 Lilu、配套图形包和 Mod AMFIPass；不要清理成只有一个 EFI 插件 |
 | `USBToolBox` + `UTBMap` | USB 端口映射（替代 `XhciPortLimit`） |
 | `RestrictEvents` | 配合 `revpatch=` 改机型/CPU 显示 |
 | `NVMeFix` | NVMe 电源管理/兼容性 |

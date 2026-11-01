@@ -1,5 +1,7 @@
 # Intel 睿频（Turbo Boost）诊断与 CPUFriend 数据检查
 
+AMD Zen 的温度、功耗、频率与 P-State / 风扇需求见 [AMD CPU 专题](amd-cpu.md)，不使用本文的 Intel CPUFriend / HWP 路线。
+
 依据：[CPUFriend 使用说明](https://github.com/acidanthera/CPUFriend/blob/master/Instructions.md)、
 [FrequencyVectors 结构定义](https://github.com/acidanthera/CPUFriend/blob/master/Tools/FrequencyVectors.bt)
 与 [iMac20,x XCPM QoS 的作者讨论](https://github.com/dortania/bugtracker/issues/190)。
