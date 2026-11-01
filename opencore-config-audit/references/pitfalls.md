@@ -4,7 +4,7 @@
 
 | 症状 | 原因 | 正确做法 |
 |---|---|---|
-| 用 `ScanPolicy` 屏蔽后 **Windows 启动不了** | `ScanPolicy` 是**安全策略**（限制扫描不受信来源），不是显示开关 | 保持 `ScanPolicy=0`；少显示用 `HideAuxiliary` / `Misc>Entries` |
+| 用 `ScanPolicy` 屏蔽后 **Windows 启动不了** | `ScanPolicy` 是按文件系统与设备类型筛选扫描/启动来源的策略，不是显示开关 | 先读当前 OpenCore 版本和有效 mask，检查锁定位以及 Windows EFI 所在文件系统、设备类型是否获准；`0` 会清除文件系统 / 设备锁限制，属于宽扫描策略，不是通用修复或显示选项。`HideAuxiliary` 只隐藏辅助项；`Misc>Entries` 用于添加自定义项，不是过滤自动发现项。Windows 双启动排查见 [Windows 共存专题](windows-coexistence.md) 与 [固件启动项专题](boot-entries.md)；必要时按版本支持的 `.contentVisibility` 规则隐藏单个 picker 项。 |
 | 以为 `ocvalidate` 过了就没问题 | 它只查 schema / 类型 / 必填 / 顺序 | 取值是否**符合文档**要逐键人工比对（见 `official-docs-method.md`） |
 | 改了 SSDT **文件名**后担心表身份变了 | 表身份由**内容**解析决定，不由文件名 | 改名安全；只要同步改 `ACPI>Add>Path` |
 | 把 `NVRAM>Add` 的键写进去却不生效 | Add 为不存在的变量提供默认值；要覆盖已有值时才需先 Delete | 先读现值；仅将明确需要覆盖的键加入 Delete，不能把所有 Add 项都机械删除重写。见 [官方定义](https://github.com/acidanthera/OpenCorePkg/blob/master/Docs/Configuration.tex) |
@@ -57,7 +57,7 @@
 | 想手工 `bcfg boot add/rm` 但改不动 | `UEFI>Quirks>RequestBootVarRouting=true` 会**保护 NVRAM** | 先跑 `OpenControl.efi disable`，之后再 reboot 或 `OpenControl restore` |
 | 在 **ASUS** 板上手工建 `Boot0000` | 源码注释：ASUS 把 `Boot0000` 当「已删除」处理 | **别用 `Boot0000`** —— 会导致条目重复、甚至 BIOS 变砖 |
 | `nvram -p` 里看不到 `Boot####`，以为没有启动项 | `nvram -p` **不列出** `Boot####` | 按 `GUID:名字` 单独读：`nvram 8BE4DF61-93CA-11D2-AA0D-00E098032B8C:BootOrder` |
-| 把「BIOS 启动菜单里的项」和「OpenCore 选择器里的项」当成一回事 | 前者是**固件 NVRAM**（`Boot####`），后者是 OpenCore 扫出来的 | 少显示系统用 `ScanPolicy`/`HideAuxiliary`；启动项丢失看 `boot-entries.md` |
+| 把「BIOS 启动菜单里的项」和「OpenCore 选择器里的项」当成一回事 | 前者是**固件 NVRAM**（`Boot####`），后者是 OpenCore 扫描/配置出的 picker 项 | 启动入口和 Windows 共存问题看 [固件启动项专题](boot-entries.md) / [Windows 共存专题](windows-coexistence.md)；选择器显示按 `HideAuxiliary`、`Misc>Entries` 与 `.contentVisibility` 各自的用途处理，不用 `ScanPolicy` 当显示开关 |
 | 在 macOS 里 `nvram <GUID>:Boot0001=…` 报 **`(iokit/common) general error`** | ★ 不是重定向，是**没提权** —— 实测：未提权连**普通变量**都写不进去 | 走 Terminal + `sudo`，或提权 AppleScript（`do shell script "…" with administrator privileges`）。★ `dump`/`backup` 不需要提权 |
 | 把 `nvram` **回读一致**当成「启动项写进固件了」 | `RequestBootVarRouting=true` 会把 `Boot*` 重定向到 `OC_VENDOR:OCBt*`，**读写都走同一条重定向** ⇒ 回读一致证明不了落固件 | **验收只看重启后的 BIOS**（或引导日志 `OCB:` 行）。要确定落固件 ⇒ 让 OpenCore 自己写（`LauncherOption=Full`） |
 | 把 `nvram` 读出来的值**原样写回去**却失败 | macOS 输出里的 **`0x20` 是字面空格**，而 `nvram` 把值里的字面空格当**参数分隔符** | 写之前**统一重新编码**（每个字节写成 `%XX`），别照抄 `nvram` 的输出 |

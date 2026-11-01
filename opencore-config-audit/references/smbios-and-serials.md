@@ -46,6 +46,12 @@ macserial -i '<serial>'
 
 不要仅为显示名不匹配就清除身份信息、注销 Apple ID 或删除系统偏好。
 
+### 1.4 Windows 共存与激活
+
+Windows 经 OC 启动后可能看到已更新的 SMBIOS。需要保留原表时，按 [Windows 身份隔离](windows-coexistence.md#3-smbios-与-windows-身份)评估 `PlatformInfo > UpdateSMBIOSMode=Custom` 与 `Kernel > Quirks > CustomSMBIOSGuid=true`，不是将 Custom 与 Create 一并认定为必然替换 Windows 身份。
+
+官方提出过考虑使用有效的原固件 UUID；这不是必须改回原值的要求，也不保证解决激活。先比较直接启动 / 经 OC 的身份和已有配置，保留用户要求的稳定字段，不为双系统审查自动轮换三码或 UUID。
+
 ## 2. 换机型后启动失败：按证据检查 ACPI
 
 ### 2.1 先确认故障形态

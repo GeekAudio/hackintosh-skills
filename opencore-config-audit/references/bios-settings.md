@@ -8,7 +8,9 @@
 > 2. **Dortania OpenCore Install Guide**（社区事实标准）—— 官方没写的它也写了，分 Intel / AMD
 > 3. **社区实战补充**（VMD、Speed Shift 等）—— 官方**完全没提**，但踩到就装不上
 >
-> ⚠️ 三份都不完整，**要合起来看**。本文第 3 节把它们合并成「必须关 / 必须开 / 看情况」三类。
+> ⚠️ 三份都不完整，**要合起来看**。本文第 3 节按常见启动要求归类，不能据此批量改掉已有 Windows 所需的设置。
+
+双系统先记录固件直启 Windows 的基线，核对 BitLocker 恢复材料、存储模式与安全功能，再评估改动。BIOS 设置影响整机；macOS 不使用某项功能，不等于应为它关闭该功能。见 [Windows 共存审查](windows-coexistence.md)。
 
 ---
 
@@ -16,15 +18,14 @@
 
 **不要**一上来就把 BIOS 所有选项翻一遍（几百项，且各厂商命名不同）。按这个顺序：
 
-1. **先跑 Windows 审查脚本**（`scripts/bios-audit.ps1`）—— 它能在 Windows 里**直接判定**一批项，
-   把「肯定有问题」的先挑出来，剩下的才需要人工进 BIOS 核
-2. **进 BIOS 核「必须关/必须开」两类**（§3）—— 用 §7 的检查表逐条打勾
+1. **先跑 Windows 审查脚本**（`scripts/bios-audit.ps1`）—— 它能在 Windows 里**读取一批状态**，
+   先记录可观察值；脚本的建议仍须按目标系统与现有 Windows 需求复核，不能将 WARN / FAIL 直接当成修改授权
+2. **按平台与故障证据进 BIOS 核清单**（§3）—— 用 §7 的检查表记录当前值和确需变更项
 3. **BIOS 里找不到某项**时，看 §8 的厂商命名对照表（同一设置各家叫法不同）
 4. **找不到、又确实需要**时 → 走 §5 的隐藏选项路线（UEFITool + IFR-Extractor），
    或用 §3 表里「对应的 OpenCore 兜底」那一列绕过
 
-> ★ **判据优先级**：**BIOS 层能解决的一律在 BIOS 层解决**，别用 OpenCore 的 quirk 兜底。
-> 官方原话（关于 CFG Lock）：*"this option should be avoided whenever possible"*（指 `AppleXcpmCfgLock`）。
+> ★ **按具体选项判断**：官方对 `AppleXcpmCfgLock` 建议尽量避免使用，不表示所有问题都应优先改整机 BIOS。对 macOS IOMapper 冲突，官方反而优先推荐 `DisableIoMapper`，保留其它系统的 VT-d。依据：[OpenCore 1.0.8](https://github.com/acidanthera/OpenCorePkg/blob/1.0.8/Docs/Configuration.tex)。
 
 ---
 
@@ -37,7 +38,7 @@
 | 1 | Most up-to-date UEFI firmware | **升级固件** |
 | 2 | `Fast Boot` and `Hardware Fast Boot` disabled | **关** |
 | 3 | `Above 4G Decoding` or similar enabled —— ★ 但 **ASUS WS-X299-PRO** 上该选项会**起反效果、必须关**；其它主板未见此问题，出现「莫名其妙引导失败」时**第一个查它** | **开**（例外：关） |
-| 4 | `DisableIoMapper` quirk enabled, **or** `VT-d` disabled in firmware, **or** ACPI DMAR deleted（三选一） | **关**（或 quirk 兜底） |
+| 4 | `DisableIoMapper` quirk enabled, **or** `VT-d` disabled in firmware, **or** ACPI DMAR deleted（三选一） | 按目标路线核实；IOMapper 冲突优先评估 macOS 限定 quirk，不先关整机 VT-d / 删 DMAR |
 | 5 | No `slide` boot argument present | **别加** |
 | 6 | `CFG Lock`（MSR `0xE2` write protection）disabled —— 详见 `ControlMsrE2` | **关** |
 | 7 | `CSM`（Compatibility Support Module）disabled —— NVIDIA 6xx / AMD 2xx 及更老需先刷 GOP ROM | **关** |
@@ -55,6 +56,8 @@
 ### 2.1 Intel（桌面 / 笔记本 / HEDT 通用）
 
 > 原文前置说明：*"Most of these options may not be present in your firmware, we recommend matching up as closely as possible but don't be too concerned if many of these options are not available in your BIOS"*
+
+以下保留 Dortania 的平台清单供对照；其中 Secure Boot、PTT / fTPM、IOMMU 与存储模式须结合 §3 的共存条件评估，不是对已有 Windows 的统一修改指令。
 
 **Disable**
 
@@ -88,7 +91,7 @@
 
 AMD CPU 的电源管理 / 监控和 AMD Power Gadget 见 [专题](amd-cpu.md)；不能用传感器插件替代内核兼容补丁，也不把 P-State / 风扇调节当成 BIOS 审查的默认操作。
 
-**Disable**：Fast Boot、Secure Boot、Serial/COM Port、Parallel Port、**CSM**、**IOMMU**
+**Disable（平台参考，按 §3 条件核实）**：Fast Boot、Secure Boot、Serial/COM Port、Parallel Port、**CSM**、**IOMMU**；不因这条清单直接关闭现有 Windows 所需的固件安全或 IOMMU。
 > ★ 特殊：**3990X** 有 128 线程，macOS 内核只支持 64 ⇒ 必须**关超线程**（Dortania 明确建议）。
 
 **Enable**：
@@ -103,29 +106,29 @@ AMD CPU 的电源管理 / 监控和 AMD Power Gadget 见 [专题](amd-cpu.md)；
 
 ## 3. ★★ 合并后的三类清单（**这张表是核心**）
 
-### 3.1 必须关闭
+### 3.1 常见关闭候选（先确认适用条件）
 
-| 设置 | 为什么必须关 | 不关的后果 | OpenCore 兜底 |
+| 设置 | macOS 侧考虑 | 可能的影响 | 条件 / OpenCore 方案 |
 |---|---|---|---|
 | **Fast Boot / Ultra Fast Boot / MSI Fast Boot** | 跳过设备初始化 | **进不去选择器**、USB 键鼠没反应 | ❌ 无 |
-| **Secure Boot** | macOS 不认非 Apple 签名 | 第三方 kext 加载失败 | ⚠️ 部分靠 `SecureBootModel=Disabled`，但 BIOS 侧仍建议关 |
+| **固件 UEFI Secure Boot** | 可能拒绝未受信任的 OpenCore / UEFI 组件 | 固件拒绝加载引导程序 | 与 Apple `SecureBootModel` 是两套机制；按实际签名与固件拒绝证据处理，不因第三方 kext 就统一关闭。已有 Windows 的保护与恢复路径先核实 |
 | **CSM（Compatibility Support Module）** | 引入 legacy option ROM，GOP 走不通 | **GPU 报错 / 卡在 `gIO` / 分辨率异常** | ❌ 无 |
 | **CFG Lock（MSR 0xE2 write protection）** | macOS 原生电源管理要写 MSR `0xE2` | ★★ **"Your hack will not boot"**（Dortania 原文） | ⚠️ `Kernel → Quirks → AppleXcpmCfgLock = true`（**官方说尽量别用**） |
-| **★ Intel VMD / Volume Management Device** | **macOS 没有 VMD 驱动** | ★★ **装系统时「找不到任何驱动器」**；已装好的系统看不到盘 | ❌ 无（**官方与 Dortania 都没写，纯社区经验**） |
-| **Intel RST / SATA RAID Mode** | macOS 只认 AHCI / NVMe 原生，不认 RST 假 RAID | 看不到硬盘 | ❌ 无 |
+| **★ Intel VMD / Volume Management Device** | macOS 可能看不到由该控制器接管的目标盘 | 安装器 / 系统找不到该盘 | 先核对目标盘是否由它接管；已有 Windows 依赖该模式时先规划存储驱动迁移与回退，不能直接关闭 |
+| **Intel RST / SATA RAID Mode** | macOS 目标盘通常需要原生 AHCI / NVMe 路径 | 看不到目标盘 | 已有 Windows 的控制器模式不能直接切换；先备份并核实迁移方案，见下方来源 |
 | **Serial / COM Port** | 占 I/O、老平台可能冲突 | 少数情况卡引导 | ❌ 无 |
 | **Parallel Port** | 同上 | | ❌ 无 |
 | **Intel SGX** | macOS 无驱动 | 一般无害，官方仍建议关 | ❌ 无 |
-| **Intel Platform Trust / PTT / fTPM** | macOS 不需要 TPM | 一般无害 | ❌ 无 |
-| **VT-d / IOMMU**（**可以开，但要知道代价**） | 与 XNU 的 IOMapper 冲突 | 网卡/无线反复 `link up/link down`、发现不了网络 | ✅ ★ **官方首选是开 `DisableIoMapper=true`**（*"a preferred alternative to … disabling VT-d in firmware preferences, which does not obstruct VT-d support in other systems"*） |
 | **Thunderbolt**（**仅安装期**） | 未配置时可能出问题 | 安装期异常 | — 装好后按需开 |
 | **ErP / EuP Ready** | 关机后切断待机供电 | 关机不断电、USB 唤醒异常（**看情况**，不是必须） | ❌ 无 |
 | **Wake on LAN / 网络唤醒** | 睡眠被网络事件唤醒 | 睡眠不稳 | ❌ 无 |
 | **Network Stack / PXE Boot** | POST 阶段要初始化网络 | 开机变慢 | ❌ 无 |
 
-### 3.2 必须开启
+固件 / TPM / 启动链变动可能触发 BitLocker 恢复；先确认恢复密钥可取，确需变更时按 Windows 管理策略处理保护状态，不自动关闭加密或清除 TPM。依据：[Microsoft BitLocker FAQ](https://learn.microsoft.com/en-us/windows/security/operating-system-security/data-protection/bitlocker/faq)。控制器模式切换可能导致 Windows `INACCESSIBLE_BOOT_DEVICE`，见 [Microsoft 故障说明](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/bug-check-0x7b--inaccessible-boot-device)。
 
-| 设置 | 为什么必须开 | 不开的后果 | 备注 |
+### 3.2 常见开启候选（按目标硬件与启动路径确认）
+
+| 设置 | 适用条件 | 可能的影响 | 备注 |
 |---|---|---|---|
 | **VT-x**（Intel）/ **SVM Mode**（AMD） | 虚拟化 | Docker/VM 用不了 | |
 | **Above 4G Decoding** | 让大 BAR 能被映射到 4G 以上 | 大 BAR 显卡驱动起不来 | ★ 官方点名例外：**ASUS WS-X299-PRO 必须关** |
@@ -133,7 +136,7 @@ AMD CPU 的电源管理 / 监控和 AMD Power Gadget 见 [专题](amd-cpu.md)；
 | **Execute Disable Bit**（XD / NX） | macOS 要求 | 可能起不来 | |
 | **EHCI/XHCI Hand-off** | USB 控制权交接给 OS | 安装期 USB 键鼠 / 安装介质没反应 | 官方：**仅当不拔 USB 就卡引导时**才需要 |
 | **OS Type = Windows 8.1/10 UEFI Mode**（或 **Other OS**） | 让固件按 UEFI 方式初始化 | 可能退回 legacy 路径 | 部分主板必须选 "Other OS" |
-| **SATA Mode = AHCI** | macOS 只认 AHCI | 看不到 SATA 盘 | |
+| **SATA Mode = AHCI** | macOS 目标 SATA 盘通常需要原生 AHCI | 目标盘不可见 | 已有 Windows 依赖 RST / RAID 时先规划迁移，不能只为勾此表直接切换 |
 | **DVMT Pre-Allocated** | 按目标核显驱动预留内存 | 核显花屏 / 黑屏 | 常规参考 ≥64MB；[WhateverXe](intel-xe-graphics.md) 优先96MB，不能混用DVMT特例 |
 | **★ Intel Speed Shift Technology** | macOS 用 HWP 调度 | ★★ **`wrmsr(0x770,1)` #GP panic**（本机实测硬前提） | **官方与 Dortania 都没写**，社区经验 |
 | **Resizable BAR / Re-Size BAR Support** | 大 BAR 驱动路线需要 | 大 BAR 驱动拿不到 BAR | **看情况**，见 §3.3 |
@@ -142,6 +145,8 @@ AMD CPU 的电源管理 / 监控和 AMD Power Gadget 见 [专题](amd-cpu.md)；
 
 | 设置 | 什么时候开 | 什么时候关 |
 |---|---|---|
+| **TPM / PTT / fTPM** | 保留已有 Windows / BitLocker 所需状态；macOS 用不到不是关闭理由 | 仅目标机器有明确兼容问题且已核实 Windows 影响、恢复材料与回退路径时评估；不清除 TPM |
+| **VT-d / IOMMU** | 其它系统或目标驱动需要时保留；原生 AppleVTD 路线按其要求配置 | 仅有具体平台 / 驱动证据时评估。macOS IOMapper 冲突优先用 `Kernel>Quirks>DisableIoMapper`，而非关固件 VT-d 或删 DMAR |
 | **Re-Size BAR Support** | 你的驱动/卡需要大 BAR（如 NVIDIA 驱动），且 `ResizeGpuBars` 已配好 | 驱动版本或卡不支持大 BAR 时；出现黑屏/起不来时先试关 |
 | **XMP / DOCP / EXPO** | 内存超频档，**稳定就开着** | 出现内存相关不稳定、睡眠异常时关掉回 JEDEC |
 | **Internal Graphics / iGPU** | 根据用户目标启用；传统 Intel 路线与 [WhateverXe Xe-LP 路线](intel-xe-graphics.md) 分别核对 | 仅在明确不使用核显时关闭 / 禁用；不要因 CPU 代数直接认定无驱动，WhateverGreen 与 WEX 不能同开 |
@@ -153,7 +158,7 @@ AMD CPU 的电源管理 / 监控和 AMD Power Gadget 见 [专题](amd-cpu.md)；
 | **Power Supply Idle Control**（AMD） | 一般 `Auto` | 某些 Ryzen 待机重启 ⇒ 试 `Typical Current Idle` |
 | **★ E 核（Efficient Core）数量**（Intel 混合架构） | 需要全部活动核心时选 `All`；Alder/Raptor Lake 的 `ProvideCurrentCpuInfo` 与可选 CTR 拓扑处理见 `e-cores.md` | 仅在用户选择或当前排障有依据时关闭；核数及 HT 按目标配置核实，不默认套用 4 个 E 核 |
 | **Multi-Monitor / Primary Display** | 取决于用哪块 GPU 输出 | — |
-| **DMA Protection / Kernel DMA Protection** | Win11 需要 | 与 macOS 无关，但**可能干扰**第三方驱动，出问题先试关 |
+| **DMA Protection / Kernel DMA Protection** | 保留现有 Windows 的 DMA 防护；功能依赖 IOMMU 与固件 / 驱动支持 | 有明确兼容证据时才评估改变，不因一般驱动异常先关整机防护。见 [Microsoft 说明](https://learn.microsoft.com/en-us/windows/security/hardware-security/kernel-dma-protection-for-thunderbolt) |
 
 ---
 
@@ -166,7 +171,7 @@ AMD CPU 的电源管理 / 监控和 AMD Power Gadget 见 [专题](amd-cpu.md)；
 | **Re-Size BAR + Above 4G 的组合** | ReBAR 依赖 Above 4G。只开 ReBAR 不开 Above 4G 会出怪问题 | 两个一起看；配 `ResizeGpuBars` / `ResizeAppleGpuBars` |
 | **XMP 与内存稳定性** | XMP 档位在 macOS 下不一定稳（尤其 4 条满插） | Windows 里对比 `Speed` vs `ConfiguredClockSpeed`（§6 脚本） |
 | **ErP / EuP** | 关机行为、USB 供电 | 只在你关心关机/唤醒行为时动 |
-| **TPM / PTT / fTPM** | macOS 用不到；有些主板开 PTT 会多出设备 | Windows 里 `Get-Tpm` 看 `TpmPresent`（§6 脚本） |
+| **TPM / PTT / fTPM** | macOS 用不到不代表应该关闭；可能被现有 Windows 保护使用 | Windows 里 `Get-Tpm` 看状态，按 §3.3 判断，不将存在 TPM 当作故障 |
 | **固件版本** | 官方清单第 1 条就是「用最新 UEFI」 | 记下当前版本，去主板官网比对 |
 
 ---
@@ -233,16 +238,18 @@ powershell -ExecutionPolicy Bypass -File .\bios-audit.ps1 -OutFile C:\bios-audit
 | 固件类型（UEFI / Legacy） | `$env:firmware_type` | 必须是 **UEFI** |
 | 启动模式 | `bcdedit` 的 `winload.efi` | 必须是 `.efi` |
 | 系统盘分区样式 | `Get-Disk.PartitionStyle` | **GPT**（配合 UEFI） |
-| **Secure Boot** | `Confirm-SecureBootUEFI` | 期望 **False**（= 已关） |
-| **TPM / PTT / fTPM** | `Get-Tpm.TpmPresent` | 期望 **False**（= BIOS 里已关） |
-| **VT-x / SVM** | `Win32_Processor.VirtualizationFirmwareEnabled` | 期望 **True**（若 Hyper-V 在跑会误报，脚本会一并报 `HypervisorPresent`） |
-| **超线程** | `Cores` vs `LogicalProcessors` | 逻辑 = 2×物理 ⇒ HT 已开 |
+| **Secure Boot** | `Confirm-SecureBootUEFI` | 记录现状；按实际引导组件信任与 Windows 保护判断，不统一期望 False |
+| **TPM / PTT / fTPM** | `Get-Tpm.TpmPresent` | 只记录是否存在；是否被 BitLocker 等使用另核。True 本身不表示故障，不统一要求关闭 |
+| **VT-x / SVM** | `Win32_Processor.VirtualizationFirmwareEnabled` | 记录状态，按目标工作负载与系统要求判断；Hyper-V 在跑时读数可能受影响，结合 `HypervisorPresent` 复核 |
+| **超线程** | `Cores` vs `LogicalProcessors` | 核数比例只是 SMT 线索，结合实际 CPU 拓扑与 BIOS 判断，不据此强制启用 |
 | **XMP / DOCP** | `Speed` vs `ConfiguredClockSpeed` | Configured > JEDEC 默认 ⇒ 超频档生效 |
-| **★ VMD / RST** | `Get-Disk.BusType` + 存储控制器设备名 | 出现 **`RAID`** 总线类型、或控制器名含 `VMD` / `Volume Management Device` / `RST` ⇒ **VMD 开着，必须关** |
+| **★ VMD / RST** | `Get-Disk.BusType` + 存储控制器设备名 | `RAID` / `VMD` / `RST` 是接管线索；继续核对目标盘与已有 Windows 驱动，不能据名称直接切换模式 |
 | 存储控制器清单 | `Get-PnpDevice` + PCI 硬件 ID | 列出所有 SCSIAdapter/HDC，便于人工认 |
 | Serial/COM 端口 | `Get-CimInstance Win32_SerialPort` | 有 COM 口 ⇒ BIOS 里串口可能没关 |
 | BIOS 版本 / 日期 / 主板 | `Win32_BIOS` / `Win32_BaseBoard` | 拿去官网比对是否最新 |
 | 内存条与插槽 | `Win32_PhysicalMemory` | 顺便核对内存注入的槽位（见 `memory-injection.md`） |
+
+脚本输出是采集线索，不能由 TPM 存在、RAID 总线类型或控制器名称单独推出应关闭功能 / 切换存储模式。
 
 ### 6.3 它只能**给线索**、要人工确认的（B 类）
 
@@ -269,34 +276,33 @@ powershell -ExecutionPolicy Bypass -File .\bios-audit.ps1 -OutFile C:\bios-audit
 ## 7. 检查表（进 BIOS 时逐条打勾）
 
 ```
-【必须关】
+【启动要求：按平台与证据核实】
 [ ] Fast Boot / Ultra Fast Boot / MSI Fast Boot
-[ ] Secure Boot
+[ ] 固件 Secure Boot → 核实引导组件信任与 Windows / BitLocker 影响
 [ ] CSM (Compatibility Support Module)
 [ ] CFG Lock (MSR 0xE2)
-[ ] VMD / Intel Volume Management Device        ← ★ 官方没写，但必关
-[ ] Intel RST / SATA RAID Mode  → 改成 AHCI
+[ ] VMD / Intel RST / SATA RAID → 确认目标盘归属；已有 Windows 先规划驱动迁移与回退
 [ ] Serial / COM Port
 [ ] Parallel Port
 [ ] Intel SGX
-[ ] Intel Platform Trust / PTT / fTPM
 [ ] Network Stack / PXE（可选，为了快）
 [ ] Wake on LAN（可选）
-[ ] VT-d / IOMMU（★ 也可改开 + 用 DisableIoMapper=true 兜底）
 
-【必须开】
+【按目标硬件与启动路径核对的开启候选】
 [ ] VT-x（Intel）/ SVM Mode（AMD）
 [ ] Above 4G Decoding
 [ ] Hyper-Threading（3990X 例外：关）
 [ ] Execute Disable Bit (XD / NX)
 [ ] EHCI/XHCI Hand-off
 [ ] OS Type = Windows 8.1/10 UEFI Mode（或 Other OS）
-[ ] SATA Mode = AHCI
+[ ] SATA Mode = AHCI → 先处理已有 Windows 的存储模式依赖
 [ ] DVMT Pre-Allocated ≥ 64MB（有核显时）
-[ ] Intel Speed Shift Technology                ← ★ 官方没写，但是硬前提
+[ ] Intel Speed Shift Technology → 按实际 Intel CPU 与 HWP 路线核对
 [ ] Resizable BAR（按驱动需要，配 ResizeGpuBars）
 
 【看情况，别一律动】
+[ ] TPM / PTT / fTPM    → 保留 Windows 所需状态，不因 macOS 用不到就关
+[ ] VT-d / IOMMU        → 保留其它系统需求；macOS IOMapper 冲突优先评估 DisableIoMapper
 [ ] XMP / DOCP          → 稳定就开
 [ ] Internal Graphics   → 核显有驱动才开
 [ ] Legacy USB Support  → 装系统期开，之后可关
@@ -318,7 +324,7 @@ powershell -ExecutionPolicy Bypass -File .\bios-audit.ps1 -OutFile C:\bios-audit
 | Re-Size BAR | `Advanced → PCI Subsystem → Re-Size BAR Support` | `Settings → Advanced → PCI Subsystem → Re-Size BAR` | `Settings → IO Ports → Re-Size BAR Support` | `Advanced → PCI Configuration → Re-Size BAR` |
 | CFG Lock | `Advanced → CPU Configuration → CPU Power Management → CFG Lock` | `OC → CPU Features → CFG Lock` | `Settings → Miscellaneous → CFG Lock` | `Advanced → CPU Configuration → CFG Lock` |
 | VT-d / IOMMU | `Advanced → System Agent → VT-d` | `OC → CPU Features → VT-d` | `Settings → Miscellaneous → VT-d` | `Advanced → Chipset → VT-d` |
-| VMD | `Advanced → VMD Setup Menu → Enable VMD controller = Disabled` | `Settings → Advanced → VMD Setup Menu` | `Settings → IO Ports → VMD Configuration` | `Advanced → VMD Configuration` |
+| VMD | `Advanced → VMD Setup Menu → Enable VMD controller` | `Settings → Advanced → VMD Setup Menu` | `Settings → IO Ports → VMD Configuration` | `Advanced → VMD Configuration` |
 | Speed Shift | `Advanced → CPU Configuration → Intel Speed Shift Technology` | `OC → CPU Features → Intel Speed Shift` | `Settings → Advanced CPU Settings` | `Advanced → CPU Configuration` |
 | **E 核数量**（12 代+） | `Advanced → CPU Configuration → Active Efficient Cores` | `OC → Advanced CPU Configuration → E-Core Count` | `Settings → Advanced CPU Settings → E-Core Count` | `Advanced → CPU Configuration → Active E Cores` |
 | SATA Mode | `Advanced → SATA Configuration → SATA Mode = AHCI` | `Settings → Advanced → SATA Mode = AHCI` | `Settings → SATA Mode = AHCI` | `Advanced → Storage Configuration → SATA Mode = AHCI` |
@@ -332,7 +338,7 @@ powershell -ExecutionPolicy Bypass -File .\bios-audit.ps1 -OutFile C:\bios-audit
 
 | BIOS 里做不到 / 不想动 | OpenCore 侧对应 | 说明 |
 |---|---|---|
-| 关不掉 VT-d | `Kernel → Quirks → DisableIoMapper = true` | ★ **官方首选**（不影响其它系统用 VT-d） |
+| 需要绕过 macOS IOMapper 冲突，并保留其它系统的 VT-d | `Kernel → Quirks → DisableIoMapper = true` | ★ **官方首选**；需要 AppleVTD 的驱动路线须另核其要求 |
 | 关不掉 CFG Lock | `Kernel → Quirks → AppleXcpmCfgLock = true` | ⚠️ 官方说尽量避免 |
 | 关不掉 CSM（老卡） | 无 —— 需先刷 GOP ROM | |
 | Above 4G 关掉（ASUS WS-X299-PRO / AMD 某些板） | boot-args 加 `npci=0x3000` | ★ **两者不能同时** |
@@ -345,6 +351,7 @@ powershell -ExecutionPolicy Bypass -File .\bios-audit.ps1 -OutFile C:\bios-audit
 ## 10. 与其它 reference 的关系
 
 - **引导失败 / 卡住** → `logs-and-debug.md`（先看 OC 日志）；**耗时** → `boot-timeline.md`
+- **Windows 共存 / 固件安全与启动差异** → [Windows 共存审查](windows-coexistence.md)
 - **NVIDIA 大 BAR 与 ReBAR** → `nvidia-driver.md`
 - **核显 / iGPU** → Intel Xe-LP 先查 [WhateverXe](intel-xe-graphics.md)；明确不用核显时才看 §3.3 与 `boot-timeline.md` 的禁用案例
 - **内存条与插槽核对** → `memory-injection.md`（脚本的 §6.2 顺带输出槽位）

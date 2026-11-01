@@ -4,7 +4,8 @@
   Purpose : Collect everything Windows CAN tell you about your firmware settings,
             so you only have to walk into the BIOS for what Windows cannot read.
 
-  Safety  : READ-ONLY. It never writes to disk, NVRAM, firmware or any device.
+  Safety  : Read-only collection: no NVRAM, firmware or device changes.
+            -OutFile writes only the requested report file.
             Output is plain ASCII on purpose (avoids PowerShell 5.1 encoding issues).
 
   Usage   : powershell -ExecutionPolicy Bypass -File .\bios-audit.ps1
@@ -64,13 +65,13 @@ $script:FwType = ""
 Try-It { $script:FwType = $env:firmware_type }
 if ($script:FwType) {
     if ($script:FwType -eq 'UEFI') { OK ("firmware_type = UEFI") }
-    else { BAD ("firmware_type = " + $script:FwType + "  -> must be UEFI for macOS") }
+    else { WARN ("firmware_type = " + $script:FwType + "  -> review the planned OpenCore boot method before changing Windows boot mode") }
 } else { MAN "firmware_type not exposed on this build; falling back to bcdedit" }
 
 Try-It {
     $bcd = (& bcdedit /enum '{current}' 2>$null) -join "`n"
     if ($bcd -match 'winload\.efi') { OK "boot loader = winload.efi  (UEFI boot)" }
-    elseif ($bcd -match 'winload\.exe') { BAD "boot loader = winload.exe  (LEGACY boot) -> macOS needs UEFI" }
+    elseif ($bcd -match 'winload\.exe') { WARN "boot loader = winload.exe  (LEGACY boot); a UEFI migration needs a Windows recovery plan" }
     else { MAN "could not parse bcdedit output" }
 }
 
@@ -87,22 +88,27 @@ Try-It {
 }
 
 SEP
-INFO "Secure Boot (BIOS setting - we want it OFF)"
+INFO "UEFI Secure Boot (record the current Windows firmware state)"
 if ($IsAdmin) {
     Try-It {
         $sb = Confirm-SecureBootUEFI -ErrorAction Stop
-        if ($sb) { BAD "Secure Boot is ENABLED -> disable it in BIOS" }
-        else     { OK  "Secure Boot is DISABLED" }
+        if ($sb) { INFO "UEFI Secure Boot is ENABLED" }
+        else     { INFO "UEFI Secure Boot is DISABLED" }
+        W "         Check whether the planned OpenCore boot chain is trusted by this firmware."
+        W "         Do not disable Secure Boot or clear keys just because it is enabled."
+        W "         This is separate from OpenCore's Apple SecureBootModel setting."
     }
 } else { MAN "needs Administrator" }
 
 SEP
-INFO "TPM / Intel PTT / AMD fTPM (BIOS setting - we want it OFF)"
+INFO "TPM / Intel PTT / AMD fTPM (presence is not a macOS failure)"
 if ($IsAdmin) {
     Try-It {
         $tpm = Get-Tpm -ErrorAction Stop
-        if ($tpm.TpmPresent) { WARN "TPM present (TpmPresent=True) -> consider disabling PTT/fTPM in BIOS" }
-        else                 { OK   "no TPM present" }
+        INFO ("TpmPresent=" + $tpm.TpmPresent + "  TpmReady=" + $tpm.TpmReady)
+        W "         Windows security and BitLocker may depend on the current TPM state."
+        W "         Do not disable or clear TPM based on this detection alone."
+        W "         Before any required firmware/security change, retain recovery keys and a rollback plan."
     }
 } else { MAN "needs Administrator" }
 
@@ -116,9 +122,9 @@ Try-It {
     INFO ("Logical CPUs   : " + $cpu.NumberOfLogicalProcessors)
     if ($cpu.NumberOfCores -gt 0 -and
         $cpu.NumberOfLogicalProcessors -eq (2 * $cpu.NumberOfCores)) {
-        OK "Hyper-Threading appears ENABLED (logical = 2 x cores)"
+        INFO "Logical CPUs = 2 x cores (consistent with SMT; verify the actual CPU topology)"
     } elseif ($cpu.NumberOfLogicalProcessors -eq $cpu.NumberOfCores) {
-        WARN "Hyper-Threading appears DISABLED (logical = cores) -> enable it in BIOS"
+        INFO "Logical CPUs = cores; this alone does not prove SMT is disabled or supported"
     } else {
         MAN ("HT state unclear (" + $cpu.NumberOfCores + " cores / " + $cpu.NumberOfLogicalProcessors + " logical)")
     }
@@ -134,7 +140,7 @@ Try-It {
         W "         -> this reading is unreliable while Hyper-V is active."
         W "         -> verify VT-x / SVM directly in BIOS."
     } else {
-        BAD "VirtualizationFirmwareEnabled = False -> enable VT-x (Intel) / SVM (AMD) in BIOS"
+        INFO "VirtualizationFirmwareEnabled = False; confirm VT-x / SVM in BIOS if the target workload needs it"
     }
 
     if ($cpu.DataExecutionPrevention_Available -eq $true) {
@@ -192,13 +198,12 @@ Try-It {
     }
     SEP
     if ($raid) {
-        BAD "A disk reports BusType = RAID."
-        W "         -> On Intel platforms this strongly suggests VMD (Volume Management"
-        W "            Device) or Intel RST is ENABLED. macOS has no VMD driver, so you"
-        W "            will NOT see the drive in the installer. DISABLE VMD in BIOS"
-        W "            and set SATA Mode to AHCI."
+        WARN "A disk reports BusType = RAID (a Windows storage presentation clue)."
+        W "         This alone does not identify VMD/RST, the firmware controller mode,"
+        W "         or whether the target macOS disk is behind that controller."
+        W "         Correlate controller hardware IDs, the target disk path and installer visibility."
     } else {
-        OK "No disk reports BusType = RAID (good sign, but keep reading below)"
+        INFO "No disk reports BusType = RAID; this does not prove VMD/RST is disabled"
     }
 }
 
@@ -214,7 +219,8 @@ Try-It {
         INFO ("  " + $name)
         if ($name -match 'VMD|Volume Management|RST|RAID|Optane') {
             $script:CtrlHit = $true
-            BAD ("    ^^^ matches VMD / RST / RAID -> DISABLE VMD in BIOS")
+            WARN ("    ^^^ name matches VMD / RST / RAID; verify the device and target disk path")
+            W "         A matching device name does not establish the current controller mode."
         }
         try {
             $hw = (Get-PnpDeviceProperty -InstanceId $c.InstanceId -KeyName 'DEVPKEY_Device_HardwareIds' -ErrorAction Stop).Data
@@ -224,14 +230,19 @@ Try-It {
     SEP
     if (-not $script:CtrlHit) {
         INFO "No controller name matched VMD/RST/RAID."
-        W "         Still verify in BIOS: search for 'VMD' / 'Volume Management Device'."
-        W "         VMD can be enabled with the controller hidden behind a different name."
+        W "         Names alone cannot establish whether VMD/RST is enabled or disabled."
+        W "         Check hardware IDs, firmware settings and the target disk path if needed."
     }
 }
 if (-not (Get-Command Get-PnpDevice -ErrorAction SilentlyContinue)) {
     MAN "Get-PnpDevice not available on this build - check Device Manager manually:"
     W "         Storage controllers -> look for 'Intel(R) Volume Management Device'"
 }
+W ""
+INFO "Do not switch VMD/RST/RAID or SATA mode solely from these observations."
+W "         If the target disk needs direct NVMe/AHCI access, first confirm the mapping."
+W "         Back up data and BitLocker recovery keys, and prepare the Windows storage"
+W "         driver/migration and firmware rollback plan before an authorized change."
 
 # ------------------------------------------------------------ 5. GPU / ReBAR
 H "5. GPU  (Above 4G / Re-Size BAR hints)"
@@ -274,15 +285,15 @@ W "         Use GPU-Z (shows 'Resizable BAR' and 'Above 4G Decoding') or"
 W "         NVIDIA Control Panel -> System Information."
 
 # ----------------------------------------------------------- 6. serial ports
-H "6. SERIAL / COM PORTS  (BIOS setting - we want them OFF)"
+H "6. SERIAL / COM PORTS  (inventory; preserve ports needed by Windows)"
 
 Try-It {
     $coms = Get-CimInstance Win32_SerialPort -ErrorAction Stop
     if ($coms) {
-        WARN ("Found " + @($coms).Count + " serial port(s) -> consider disabling Serial/COM Port in BIOS")
+        INFO ("Found " + @($coms).Count + " serial port(s); presence alone does not require disabling them")
         foreach ($p in $coms) { INFO ("  " + $p.DeviceID + "  " + $p.Description) }
     } else {
-        OK "No serial ports enumerated (consistent with Serial/COM disabled)"
+        INFO "No serial ports enumerated; this does not establish the BIOS port setting"
     }
 }
 
@@ -310,22 +321,21 @@ Try-It {
 # ------------------------------------------------------------- 8. can't read
 H "8. CANNOT BE READ FROM WINDOWS  -> check in BIOS or with a special tool"
 
-W "  These MUST be verified manually. Windows gives no reliable reading:"
+W "  Review these only as needed for the target hardware, boot path and symptoms."
+W "  Preserve working Windows settings; this report does not prescribe BIOS changes:"
 W ""
-W "  [ ] CFG Lock (MSR 0xE2 write protection)   -> must be DISABLED"
-W "      Windows cannot read MSRs from user mode. Use one of:"
-W "        - OpenCore's bundled ControlMsrE2.efi  (most accurate; runs at the picker)"
-W "        - RWEverything on Windows"
-W "        - macOS: sudo wrmsr 0xE2 0x0   (fails with 'cannot set MSR' when locked)"
+W "  [ ] Intel CFG Lock (MSR 0xE2)             -> verify only if the CPU/EFI path needs it"
+W "      WMI does not provide this MSR state. For a deliberate status check, use"
+W "      ControlMsrE2.efi without arguments (verify only), not lock/unlock/interactive."
 W ""
-W "  [ ] CSM (Compatibility Support Module)     -> must be DISABLED"
-W "  [ ] Fast Boot / Ultra Fast Boot            -> must be DISABLED"
-W "  [ ] VMD / Volume Management Device         -> must be DISABLED  (see section 4)"
-W "  [ ] SATA Mode = AHCI                       -> must be AHCI"
-W "  [ ] Intel Speed Shift Technology           -> must be ENABLED"
-W "  [ ] EHCI/XHCI Hand-off                     -> ENABLED"
-W "  [ ] OS Type = Windows 8.1/10 UEFI Mode     -> (or 'Other OS')"
-W "  [ ] DVMT Pre-Allocated >= 64MB             -> only if you keep the iGPU enabled"
+W "  [ ] CSM / UEFI boot path                  -> match the firmware, GPU GOP and Windows boot method"
+W "  [ ] Fast Boot / Ultra Fast Boot           -> review for USB discovery or firmware-entry problems"
+W "  [ ] VMD / RST / target disk mapping       -> confirm before considering a mode change (section 4)"
+W "  [ ] SATA mode                            -> AHCI only where the target storage path requires it"
+W "  [ ] Intel Speed Shift                    -> depends on the Intel CPU and macOS power-management path"
+W "  [ ] EHCI/XHCI Hand-off                    -> review when USB hand-off symptoms require it"
+W "  [ ] OS Type                              -> vendor-specific; review its actual Secure Boot effect"
+W "  [ ] iGPU / DVMT pre-allocation            -> match the actual GPU, driver and display route"
 W "  [ ] ACPI tables (DSDT / DMAR / FADT ...)   -> RWEverything / acpidump,"
 W "      or OpenCore DEBUG build + Misc > Debug > SysReport"
 W ""
@@ -335,10 +345,10 @@ W "      references/bios-settings.md"
 # ------------------------------------------------------------------- footer
 H "DONE"
 W "  Reminder: BIOS settings are only half of it. The matching OpenCore side is:"
-W "    - DisableIoMapper      <-> VT-d / IOMMU"
-W "    - AppleXcpmCfgLock     <-> CFG Lock (avoid if you can disable it in BIOS)"
-W "    - ResizeAppleGpuBars   <-> Re-Size BAR"
-W "    - -wegnoigpu           <-> Internal Graphics with no driver"
+W "    - DisableIoMapper: macOS IOMapper workaround; not an instruction to disable Windows VT-d/IOMMU"
+W "    - CFG Lock quirks: select for the actual CPU and kernel path; do not force a firmware unlock"
+W "    - ResizeAppleGpuBars: macOS BAR handling; distinct from firmware Re-Size BAR and UEFI ResizeGpuBars"
+W "    - iGPU handling: retain the selected driver/display route; do not automatically add -wegnoigpu"
 W ""
 
 if ($OutFile -ne "") {

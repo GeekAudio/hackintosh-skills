@@ -25,6 +25,8 @@ Windows GUI 的完整扫描需在**目标 PC 的 Windows**中进行。没有这�
 4. 需要制作安装棒时，备份所选 USB 的全部数据，再用 **Create the macOS stick / Erase and create**。这是**擦整个所选 USB**的步骤。App 会核对扫描 / EFI 绑定、盘身份、恢复镜像与写入结果；仍须确认选择的是准备擦除的盘。
 5. 按指南调整 BIOS，从该安装棒启动，记录实际停止位置或安装 / 启动结果。安装后的驱动配置与安装器配置分别处理；不要把已安装 NVIDIA 系统的大 BAR 等设置提前抄进安装棒。
 
+双系统机器在候选审阅与启动验收中加入 [Windows 共存检查](windows-coexistence.md)：记录原生直启与经 OC 的设备、身份和启动项基线；不机械关闭 TPM / VT-d、Booter quirk 或重写现有 UUID。
+
 实际工作根是 `%LOCALAPPDATA%\NullMoth\1401`：
 
 | 数据 | 当前实现中的位置 / 含义 |

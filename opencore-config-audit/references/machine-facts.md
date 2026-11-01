@@ -56,11 +56,11 @@
 |---|---|---|
 | `Misc>Debug>Target` | `69 (0x45)` | 记录 + DataHub + 文件；**控制台位 0x02 已关**（屏幕不再刷） |
 | `Misc>Debug>DisplayLevel` | `0x80000042` | ERROR + INFO（未开 VERBOSE） |
-| `Misc>Security>ScanPolicy` | `0` | 保持 0（选择器要能看到 Windows） |
+| `Misc>Security>ScanPolicy` | `0` | 当时采用不限扫描；不是显示 Windows 的唯一取值或所有机器默认值 |
 | `Misc>Security>SecureBootModel` | `Disabled` | 与 `FixupAppleEfiImages=true` 成对 |
 | `Misc>Security>Vault` | `Optional` | 无 vault.plist |
 | `Misc>Security>ExposeSensitiveData` | `7` | `0x01` 是 1401 App 找 OpenCore 用的 `boot-path`，**别降成 6** |
-| `Misc>Boot>LauncherOption` / `RequestBootVarRouting` | **`Full`** / `true` | ★ **10-15 02:41 定案：硬盘那份 `Full`（自建+自愈）/ U 盘那份 `Disabled`（不改写 NVRAM）** —— 中间一度两边都改过 `Disabled`，但那样**没人建启动项**，已回退。见 `boot-entries.md` §3 |
+| `Misc>Boot>LauncherOption` / `RequestBootVarRouting` | **`Full`** / `true` | ★ **10-15 02:41 定案：硬盘那份 `Full`（自建+自愈）/ U 盘那份 `Disabled`（不自动维护 Launcher 项；不代表禁止其它 NVRAM 写入）** —— 中间一度两边都改过 `Disabled`，但那样**没人建启动项**，已回退。见 `boot-entries.md` §3 |
 | `Misc>Boot>PickerMode/Variant/Attributes` | `External` / `Acidanthera\GoldenGate` / `144` | 主题，保留 |
 | `Misc>Boot>HideAuxiliary` | `true` | 隐藏 recovery / 工具项（按空格展开） |
 | `Booter>Quirks>EnableWriteUnprotector` | `false` | 依据 `OCABC: MAT support is 1` |

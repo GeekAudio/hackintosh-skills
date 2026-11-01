@@ -19,6 +19,7 @@
 | **1401 构建 / 诊断重建** | 「用1401生成EFI」「按原U盘日志重建」「1401报EB.MM.AKM」「Check my EFI怎么用」「取消发送后怎么本地排障」 |
 | **装不上 / 进不去系统** | 「装系统找不到硬盘」「卡在苹果 logo 进不去」「开机循环重启」「黑屏只剩鼠标」「装完第一次开机进不去」 |
 | 查开机慢 | 「开机很慢，分析一下时间线」「卡在苹果 logo」 |
+| **Windows 双系统兼容** | 「EFI 不要影响 Windows」「经 OC 启动 Windows 蓝屏 / 丢设备」「SMBIOS 影响激活吗」「OC 菜单没有 Windows」 |
 | **启动项没了** | 「BIOS 里看不到 OpenCore 了」「只剩 Windows」「用 U 盘引导后启动项消失」「bcfg 怎么加启动项」 |
 | **换引导盘** | 「从 U 盘启动改成硬盘启动」「怎么在 macOS 里加启动项」「启动项排第一」 |
 | 精简 | 「kext 精简一下，不用的删掉」「屏蔽一下其它磁盘」 |
@@ -78,7 +79,7 @@
 按主题挑：`toolchain.md`（**工具链：`iasl` / `gfxutil` 从哪来、缺了怎么降级**）· `bios-settings.md`（BIOS）· `lifecycle.md`（全流程）· `os-upgrade-15-to-26.md`（升系统）·
 `intel-xe-graphics.md`（**WhateverXe：Xe-LP 核显、配套图形包、接口与系统边界**）· `nvidia-driver.md` · `amfi-and-tcc.md`（**AMFI 相关权限故障，确认根因后按需使用 tcc-helper**）· `intel-wifi.md` · `mediatek-wifi.md`（**含原生 Sunrise 打包方案**） · `broadcom-wifi.md`（按芯片与系统选路线）· `airdrop-handoff.md`（**AirDrop / 接力：区分蓝牙发现、AWDL 与实际互通证据**）·
 `applealc-custom.md`（**声卡 / macOS 26 的音频路线 / 用 HDAU GUI 或 Linux dump 收集定制证据**）· `hidpi.md`（显示）· `amd-cpu.md`（**AMD Zen 电源管理 / 监控 / AMD Power Gadget**）· `intel-turbo.md`（Intel 睿频）· `e-cores.md`（**开/关小核**）· `cpu-name.md`（**CPU 显示名**）· `memory-injection.md`（内存）· `boot-failure-debug.md`（**装不上/进不去系统**）· `boot-timeline.md` / `logs-and-debug.md`（日志）· `boot-entries.md`（启动项）·
-`acpi-ssdt.md`（**ACPI 热补丁样例库索引**）· `disks-and-kexts.md` · `kext-and-oc-update.md`（**更新 kext / OC**）· `official-docs-method.md`（官方手工备选 / 复核）· `rapidefi-first-efi.md`（RapidEFI备选）·
+[windows-coexistence.md](references/windows-coexistence.md)（**Windows 共存、ACPI / 身份隔离与双路径验收**）· `acpi-ssdt.md`（**ACPI 热补丁样例库索引**）· `disks-and-kexts.md` · `kext-and-oc-update.md`（**更新 kext / OC**）· `official-docs-method.md`（官方手工备选 / 复核）· `rapidefi-first-efi.md`（RapidEFI备选）·
 `smbios-and-serials.md`（换机型 + 三码）· `network-en0-order.md`（`en0` 归属）· `ethernet-drivers.md`（有线网卡）· `ecosystem-sources.md`（**权威来源与工具索引**）· `laobamac-toolkit.md`（工具索引）· `pitfalls.md`（踩过的坑）· `theme-opencanopy.md`（选择器主题）· `machine-facts.md`（参考机器事实）
 
 `oc-edit-safe.sh` 默认存档到工作区的 `oc-config-archive/`。旧版仅含 SHA 的编辑基线不能直接用于新版 `finish`；先核对旧备份及未完成改动，再建立新的 `begin` 会话。

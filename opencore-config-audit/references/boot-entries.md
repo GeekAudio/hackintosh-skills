@@ -10,6 +10,10 @@
 
 `Misc>Boot>LauncherOption` 决定 OpenCore 要不要在**固件 NVRAM 里维护一条「指向自己」的启动项**。
 
+这里的 `Disabled` 只表示不通过 `LauncherOption` 注册或更新这条 launcher 启动项，不代表整次启动对 NVRAM 完全只读：
+`RequestBootVarRouting` 会单独重定向 `Boot*` 变量，`NVRAM>Add/Delete`、Reset NVRAM 和工具写入也需分别检查。
+Windows 与 OpenCore 共存的整体排查见 [Windows 共存专题](windows-coexistence.md)。
+
 它**认「自己那条项」的方式是：只比对启动项里的文件路径后缀**（`LauncherPath=Default` 时即 `OpenCore.efi`），
 **不看是哪个盘**（源码注释原话：*"Using OpenCore.efi … will overwrite any option with this path (e.g. `OC\OpenCore.efi` and `OC2\OpenCore.efi`)"*）。
 
@@ -38,7 +42,7 @@
 > ★ **关键认识**：这不是「U 盘抢了硬盘的项」，而是 **OpenCore 自己按「路径后缀」把两项当成同一项**。
 > 只要两边都是 `Full` + 同一个 `LauncherPath`，**任何一次从另一块盘引导都会改写**。
 
-### 1.3 官方原文（`Docs/Configuration.tex`，1.0.8）
+### 1.3 官方原文（[OpenCore `Docs/Configuration.tex`，1.0.8](https://github.com/acidanthera/OpenCorePkg/blob/1.0.8/Docs/Configuration.tex)）
 
 ```
 LauncherOption
@@ -58,7 +62,7 @@ LauncherOption
 - *"This option allows integration with third-party operating system installation and upgrades
   (which may overwrite the `\EFI\BOOT\BOOTx64.efi` file). **The BOOTx64.efi file is no longer used
   for bootstrapping OpenCore if a custom option is created.**"*
-  ⇒ **`Full` 之后 `BOOTx64.efi` 就不参与引导了**；改回 `Disabled` 才重新靠它兜底。
+  ⇒ 创建了自定义启动项后，`BOOTx64.efi` 不再是该自定义项的启动路径。改为 `Disabled` 只停止该配置继续维护 launcher 项，**不保证删除此前已有的 `Boot####`**；想依赖 fallback 时，要另行确认固件里没有仍在使用的自定义项。
 - *"When `LauncherOption` is not enabled, other operating systems may overwrite OpenCore settings
   and this property should therefore be enabled when planning to use other operating systems."*
   ⇒ 这是 **`Disabled` 的代价**（见 §5）。
@@ -87,7 +91,7 @@ OCB: Moving boot option to the front from N position
 
 | 值 | 行为 | 备注 |
 |---|---|---|
-| **`Disabled`** | do nothing（什么都不做） | ★ **官方 Failsafe**；此时靠 `\EFI\BOOT\BOOTx64.efi` 兜底 |
+| **`Disabled`** | 不注册或更新这条 launcher 启动项 | ★ **官方 Failsafe**；这里的 “do nothing” 不等于屏蔽其他 NVRAM 路径；没有可用自定义项时，固件可通过 `\EFI\BOOT\BOOTx64.efi` fallback 引导 |
 | `Full` | 每次开机**创建/更新**最高优先级启动项 | 需 `UEFI>Quirks>RequestBootVarRouting=true`（成对） |
 | `Short` | 建「短」启动项（只含硬盘节点） | 给 Insyde 等**处理不了完整设备路径**的老固件 |
 | `System` | **不建项**，假设自定义项已被 `bless` | 配合 `ForceBooterSignature`；靠 `bless` 工具管路径 |
@@ -101,15 +105,15 @@ OCB: Moving boot option to the front from N position
 
 | 组合 | 结果 | 评价 |
 |---|---|---|
-| **硬盘 `Full` + U 盘 `Disabled`** | 从硬盘启动时 OpenCore 自建/置顶并**自愈**；U 盘只读不写 NVRAM | ★ **推荐**：定案快、U 盘不会再改写 NVRAM |
-| **两个都 `Disabled`** | OpenCore 不再碰 NVRAM —— **但也就没人建启动项了** | 只有「已经有能用的项、且不打算让 OpenCore 管」时才合适 |
+| **硬盘 `Full` + U 盘 `Disabled`** | 硬盘启动时 OpenCore 自建/置顶并**自愈**；U 盘不通过 LauncherOption 注册或更新自己的 launcher 项 | ★ **本机采用的组合**：避免 §1 中两份 EFI 用相同路径后缀互相改写；其他 NVRAM 路径仍需单独检查 |
+| **两个都 `Disabled`** | 两份 EFI 都不通过 LauncherOption 创建/更新 launcher 项；其他 NVRAM 行为不因此关闭 | 只有「已有可用入口，且不打算让 OpenCore 管这条入口」时才合适 |
 | 两个都 `Full` | 互相改写（见 §1） | ✗ 正是这个坑的成因 |
 
-> ★★ **关键认识：`Disabled` 不是「更安全」，它只是「不管」。**
+> ★★ **关键认识：`Disabled` 不是 NVRAM 的全局只读开关**；它只关闭 LauncherOption 对 launcher 启动项的维护。
 > 要让入口**存在且排第一**，就必须有人去写它 —— 要么让 OpenCore 写（`Full`，见 §3.1），
 > 要么人工写（§7）。**「都设 Disabled 就没事了」是错的。**
 
-### 3.1 推荐定案：硬盘 `Full` / U 盘那份 `Disabled`
+### 3.1 参考机器定案：硬盘 `Full` / U 盘那份 `Disabled`
 
 ```text
 硬盘 ESP 的 config：Misc > Boot > LauncherOption = Full        （LauncherPath = Default）
@@ -117,7 +121,8 @@ U 盘 ESP 的 config：Misc > Boot > LauncherOption = Disabled
 ```
 
 **理由**：只有**从硬盘启动**时 OpenCore 才会建/置顶硬盘那条项（且此后每次开机自愈）；
-U 盘那份设 `Disabled` 后**不再改写 NVRAM** ⇒ 不会再把硬盘项搬走。这就是收敛的组合。
+U 盘那份设 `Disabled` 后不会通过 `LauncherOption` 把同路径后缀的 launcher 项重指到 U 盘，因而消除 §1 的这条冲突。
+这不代表 USB EFI 的其他 NVRAM 路径被关闭；还要单独核对 `RequestBootVarRouting`、`NVRAM>Add/Delete` 和所用工具。
 
 - **执行记录（10-15 02:41）**：硬盘 `disk2s1` → `Full`，sha 精确回到 **`a08dfed3…`**（往返无损）；
   U 盘 `disk9s1` → `Disabled`，sha `50889560…` → **`d01b859a…`**。
@@ -127,10 +132,9 @@ U 盘那份设 `Disabled` 后**不再改写 NVRAM** ⇒ 不会再把硬盘项搬
 
 ### 3.2 兜底：`\EFI\BOOT\BOOTx64.efi`
 
-**两个 ESP 都保留 `\EFI\BOOT\BOOTx64.efi`**（OpenCore 发布包里那份，改名前可另存为 `bootx64.efi.win` 备用）。
-`LauncherOption=Disabled` 时它**重新参与引导**（官方原文：*"The BOOTx64.efi file is no longer used for
-bootstrapping OpenCore **if a custom option is created**."*）
-⇒ 启动项真丢了，也能从 **BIOS 启动菜单直接选那块硬盘**启动，进去后再把项加回来（§7）。
+需从 fallback 启动 OpenCore 的 ESP，保留与该 OpenCore 配套的 `\EFI\BOOT\BOOTx64.efi`。共存布局若该路径已有 Windows / 厂商 loader，先备份并评估启动方案，不直接覆盖它或 `EFI\Microsoft`；也可评估独立 ESP / 自定义启动路径。
+当固件没有可用的自定义启动项时，这条 UEFI fallback 路径可用于启动 OpenCore；已有的自定义 `Boot####` 不会因为把 `LauncherOption` 设为 `Disabled` 就自动删除。
+启动项真丢了时，可在 **BIOS 启动菜单直接选择对应硬盘/EFI fallback**（具体选项由固件决定），进去后再按 §7 恢复所需启动项。
 
 ### 3.3 入口真的丢了，怎么恢复
 
@@ -272,7 +276,7 @@ grep -E "OCB: (Have existing option|Creating boot option|Moving boot option)" \
 ④ exit 退出 OpenShell → 重启
 ```
 
-- **认目标 ESP 的诀窍**：它里面**同时**有 `\EFI\OC\OpenCore.efi`（OpenCore）和 `\EFI\Microsoft\Boot\bootmgfw.efi`（Windows）
+- **认目标 ESP**：核对分区标识、设备路径及目标 `\EFI\OC\OpenCore.efi`。本机同一 ESP 也有 `\EFI\Microsoft\Boot\bootmgfw.efi`，但分开存放两套引导是合法布局，不能要求两者必须共处一个 ESP。
 - **判据**：重启后 BIOS 启动菜单里出现「OpenCore」且**排在第一位**
 
 ### 7.3 方法 C：`bcfg` 报「写不进去」时，先解锁 NVRAM 保护
@@ -318,17 +322,17 @@ grep -E "OCB: (Have existing option|Creating boot option|Moving boot option)" \
 ⇒ **它依赖 Apple 的 BootPicker 协议，非 Apple 固件（黑苹果）上一般用不了。**
 列在这里只是让你知道官方有这条，**别在这上面耗时间**。
 
-### 7.6 日常应该怎么配（建议）
+### 7.6 已知兼容固件上的配置示例
 
 | | `LauncherOption` | `RequestBootVarRouting` | 作用 |
 |---|---|---|---|
-| **硬盘那份** | `Full` | `true` | 入口**自愈**；且不会被 Windows 抢走 |
-| **U 盘那份** | `Disabled` | `false`（想当救援盘）或 `true` | 永远不会抢硬盘的入口；`false` 时还能当「从系统里写启动项」的救援盘 |
+| **硬盘那份** | `Full` | `true` | 自维护 launcher 项，并重定向经 OpenRuntime 的 Boot 变量访问；仍需复核真实固件与其它启动路径的变化，不保证永不被改 |
+| **U 盘那份** | `Disabled` | `false`（想当救援盘）或 `true` | 不通过 LauncherOption 创建/更新 USB 自己的 launcher 项；`false` 时还能当「从系统里写启动项」的救援盘。NVRAM 其他读写路径仍独立生效 |
 
-> ★ **为什么硬盘要保持 `Full` + `true`**：官方原话 *"When `LauncherOption` is not enabled,
+> ★ **示例采用 `Full` + `true` 的理由**：官方原话 *"When `LauncherOption` is not enabled,
 > other operating systems may overwrite OpenCore settings"* —— 关了它，
-> **Windows 大更新时可能把 OpenCore 的启动项覆盖掉**。`Full` 正是在防这个。
-> ★ 而**任何会从 U 盘启动的 OpenCore，`LauncherOption` 必须是 `Disabled`**（官方 Note 3）—— 见 §1 的根因。
+> **Windows 大更新时可能改变 OpenCore 的启动入口**。此组合用于维护本例入口；是否采用仍取决于固件兼容性与用户的启动项管理方式。
+> ★ 对 §1 所述的同路径后缀冲突，U 盘 EFI 设为 `Disabled` 可避免它更新那条 launcher 项；官方 Note 3 的特殊固件提醒见 §5，不应外推为所有机器都必须如此。
 
 ### 7.7 官方出处（可自行核对）
 
@@ -367,7 +371,7 @@ grep -E "OCB: (Have existing option|Creating boot option|Moving boot option)" \
    ★ 硬盘那份**不能**照抄 U 盘的：`PlatformInfo`（机型/三码）、`ACPI`、`Kernel` 都可能不同。
 2. **硬盘 config**：`Misc>Boot>LauncherOption=Full`（让它自建并置顶）、`LauncherPath=Default`、
    `UEFI>Quirks>RequestBootVarRouting=true`
-3. **U 盘 config**：`Misc>Boot>LauncherOption=Disabled`（不再改写 NVRAM）
+3. **U 盘 config**：`Misc>Boot>LauncherOption=Disabled`（不通过此项注册/更新 U 盘的 launcher 启动项；其他 NVRAM 行为另查）
 4. 两边都走安全流程：`plutil -lint` → 官方 `ocvalidate`（**必须同版本**）→ 算 sha → `sync` →
    **卸载 → 重挂 → 复验 sha**
 5. **重启，并在固件启动菜单里选「那块硬盘」**（不要选 U 盘）

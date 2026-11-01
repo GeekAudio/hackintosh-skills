@@ -4,12 +4,14 @@
 > **★745** · BSD-3-Clause · **仍在更新**）—— 起于 Daliansky `OC-little` 的**英译**，但**已远超原作**：
 > 新增第 7–20 章 + **完整附录 A–Z**，重写了 ACPI / USB 端口映射等章节。
 > ★★ **作者明确定位**：**不是安装指南**，是**装好之后的调优与硬件启用**；
-> **只用 ACPI 热补丁、不做 DSDT patch**（干净黑苹果路线）⇒ **与本文的判据完全同源，可以放心当样例库用**。
+> **只用 ACPI 热补丁、不做 DSDT patch**（干净黑苹果路线）⇒ 可作样例索引，仍须核对目标机器与其它系统的行为。
 > ★ **诚实提醒**：英译是 AI 工具 + 人工校对，**译者不懂中文** ⇒ 译文可能有小偏差；**关键结论仍要回到官方文档核**。
 >
 > ★ **中文参考**：`laobamac/OC-little-zh`（原作的中文版，索引见 `laobamac-toolkit.md`）。
 >
 > ★ **写 SSDT 之前先翻样例库**，再对照本文的官方 `AcpiSamples` 判「该不该加」。
+
+经 OpenCore 启动 Windows 时，ACPI 改动也会交给 Windows。`_OSI("Darwin")` 只能条件化 AML 内部逻辑，不能撤销已经执行的全局重命名或删表；覆盖已有设备 / 方法时应核对非 macOS 分支保留原行为。见 [Windows 共存审查](windows-coexistence.md)。
 
 ## 0. ★★ 按需求找哪一章（含**落点标注**）
 
@@ -59,14 +61,16 @@
 - 路径上限 `OC_STORAGE_SAFE_PATH_MAX` = **192 字符**（含结尾 `\0`）
 - ★ **表的身份由内容解析决定，不由文件名决定**（`Path` 条目原文：*"determined by parsing data, not by filename"*）
   ⇒ **改名安全**，只要同步改 `ACPI>Add>Path`；`ACPI>Delete` 匹配的也是内容（`TableSignature`/`OemTableId`）
-- 处理顺序（ACPI Introduction）：**`Patch` → `Delete` → `Add`**；`RebaseRegions`/`SyncTableIds` 在所有改动**之后**才处理
+- 处理顺序（ACPI Introduction）：**`Delete` → `Quirks` → `Patch` → `Add`**；`RebaseRegions`/`SyncTableIds` 在所有改动**之后**才处理。依据：[OpenCore 1.0.8 官方文档](https://github.com/acidanthera/OpenCorePkg/blob/1.0.8/Docs/Configuration.tex)
 
-## 2. 先做「零报错」确认
+## 2. 先检查已有 ACPI 报错
 
 ```bash
-# 内核日志里 0 命中 ⇒ 没有坏掉的 ACPI（第一判据）
+# 0 命中只表示本次采集中未观察到这些报错，不证明 ACPI 正确
 grep -aiE "acpi error|ae_not_found|ae_already|namespace lookup|Error evaluating" <内核日志>
 ```
+
+先核实日志覆盖了目标启动与故障时段，再结合原始表、设备树和实际功能判断。Windows 的设备 / 睡眠异常也不能由 macOS 日志无报错排除。
 
 ## 3. 设备存在性检查（决定某张 SSDT 是否适用）
 
@@ -101,8 +105,9 @@ ioreg -r -c AppleSMBusController -w0 | wc -l     # 0 = 已加载但无实例 ⇒
 | `SSDT-SBUS-MCHC` | SMBus 兼容表：给 `SBUS` 加 `BUS0`(`_CID="smbus"`) 与 `MCHC`，让 `AppleSMBusController` 挂上 | `BUS0`=0 且 `AppleSMBusController` 无实例 ⇒ **该启用** |
 
 **Dortania 常见但 OpenCore 官方样例里没有的**：`SSDT-RHUB`（USB 控制器不枚举时复位 hub）、
-`SSDT-DMAR`（屏蔽 DMAR）、`SSDT-GPRW`（秒醒）。判定同样靠「你的机器有没有对应的症状/方法」：
+`SSDT-DMAR`（定制 DMAR）、`SSDT-GPRW`（秒醒）。判定同样靠「你的机器有没有对应的症状/方法」：
 `GPRW` 方法不存在 ⇒ 该补丁不适用；USB 全端口枚举正常 ⇒ RHUB 不需要；固件表里没有 DMAR ⇒ DMAR 补丁不需要。
+仅为绕过 macOS 的 IOMapper 问题时，优先评估 `Kernel>Quirks>DisableIoMapper`，而非删除 DMAR 或关闭固件 VT-d；这可保留其它系统的 VT-d。需要 AppleVTD 的路线另按其驱动与目标 DMAR 核实，见 [BIOS 对应关系](bios-settings.md#9-bios-设置--opencore-quirk-的对应关系)。
 
 ## 5. 命名规范化
 
@@ -136,8 +141,8 @@ ioreg -r -c AppleSMBusController -w0 | wc -l     # 0 = 已加载但无实例 ⇒
 
 - **只想看结构** ⇒ 报错不管，`.dsl` 照样能读
 - **要编译回去** ⇒ 补外部表：`iasl -e <外部表.aml> -d <目标.aml>`（可给多个 `-e`）
-- ★★ **更稳的做法：不改厂商表** —— 用 `ACPI>Delete` 删掉它 + 自己的 SSDT 顶替（热补丁路线，
-  本 skill 与 `OC-Little` 的一致主张）。改厂商表等于把 BIOS 的私有实现复制进 EFI，后续无法追溯。
+- 优先保留原固件表，按实际需要选择新增对象或范围明确的小补丁；反编译报错本身不是删表依据。
+- 只有确需完整替换特定表时，才评估 `ACPI>Delete` + 替代表：核对表身份、匹配范围、全部依赖与非 macOS 行为，并准备原表恢复路径。删表是全局改动，不能因“热补丁”之名当作通用更稳方案。
 
 ### 6.3 编译完必须做的四项验证
 
@@ -153,7 +158,7 @@ ioreg -r -c AppleSMBusController -w0 | wc -l     # 0 = 已加载但无实例 ⇒
 4. **生效**：引导日志看这张表有没有被加载（`OCA:` 段），再 `ioreg` / `kmutil showloaded` 看结果
 
 ★ **「表加载了」≠「表生效了」**。判据永远是**系统里的可观测结果**：设备出现在 `ioreg`、
-驱动出现在 `kmutil showloaded`、内核日志 0 报错。
+驱动实际绑定、相关功能正常，并结合日志判断。共存机器还需对比固件直启与经 OpenCore 启动 Windows 的结果，见 [共存验收](windows-coexistence.md)。
 
 ### 6.4 常见编译错误对照
 
@@ -161,13 +166,13 @@ ioreg -r -c AppleSMBusController -w0 | wc -l     # 0 = 已加载但无实例 ⇒
 |---|---|---|
 | `syntax error, unexpected …`，而样例是新版 | **编译器太老**（`iasl -v` 的日期串旧） | 换新 ACPICA，别去改样例 |
 | `Object does not exist (AE_NOT_FOUND)` | 引用了外部表里的符号 | 补 `-e`，或改写为自包含的 SSDT |
-| `_OFF` / `_ON` / `_STA` 重复定义 | 与厂商表里的同名对象冲突 | 先 `ACPI>Delete` 原表，再放自己的 |
+| `_OFF` / `_ON` / `_STA` 重复定义 | 与厂商表里的同名对象冲突 | 先定位原对象及依赖，评估定向代理 / 补丁；只有已审查的完整替换才删除原表，见 §6.2 |
 | 编译通过，但 `ocvalidate` 报 `Path` 不存在 | 文件名 / 大小写 / 子目录没对上 | 对 `ACPI>Add>Path` 逐字核 |
 | 编出来的 `.aml` 只有几十字节 | 编的是空文件 / 文件没被覆盖 | 看 `iasl` 的 `AML size` 行 |
 
 ## 7. 排查顺序（建议）
 
-1. 内核日志 0 报错？→ 没有"坏 ACPI"
+1. 核实日志覆盖并检查报错；0 命中不证明 ACPI 正确，继续核对设备与功能
 2. 官方样例逐条对照你自己机器的设备存在性 → 得到「该加/不该加」清单
 3. 检查 `ACPI>Add` 每条 `Path` 是否**真的存在**、目录里有没有**孤儿文件**
 4. 检查 `ACPI>Delete` 是否命中（看 OC 日志 `OCA: Deleting table …`）

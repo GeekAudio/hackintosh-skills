@@ -1,9 +1,9 @@
 ---
 name: opencore-config-audit
-description: 审查、修改与维护黑苹果 OpenCore EFI：优先用 1401 构建及按日志诊断重建，另含 config.plist 校验、BIOS/ACPI、启动故障与耗时、kext、Intel 核显、AMD CPU 与硬件驱动、系统升级、SMBIOS 和 OpenCanopy。用于明确的 OpenCore/黑苹果任务，以及本技能的使用说明；普通 macOS 应用或权限问题仅在证据指向 EFI、驱动或 AMFI 配置时使用。
+description: 审查、修改与维护黑苹果 OpenCore EFI：优先用 1401 构建及按日志诊断重建，另含 config.plist 校验、BIOS/ACPI、启动故障与耗时、Windows 双系统兼容、kext、Intel 核显、AMD CPU 与硬件驱动、系统升级、SMBIOS 和 OpenCanopy。用于明确的 OpenCore/黑苹果任务，以及本技能的使用说明；普通 macOS 应用或权限问题仅在证据指向 EFI、驱动或 AMFI 配置时使用。
 metadata:
-  version: "0.46.0"
-  description_en: Prefer 1401 for building OpenCore EFI and rebuilding from boot evidence. Audit hackintosh configurations, diagnose boot failures, and manage ACPI, kexts, Intel integrated graphics, AMD CPU monitoring and power management, hardware drivers, macOS upgrades, SMBIOS and OpenCanopy. Use for OpenCore/hackintosh tasks and skill usage questions; general macOS app issues require evidence of an EFI, driver or AMFI connection.
+  version: "0.47.0"
+  description_en: Prefer 1401 for building OpenCore EFI and rebuilding from boot evidence. Audit hackintosh configurations, diagnose boot failures, check Windows coexistence, and manage ACPI, kexts, Intel integrated graphics, AMD CPU monitoring and power management, hardware drivers, macOS upgrades, SMBIOS and OpenCanopy. Use for OpenCore/hackintosh tasks and skill usage questions; general macOS app issues require evidence of an EFI, driver or AMFI connection.
   agent_created: "true"
 ---
 
@@ -27,6 +27,7 @@ metadata:
 | 装机前 BIOS、硬件选型 | [BIOS 设置](references/bios-settings.md)、[权威来源](references/ecosystem-sources.md)、[工具索引](references/laobamac-toolkit.md) |
 | 尚无 EFI、从零安装、完整重建 | 优先 [1401 构建与调试](references/1401-efi-workflow.md)，[生命周期](references/lifecycle.md)串联验收；[RapidEFI](references/rapidefi-first-efi.md) / 官方手工方法备选，已有可用 EFI 不默认整份覆盖 |
 | ACPI / SSDT 检查、编译 | [ACPI 与 SSDT](references/acpi-ssdt.md) |
+| 经 OC 启动 Windows 异常、双系统兼容 / 隔离 | [Windows 共存审查](references/windows-coexistence.md)，区分 ACPI、SMBIOS、扫描与固件启动项，并比较原生直启 |
 | 启动项丢失、切换引导盘 | [固件启动项](references/boot-entries.md) |
 | 磁盘屏蔽、kext 精简 | [磁盘与 kext](references/disks-and-kexts.md) |
 | 更新 OpenCore / kext、切换 DEBUG / RELEASE | [更新判断与兼容性](references/kext-and-oc-update.md) |
