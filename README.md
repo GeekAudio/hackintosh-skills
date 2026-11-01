@@ -2,7 +2,7 @@
 
 黑苹果 OpenCore 配置审查与维护技能，适用于支持 `SKILL.md` 的代理环境；仓库同时提供 WorkBuddy / CodeBuddy 插件市场清单。
 
-以目标机器的配置、同版本官方文档与日志为依据，完成可回滚、可复验的维护。当前技能为 `opencore-config-audit`，版本 **0.45.0**。
+以目标机器的配置、同版本官方文档与日志为依据，完成可回滚、可复验的维护。当前技能为 `opencore-config-audit`，版本 **0.46.0**。
 
 ## 能力与使用
 
@@ -10,12 +10,13 @@
 
 | 范围 | 支持的任务 |
 |---|---|
-| 配置与装机 | BIOS / UEFI、基础 EFI、config.plist 逐键审查、同版本 ocvalidate、ACPI / SSDT |
+| 配置与装机 | BIOS / UEFI、基础 EFI、**1401 优先构建 / 按启动日志重建**、config.plist 逐键审查、同版本 ocvalidate、ACPI / SSDT |
 | 启动诊断 | 装不上 / 进不去、日志取证、启动耗时、固件启动项与引导盘迁移 |
 | 维护与升级 | kext 清理及更新判断、OpenCore 构建切换、macOS 大版本升级、磁盘屏蔽 |
 | 硬件 | Intel Xe-LP 核显（WhateverXe）、NVIDIA、Intel / MediaTek / 博通无线、有线网卡、USB、AppleALC、Intel 睿频与小核、AMD CPU 电源管理与监控 |
 | 功能与外观 | AirDrop / 接力、黑苹果相关 AMFI / TCC、HiDPI、CPU 名称、内存显示、SMBIOS 与 OpenCanopy |
 
+- [1401 首选构建与调试](opencore-config-audit/references/1401-efi-workflow.md)：Windows 生成、原棒日志诊断与重建；RapidEFI / 官方手工方法保留为备选。
 - [技能使用说明](opencore-config-audit/USAGE.md)：常见提问、交付结果与脚本说明。
 - [技能入口](opencore-config-audit/SKILL.md)：基线、修改约束，以及全部专题和脚本的按需索引。
 - [调用与维护说明](USAGE.md)：目录、frontmatter 与验证方式。

@@ -56,7 +56,7 @@
 |---|---|---|
 | **`USBToolBox/tool`** ★1.5k | USBToolBox | **USB 端口映射**（Windows / macOS 双模式）；`USBToolBox/kext` ★455 是注入器 |
 | **`blacktop/ipsw`** ★3.8k · **`ipsw-diffs`** ★899 | blacktop | **iOS / macOS 研究工具**；`ipsw-diffs` 能看**内核与 kext 的版本差异** —— ★ **我们就是靠它在 macOS 26 里发现 `AppleSunriseWLAN.dext` 的** |
-| `NullMoth/1401` ★469 · `1401-probe` ★30 | NullMoth | **从 Windows 装 macOS**；`1401-probe` 是**离线硬件扫描 U 盘** |
+| [nullmoth/1401](https://github.com/nullmoth/1401) · `1401-probe` | NullMoth | **首选EFI生成、原棒日志诊断与重建**；Windows完整构建与Mac现有EFI检查分别处理，见 [1401流程](1401-efi-workflow.md)；Probe提供目标硬件数据 |
 
 ## 4. 驱动作者（按硬件分类）
 
@@ -125,7 +125,7 @@
 | **生成三码** | `corpnewt/GenSMBIOS`（底层是官方 `macserial`） |
 | **USB 端口映射** | `corpnewt/USBMap`（macOS 侧）· `USBToolBox/tool`（Windows/macOS 双模式） |
 | **自动生成 SSDT** | `corpnewt/SSDTTime` |
-| **下载 macOS / 做装机盘** | `corpnewt/gibMacOS` · `NullMoth/1401`（Windows 侧） |
+| **生成EFI / 诊断重建 / 制作安装棒** | 优先 [1401](1401-efi-workflow.md)；下载镜像或其它生成器按备选场景选择，`corpnewt/gibMacOS`不是完整1401诊断闭环 |
 | **看内核 / kext 的版本差异** | `blacktop/ipsw-diffs`（★ 发现 `AppleSunriseWLAN` 就靠它） |
 | **配机前避坑** | `khronokernel/Anti-Hackintosh-Buyers-Guide`（英文源头）· `laobamac/SimpleBuyersGuide`（中文） |
 | **对照真机 IOReg** | `khronokernel/IORegistryClone` |

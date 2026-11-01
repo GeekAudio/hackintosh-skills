@@ -97,7 +97,7 @@ nvram 4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102:opencore-version
 参考机器的 OpenCore 1.0.8 RELEASE / DEBUG 包中驱动曾存在大小差异，
 这不证明所有版本、所有驱动的内容必定不同。
 
-[oc-swap-build.sh](../scripts/oc-swap-build.sh) 用于同版本 RELEASE / DEBUG 切换；
+完整EFI生成或依据启动日志重建优先 [1401流程](1401-efi-workflow.md)。[oc-swap-build.sh](../scripts/oc-swap-build.sh) 保留为已有EFI的同版本 RELEASE / DEBUG 精确切换备选；
 显式给出已确认的目标版本和 EFI 根目录，先审阅打印的计划再确认；不把它当成任意跨版本迁移工具。
 
 ### 4.3 升级到新版本时的额外检查

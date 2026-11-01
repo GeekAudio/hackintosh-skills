@@ -1,11 +1,13 @@
 # 装不上 / 进不去系统 —— 分层 debug 流程
 
+安装棒失败或需要完整重建时，**先用 [1401首选诊断与重建](1401-efi-workflow.md)**：保留原棒日志 / 停止行，回Windows读取建议后重建。本专题保留作为工具未覆盖时的分层补证、已有稳定EFI局部诊断与救援备选；不要求先手工改一堆开关。
+
 > 依据：一轮完整的失败复盘（换机型循环重启 ×6、卡 USB/HID ×3、`decmpfs` panic ×2、
 > `X86PlatformShim` panic、`no kext summary` 极早期失败、ReBAR 黑屏、VMD 找不到盘…）+ OpenCore 官方文档。
 > ★★ **一句话**：**先分层定位「挂在哪一段」，再查那一段的日志** ——
 > **不要一上来就改配置**（改了就没法复盘）。
 
-## 0. ★★ 第一步永远是分层
+## 0. 分层定位（配合1401结果或用于手工备选）
 
 把启动拆成四段，**先判在哪一段挂的**：
 
@@ -26,7 +28,7 @@
 
 1. 先读取已有 OC 日志与 panic。需要观察内核屏幕输出时再临时使用 `-v`；按用户已有授权和偏好处理，排障后恢复原设置。不要把 verbose 当成所有诊断的前置条件。
 2. ★★ **进不去 ≠ 一定要重装** —— 先按 §7 把**上一份能用的配置**拿回来，再慢慢查。
-3. ★★ **备一个能用的 U 盘 EFI**（那份用 `Misc>Boot>LauncherOption=Disabled`，**不改写 NVRAM**）——
+3. ★★ **备一个能用的 U 盘 EFI**（用 `Misc>Boot>LauncherOption=Disabled` 避免它自动注册 / 更新 Launcher 启动项；NVRAM Add/Delete 及相关驱动 / 工具仍需单独审查）——
    它是**所有救援路径的前提**（`boot-entries.md`）。
 
 ## 2. ① 固件 / OpenCore 自身（连选择器都进不去）
@@ -40,6 +42,8 @@
 | **BIOS 里看不到 OpenCore 项** | 那是启动项问题，不是引导问题 ⇒ `boot-entries.md`（`LauncherOption` / `bcfg` / `OpenControl`） |
 
 ## 3. ② OpenCore 引导期
+
+1401安装棒优先保留原始日志并插回Windows；取消发送仍可读取本地建议，停止行需按[首选流程](1401-efi-workflow.md#4-完全本地的高级诊断--重建)显式传给本地重建。以下是额外取证或工具未覆盖时的手工读法。
 
 **拿日志**（三条路径，见 `logs-and-debug.md` §4）：
 
@@ -68,7 +72,7 @@
 | **卡在 Preboot** | ★ 专项排查见 `5T33Z0/OC-Little-Translated` 的 `Content/18_Troubleshooting/Fixing_Preboot`（另有 `K_Debugging/` 的 SysReport 法） |
 | **panic 了** | ★ **首选证据在 `/Library/Logs/DiagnosticReports/`**；带 `keepsyms=1` 的 panic 回溯**直接给帧名**（所以排查期值得开 `keepsyms=1`） |
 | **`decmpfs_pagein_compressed: couldn't ubc_upl_map a single page`**（`apfs_vnops.c`） | ★ **已知族**：APFS **透明解压路径**的内核断言，**与 GPU / 机型 / 内存压力无关**（panic 里 `Compressor Info: 0% … 0 swapfiles` 已排除内存不足）；特征是**开机几十分钟后、新进程启动时**、**不同机型不同进程同一行代码** |
-| **开机 ~2 s 的 `element modified after free`** | ★ 实测案例是 **`NVMeFix.kext`** 造成的（**不是 GPU、不是网卡驱动**）⇒ 先**禁用 `NVMeFix` 做 A/B** |
+| **开机 ~2 s 的 `element modified after free`** | 先结合1401诊断、实际panic和重复功能kext检查；NVMeFix是历史单机案例，不能排除网卡 / USB组合等其它原因。按证据做A/B，不自动禁用 |
 | **`SIGABRT` 在 `MPSLibrary::MPSKey_Compile`**（**应用**崩溃，不是 boot 失败） | ★ NVIDIA Metal 驱动建不出 MPS 计算管线 ⇒ **系统级、与 EFI / 三码 / 内存注入无关**（`nvidia-driver.md`、`pitfalls.md`） |
 
 ## 6. 装机期专属：装不上 / 找不到盘
@@ -85,7 +89,7 @@
 
 1. **先回到「上一份能用的配置」** —— 每次改 ESP 都该留备份（见 [修改与复验](../SKILL.md#修改与复验)）；
    `scripts/oc-edit-safe.sh` 的版本存档就是干这个的
-2. **U 盘 EFI 启动**（前提是它存在且 `LauncherOption=Disabled`，不会改写 NVRAM）
+2. **U 盘 EFI 启动**（前提是它已验证可用；`LauncherOption=Disabled` 只关闭 Launcher 自动注册 / 更新，仍核对 NVRAM Add/Delete 等写入）
 3. **Recovery / 单用户模式** 挂载**内置** EFI，把配置换回去
 4. **二分**：拔掉可疑硬件 / 关掉可疑开关
    - 例：核显相关（`-wegnoigpu`）、ReBAR、某个可疑 kext

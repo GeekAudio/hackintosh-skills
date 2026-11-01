@@ -29,7 +29,9 @@ sudo shutdown -r now                 # 必须重启：注销不会加载驱动
 
 首次加载后，系统设置 → 隐私与安全性 里**允许这些扩展**，然后再重启一次。
 
-### B. 1401 Mac App（最省事，会顺带改 OpenCore）
+### B. 1401 Mac App（已有macOS上的驱动管理）
+
+从Windows生成完整EFI / 按原棒日志重建先见 [1401首选流程](1401-efi-workflow.md)。这里的Mac Setup是驱动与现有启动EFI管理，不能当成完整生成器；仅检查时先用Check my EFI。
 
 下载 `1401-Mac-<version>.dmg` → 打开运行 1401（驱动包就在镜像里）。它会：
 

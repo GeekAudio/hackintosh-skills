@@ -45,7 +45,7 @@
 | **`SimpleKaruzi`** | **简化 OpenCore EFI 创建** —— 自动化基本设置流程 + 提供标准化配置，减少手动操作 | **AGPL-3.0**；★ **2026-06-18 已存档**；README 提到 **OCLP(-Mod) 3.0.0 已初步支持 macOS Tahoe 26** |
 | `PVE-OpenCore` | **在 PVE 上装 macOS**（基于 OpenCore 的引导器） | **GPL-3.0**；作者称比 `KVM-OpenCore` **更小、bug 更少**（内含 macOS basesystem）；V20240224 起不再附带 recovery |
 
-> 与 `rapidefi-first-efi.md`（Windows 上用 RapidEFI 生成基础 EFI）互为替代。
+> EFI构建与失败后重建先走 [1401首选流程](1401-efi-workflow.md)。本节工具及 [RapidEFI](rapidefi-first-efi.md) 保留为备选，不作为并行默认生成器。
 
 ## 3. ★★ 装机前必读：硬件避坑
 
@@ -126,7 +126,7 @@
 | 你要做的事 | 用哪个 |
 |---|---|
 | **配机 / 换硬件前** | ★ `SimpleBuyersGuide`（避坑指南） |
-| **从零生成 EFI** | `SimpleKaruzi`（已存档）或 `rapidefi-first-efi.md` 的 RapidEFI |
+| **从零生成 / 日志重建 EFI** | 优先 [1401](1401-efi-workflow.md)；RapidEFI、官方手工方法备选；SimpleKaruzi已存档 |
 | **修 ACPI / 写 SSDT** | ★ `OC-little-zh`（中文）+ ★★ `5T33Z0/OC-Little-Translated`（英文扩充版，样例最全）+ `acpi-ssdt.md` |
 | **装 kext 到系统目录 / 合并 KDK / 重建缓存** | ★ `SimpleLoader`（有快照保护） |
 | **声卡** | 按目标 codec 与系统选择：`SimpleHDA` EFI 注入，或 `MyKextInstaller` / KDK 系统侧恢复；先核对回退路径，不能混装。USB 声卡与 `SimpleVoodooHDA` 按需求评估；见 `applealc-custom.md` §0.5 |

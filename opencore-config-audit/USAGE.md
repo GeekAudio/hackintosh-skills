@@ -16,6 +16,7 @@
 | 审配置 | 「审一下我的 OpenCore 配置」「校验一下 config.plist」 |
 | 补 SSDT | 「看日志还有没有要补的 SSDT」「ACPI 热补丁怎么做」「SSDT 样例在哪」「SSDT 编译报错」「iasl 怎么用」 |
 | **缺工具 / 装不上** | 「iasl 怎么装」「没有 brew 怎么办」「ocvalidate 版本不对」「macserial 在哪」「gfxutil 找不到」 |
+| **1401 构建 / 诊断重建** | 「用1401生成EFI」「按原U盘日志重建」「1401报EB.MM.AKM」「Check my EFI怎么用」「取消发送后怎么本地排障」 |
 | **装不上 / 进不去系统** | 「装系统找不到硬盘」「卡在苹果 logo 进不去」「开机循环重启」「黑屏只剩鼠标」「装完第一次开机进不去」 |
 | 查开机慢 | 「开机很慢，分析一下时间线」「卡在苹果 logo」 |
 | **启动项没了** | 「BIOS 里看不到 OpenCore 了」「只剩 Windows」「用 U 盘引导后启动项消失」「bcfg 怎么加启动项」 |
@@ -36,7 +37,7 @@
 | **声卡** | 「板载声卡没声音」「只有 HDMI 有声音」「AppleHDA 怎么装回来」「layout-id 填多少」「自己做一个 layout-id」「codec dump 怎么取」「前置麦克风没声音」「插上耳机不切换」「哪个口是哪个口」 |
 | 换构建 | 「从 release 换成 debug 版 OpenCore 并开日志」 |
 | **换主题** | 「换个 OpenCore 主题」「图标集怎么装」「选择器界面不出现」「图标显示不对/变形」「启动没有声音」「PickerAttributes 怎么配」 |
-| 首次装机 | 「第一次装黑苹果，EFI 怎么生成」 |
+| 首次装机 | 「第一次装黑苹果，EFI 怎么生成」—— 优先1401；原RapidEFI / 手工方法备选 |
 
 ## 你会拿到什么
 
@@ -55,7 +56,7 @@
 | `bios-audit.ps1` | **Windows 侧 BIOS 审查（只读）** —— 在 Windows 里先跑这个 |
 | `fetch-opencore-docs.sh` | 取同版官方包 + 建配置键库 |
 | `oc-verify.sh` | 一键校验（`plutil` + `ocvalidate` + 引用完整性 + sha） |
-| `oc-swap-build.sh` | 同版本 RELEASE ↔ DEBUG，须显式给出目标版本与 EFI 路径 |
+| `oc-swap-build.sh` | 手工备选：同版本 RELEASE ↔ DEBUG；完整按日志重建优先1401，须区分两种任务 |
 | `oc-edit-safe.sh` | `begin` / `finish` 备份与复验；`OC_DOCS_DIR` 指定唯一版本包，`OC_ARCHIVE_DIR` 指定存档目录 |
 | `grab-logs.sh` | 抓引导日志与内核日志 |
 | `boot-timeline.sh` | 启动耗时总览 |
@@ -72,10 +73,12 @@
 
 ## 参考文档
 
+首选完整构建 / 失败重建见 **[1401流程](references/1401-efi-workflow.md)**；已有系统的局部问题不强制重建。
+
 按主题挑：`toolchain.md`（**工具链：`iasl` / `gfxutil` 从哪来、缺了怎么降级**）· `bios-settings.md`（BIOS）· `lifecycle.md`（全流程）· `os-upgrade-15-to-26.md`（升系统）·
 `intel-xe-graphics.md`（**WhateverXe：Xe-LP 核显、配套图形包、接口与系统边界**）· `nvidia-driver.md` · `amfi-and-tcc.md`（**AMFI 相关权限故障，确认根因后按需使用 tcc-helper**）· `intel-wifi.md` · `mediatek-wifi.md`（**含原生 Sunrise 打包方案**） · `broadcom-wifi.md`（按芯片与系统选路线）· `airdrop-handoff.md`（**AirDrop / 接力：区分蓝牙发现、AWDL 与实际互通证据**）·
 `applealc-custom.md`（**声卡 / macOS 26 的音频路线 / 用 HDAU GUI 或 Linux dump 收集定制证据**）· `hidpi.md`（显示）· `amd-cpu.md`（**AMD Zen 电源管理 / 监控 / AMD Power Gadget**）· `intel-turbo.md`（Intel 睿频）· `e-cores.md`（**开/关小核**）· `cpu-name.md`（**CPU 显示名**）· `memory-injection.md`（内存）· `boot-failure-debug.md`（**装不上/进不去系统**）· `boot-timeline.md` / `logs-and-debug.md`（日志）· `boot-entries.md`（启动项）·
-`acpi-ssdt.md`（**ACPI 热补丁样例库索引**）· `disks-and-kexts.md` · `kext-and-oc-update.md`（**更新 kext / OC**）· `official-docs-method.md` · `rapidefi-first-efi.md` ·
+`acpi-ssdt.md`（**ACPI 热补丁样例库索引**）· `disks-and-kexts.md` · `kext-and-oc-update.md`（**更新 kext / OC**）· `official-docs-method.md`（官方手工备选 / 复核）· `rapidefi-first-efi.md`（RapidEFI备选）·
 `smbios-and-serials.md`（换机型 + 三码）· `network-en0-order.md`（`en0` 归属）· `ethernet-drivers.md`（有线网卡）· `ecosystem-sources.md`（**权威来源与工具索引**）· `laobamac-toolkit.md`（工具索引）· `pitfalls.md`（踩过的坑）· `theme-opencanopy.md`（选择器主题）· `machine-facts.md`（参考机器事实）
 
 `oc-edit-safe.sh` 默认存档到工作区的 `oc-config-archive/`。旧版仅含 SHA 的编辑基线不能直接用于新版 `finish`；先核对旧备份及未完成改动，再建立新的 `begin` 会话。

@@ -1,179 +1,72 @@
-# 全流程：从 Windows 生成 EFI 到修补完成
+# EFI 构建、调试与收尾：1401 优先，手工方法备选
 
-以下是从零装机与完整调试的一种六阶段流程。已有稳定 EFI 或只需审查文件时，直接进入对应专题；不必重新装机或更换构建。
+从零构建和依据失败日志重建，先读 [1401 首选流程](1401-efi-workflow.md)。已有稳定 EFI 的局部问题先检查当前配置，不因工具优先级更新就强制重新装机或覆盖身份。
 
+```text
+1401 检查目标 PC → 构建候选 EFI / BIOS 指南 → 审阅校验 → 制作测试安装棒
+       ↑                                              ↓
+按原棒日志 + 屏幕停止行重建 ← 保留失败证据 ← 实际启动测试
+       ↓ 启动及所需功能验收通过
+保留救援入口、备份与最终回执；按用户目标处理日常日志 / 构建
 ```
-① Windows 上生成基础 EFI ──► ② 用它安装 macOS ──► ③ 进系统后换成 DEBUG OpenCore
-                                                          │
-                                          ⑤ 按官方文档逐项修补 ◄── ④ 收集引导期日志
-                                                          │
-                                          ⑥ 日常化：换回 RELEASE + 关掉 debug 日志
-```
 
-| 阶段 | 在哪做 | 产出 | 对应本 skill |
-|---|---|---|---|
-| ① 生成基础 EFI | Windows | 一份能引导安装盘的 EFI | `rapidefi-first-efi.md` |
-| ② 安装 macOS | 目标机 | 能进桌面的系统 | —（安装本身不在本 skill 范围） |
-| ③ 换 DEBUG OpenCore | macOS 里（改 ESP） | 能产出完整日志的引导器 | `scripts/oc-swap-build.sh` + 本文 §3 |
-| ④ 收集日志 | macOS 里 | OC 引导日志 + 内核日志 | `scripts/grab-logs.sh` + `logs-and-debug.md` |
-| ⑤ 修补 | macOS 里（改 ESP） | 逐项修正后的 config/SSDT/kext | [技能入口](../SKILL.md) 的对应专题 |
-| ⑥ 日常化 | macOS 里（改 ESP） | 快启动 + 安静屏幕的成品 | 本文 §6 + `scripts/oc-swap-build.sh release <目标版本>` |
+## 1. 首选：构建与重建
 
----
+Windows 1401 的完整入口为 **Check this PC → Build the Mac setup → Your BIOS steps → Create the macOS stick**。先本地构建，制棒步骤才擦除选中 USB。当前实现优先使用 OpenCore DEBUG，启动失败也能回 Windows 读取原棒日志继续重建；不再默认等进 macOS 后才手工换 DEBUG。
 
-## ① 在 Windows 上生成基础 EFI
+每轮记录目标硬件、OS、原 EFI、日志 / 停止行、规则变化、校验类型及实际启动结果。详见[输入、输出与重建闭环](1401-efi-workflow.md#3-启动失败保留原棒证据再重建)。需要完全本地操作、手工提供停止行或诊断器未覆盖的问题，按该专题选择 CLI 或备选分层方法。
 
-见 `rapidefi-first-efi.md`。要点复述：
+## 2. 安装器配置与已安装配置
 
-- 用 **RapidEFI-Tool**：「刷新硬件信息 → 自动配置 EFI → 输出 EFI」，拿到**基础配置**
-- ★ 官方自述边界：**「适合作为基础配置，不等于最终免调试配置」**、**「先用备用 U 盘测试启动，不要直接覆盖正在稳定使用的 EFI」**
-- 阶段①**不要**追求完美：先能进安装器、能进桌面。剩下的都留到阶段⑤
+按本次工具对实际硬件生成的设置和 BIOS 指南操作。NVIDIA 安装器用的小 BAR 与安装驱动后的大 BAR 有不同目的；不把日常驱动配置提前套到安装棒，也不把 Windows EFI 修复器的安装棒策略直接覆盖到稳定系统。
 
-## ② 用它安装 macOS
+Mac 1401 的 Check my EFI 是已有启动 EFI 的检查入口；驱动 Setup 会修改配置 / 安全设置，须审阅其变更。它不是完整生成器。仅要 EFI 诊断时不附带安装驱动，详见 [1401 的平台分工](1401-efi-workflow.md#1-工具分工与输入)。
 
-- 装机阶段用**安装器安全设置**：`ResizeAppleGpuBars = 0`、`ResizeGpuBars = -1`、**不**屏蔽 `com.apple.iokit.IONDRVSupport`
-  （安装器跑在固件 framebuffer 上，大 BAR 会让它卡在 PCI configuration）
-- 装完、能进桌面之后，才切到「驱动/日常」那套设置（大 BAR、屏蔽 IONDRVSupport 等）
+## 3. 已有 EFI 的手工 DEBUG 切换（备选）
 
-## ③ 换成 DEBUG OpenCore（本阶段的关键动作）
+以下用于非 1401 场景、1401 不覆盖的问题，或用户明确要求精确同版本切换。需要更多 OC 输出 / SysReport 而现有构建不提供时才切换，不是每个任务的固定步骤。
 
-### 什么时候需要换
+1. 确认**目标 EFI**版本；宿主 NVRAM 只反映本次运行的引导器，不代表离线副本。
+2. 备份完整 EFI，取同版本官方 RELEASE / DEBUG 包；同步 `OpenCore.efi`、`BOOTx64.efi` 与目标已使用的官方同名 Drivers，保留第三方驱动。
+3. 可用 `scripts/oc-swap-build.sh debug <目标版本> --efi <EFI根目录>`，审阅替换计划；失败按备份恢复并复验，不带失败状态重启。
+4. 对配置执行语义 diff、同版 ocvalidate、启用引用检查及 SHA；实际 ESP 写入后 sync、卸载重挂、SHA 复验。
+5. 需要 SysReport 时在 DEBUG 下按需一次性开启 `Misc>Debug>SysReport`，取证后关闭。它可能包含设备与身份信息，发布前脱敏。
 
-| | RELEASE | DEBUG |
-|---|---|---|
-| `OpenCore.efi` 大小（1.0.8 实测） | 626,688 B | **868,352 B** |
-| `BOOTx64.efi` | 24,576 B | **53,248 B** |
-| `Drivers/*.efi`（同一版本，实测） | 小 | **全部更大**（例：`OpenRuntime.efi` 24,576 → 36,864；`OpenCanopy.efi` 114,688 → 151,552） |
-| 日志量 | 少 | **多得多**（一次开机可写满 ESP 上 256 KB 的 `opencore-*.txt`） |
-| `Misc>Debug>SysReport` | **不可用**（文档明确：RELEASE 构建不提供） | **可用** —— 会在 ESP 上生成 `SysReport/`，含 ACPI / SMBIOS / 音频 codec 转储 |
-| 启动速度 | 快 | 慢一点（日志生成开销） |
+同版本 DEBUG / RELEASE 文件可能不同，不以大小猜身份；用官方包及哈希确认。对仍需 1401 写棒的产物，不绕过其机器 / 文件绑定直接改包，见 [profile 边界](1401-efi-workflow.md#2-首次构建先得到可审查的候选)。
 
-先分析已有日志；需要 RELEASE 不提供的调试输出或 SysReport 时再换 DEBUG，取证后评估恢复原构建。
+## 4. 日志采集与判断
 
-### 怎么换（`scripts/oc-swap-build.sh` 已封装）
+优先保留 1401 原棒 OC 日志、panic、实际停止行与本轮构建 / 诊断结果。工具未覆盖时按 [分层排障](boot-failure-debug.md)、[日志与调试](logs-and-debug.md)、[启动时间线](boot-timeline.md)补证；macOS 环境可按需用 `grab-logs.sh` / `boot-timeline.sh` / `find-boot-gap.sh`。
 
-1. **确认目标 EFI 的版本**：对正在运行的引导器可读 `nvram 4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102:opencore-version`
-   - 离线副本从其记录、日志和二进制交叉核实；宿主 NVRAM 不代表目标版本。脚本要求显式传入目标版本及 `--efi` 路径。
-   - `DBG-108-2026-09-27` → 版本 **1.0.8**、构建 **DEBUG**（`DBG-` 前缀）
-   - `1.0.8-2026-09-27` → 版本 1.0.8、构建 RELEASE
-2. **下载同版本**的官方 `OpenCore-<ver>-DEBUG.zip`（或 `-RELEASE.zip`）
-3. **备份**现有的 `EFI/OC/OpenCore.efi`、`EFI/BOOT/BOOTx64.efi`、`EFI/OC/Drivers/`
-4. **替换三处**：
-   - `EFI/OC/OpenCore.efi`
-   - `EFI/BOOT/BOOTx64.efi`
-   - `EFI/OC/Drivers/` 里**与官方同名的那些**（★ **保留第三方驱动**，例如驱动安装 App 放的 `NullMothLogo.efi`）
-   - ⚠️ **两边的驱动内容是不一样的**（上面表格已实测），所以换构建**必须**连驱动一起换，否则会版本/构建混搭
-5. **校验**：新文件的 sha 必须与官方包里的同名文件一致
-6. **重启**（换引导器必须重启才生效）
-7. **重启后验证**：
-   ```bash
-   nvram 4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102:opencore-version   # 应变成 DBG-<ver>-<日期>
-   shasum -a 256 /Volumes/EFI/EFI/OC/OpenCore.efi                 # 应与官方 DEBUG 包一致
-   ```
+- `EXITBS:START` 是交接标记，成功启动日志也可结束于此，不能独立作为失败证据。
+- ACPI 错误 0 命中只表示该采集中未观察到；还需核实启动时间、覆盖、原始表与实际症状。
+- Windows 校验器被 4551 阻止时，1401 的 Sample / 文件检查通过也不能称为官方 ocvalidate 已通过。
+- 报告 ID、构建成功、profile 绑定和写入回读分别证明各自步骤；它们都不替代启动与功能验收。
 
-### 按取证需要启用的选项
+## 5. 修补的两条路径
 
-- **打开 `Misc>Debug>SysReport`（一次性）**：重启后 ESP 上会出现 `SysReport/`，里面有 **ACPI 表（DSDT/SSDT）、SMBIOS、音频 codec** 转储 —— 阶段⑤ 要判断「该补哪张 SSDT」时，这些就是一手材料。**拿完就关掉**（它只在 DEBUG 下可用，且会占空间）
-- **配好日志去向**：`Misc>Debug>Target` 建议 `69 (0x45)` = 记录 + DataHub + **文件**（不上屏，见 `logs-and-debug.md`）
-  —— 想在屏幕上看就把 `0x02` 加回去（`71`），但那是**另一件事**，和日志是否完整无关
+**首选**：1401 支持且有对应证据时，由本轮日志 / 停止行驱动重新构建，审阅 `policy_changes`、`notices`、`validation` 后重新试启动。原始输出会被清理，历史副本放在输出目录之外；不要一边手改已绑定产物，一边让旧 profile 通过写棒检查。
 
-### 什么时候换回 RELEASE
+**备选**：RapidEFI / 官方手工方案，或仅需修正稳定 EFI 的局部问题时，读取同版文档，用 `oc-edit-safe.sh begin/finish` 包装实际配置编辑。按可归因的小组改动，依赖条目和文件一起改；有 ACPI / SSDT 需求再对照目标机器原始表。
 
-**修补完成、机器稳定之后**就换回去（这就是阶段⑥）：启动更快、日志更少。
-换之前先确认：`Misc>Debug>SysReport` 已关（RELEASE 下它本来就无效），且不再需要每次开机的完整日志。
-（实测：DEBUG 的 `OpenCore.efi` 与官方 DEBUG 包**逐字节一致**，所以这个换动是干净、可回滚的。）
+不把新生成的 SMBIOS / 三码、可选驱动、安全设置自动覆盖到原有稳定配置；原工具无法可靠迁移保留项时，先保留原 EFI，准备离线候选。
 
-## ④ 收集日志
+## 6. 日常化（按目标与偏好）
 
-跑 `scripts/grab-logs.sh`（`--oc-only` 可先只看 OC 那部分）。产出：
+问题修复并经启动、显示 / 网络 / 输入等所需功能验收后，保留当前有效 EFI、备用引导、身份与关键自定义设置、最终 SHA 和回滚位置。实验驱动、日志和 `-v` 按用户已有选择处理，不为“恢复默认”清理仍需的组件或诊断证据。
 
-- `oc-boot-log-summary.txt` —— 从 ESP 根 `opencore-*.txt` 里筛出的关键行（`OCABC:` 判据、ACPI 表清单、启动项注册、`OCJS: APFS` 门槛、`OC:` 错误）
-- `kernel-log-acpi.txt` —— 本次开机内核日志里的 ACPI 报错、macOS 解析到的表、平台设备挂载、ACPI 平面设备存在性
+1401 安装棒的日志策略服务于后续诊断，不默认一做完就清空或换 RELEASE。已有 EFI 明确需要切回 RELEASE 时，走 §3 的同版本备选方法；只调整需要的 `Misc>Debug` 项，并复验。不把 App Verbose、OpenCore 构建和 NVIDIA driver DEBUG 混为一谈。
 
-**判读方法见 `logs-and-debug.md`**。三条最快的判据：
-
-1. **ACPI 报错 0 命中** ⇒ 该次采集中未观察到这些报错；确认启动时间与采集覆盖，再结合原始表、设备树和症状判断，不能据此证明 ACPI 正确
-2. `OCB: Registering entry <名字>` ⇒ 选择器里**实际**有哪些启动项（"屏蔽"效果的唯一可靠依据）
-3. `OCABC: MAT support is 1` / `Only N/M slide values are usable!` ⇒ 直接决定 `EnableWriteUnprotector`、`ProvideCustomSlide` 该怎么设
-
-## ⑤ 修补
-
-按 [技能入口](../SKILL.md) 选择当前任务所需的步骤：
-
-1. 取同版官方文档与校验器，逐键解释配置偏离。
-2. 分析已有日志；需要补充时按上面④取证。
-3. 有 ACPI / SSDT 需求时，对照目标机器的原始表与官方样例。
-4. 实际修改用 `oc-edit-safe.sh begin/finish` 备份、校验并复验。
-5. 磁盘屏蔽、kext 精简与驱动调整仅在用户请求或证据支持时执行。
-
-### 修补的节奏（重要）
-
-- **一次只改一项**，改完重启验证，再改下一项 —— 否则出问题无法归因
-- 每一项都在报告里写清：**改了什么 / 文档依据 / 怎么回滚**
-- 保留「**明确不动**」清单（含理由），避免下次有人把这些"改回默认"改坏
-- 引导期的问题（`EXITBS:START` 卡住、选择器不出现）**先看 ESP 根的 `opencore-*.txt`**，别猜
-
----
-
-## ⑥ 日常化：换回 RELEASE + 关掉 debug 日志
-
-修补完成后，把机器从「排障态」切回「日常态」：**换引导器构建** + **关日志** + **确认 `-v` 偏好**。
-
-### 6.1 换回 RELEASE
+示例（仅手工备选，版本 / 路径须替换为已确认目标）：
 
 ```bash
 scripts/oc-swap-build.sh release 1.0.8 --efi /path/to/EFI
-# 示例版本与路径须替换为已确认的目标；备份、替换官方同名文件并校验 sha
-# 重启后确认：
-nvram 4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102:opencore-version    # 期望 1.0.8-2026-09-27（没有 DBG- 前缀）
 ```
 
-### 6.2 关掉 debug 日志（配置侧）
+`-v` 未请求调整就保留。若后续继续由 1401 管理，重建可能恢复工具的诊断策略，应核对本轮输出而非假设手工日常值永久保留。
 
-把 `Misc>Debug` 回到**官方 `Sample.plist` 的默认值**——这就是「日常态」：
+## 7. 系统升级与备用构建方法
 
-| 键 | 日常值 | 说明 |
-|---|---|---|
-| `Target` | **`3`** = `0x01`+`0x02` | 只留「记录 + 控制台」⇒ **不再往 ESP 写 `opencore-*.txt`**（关键：去掉 `0x40`） |
-| `DisplayLevel` | `2147483650` = `0x80000002` | ERROR + WARN（去掉 INFO） |
-| `AppleDebug` | `false` | 不再把 boot.efi 调试日志并入 OC 日志 |
-| `ApplePanic` | `false` | 不落 panic 文件；**想保留 panic 现场就设 `true`**（会往 ESP 写文件） |
-| `DisableWatchDog` | `false` | 只有 DEBUG 构建启动慢时才需要 |
-| `SysReport` | `false` | RELEASE 下本来就无效 |
-| `LogModules` | `*` | 官方默认 |
+macOS 大版本升级单独按 [15 → 26 专题](os-upgrade-15-to-26.md)判断网卡分流、图形载荷、FileVault 与 root patch 的实际需求；不是统一关闭 FileVault 或所有机器都重打补丁。
 
-> 想**完全静默**可以把 `Target` 设 `0`（文档：不设 `0x01` = 全部日志丢弃）；
-> 但那样屏幕上连 OC 的错误提示都没有，排障会很被动 ⇒ 日常建议保持 `3`。
-
-### 6.3 `-v`：按用户已有偏好执行
-
-`-v`（macOS verbose）是**偏好项**，不是技术默认值。切日常态时按用户已表达的选择处理；未要求调整就保留，确需决定且无法推断时再说明差别：
-
-| | 开 `-v` | 关 `-v` |
-|---|---|---|
-| 屏幕 | 内核/kext 全文滚动，看不到苹果 logo | 苹果 logo + 进度条 |
-| 开机速度 | 慢一点（每行都要经控制台渲染） | 快一点 |
-| 现场排障 | 一眼看到卡在哪 | 需按 **CMD+V** 临时开（`PollAppleHotKeys=true` 时可用） |
-| 日志完整性 | **不受影响** | **不受影响**（`log show` / Send logs / OC 日志都还在） |
-
-- 关掉 = boot-args 去掉 `-v`（等同驱动安装 App 的 "Turn verbose off"）
-- 换的时候**只动这一个 token**，并在报告里写明选择与依据
-
-### 6.4 日常态收尾清单
-
-- [ ] `oc-swap-build.sh release` 已执行，重启后 `opencore-version` 无 `DBG-` 前缀
-- [ ] `Misc>Debug` 已回到 §6.2 的值（或按客户意愿保留 panic 落盘）
-- [ ] `-v` 已按用户已有选择处理或保留原值
-- [ ] ESP 上排障期攒下的 `opencore-*.txt` 按需清理（可留最近几份备查）
-- [ ] 再跑一次 `scripts/oc-verify.sh` 确认仍是 `No issues found`
-- [ ] 报告里记录：本次生命周期各阶段做了什么、最终 sha、以及「明确不动」清单
-
----
-
-## ⑦ 之后：系统大版本升级（不是装机的第七阶段，是另一件事）
-
-装好、稳定运行之后，如果要从 **macOS 15 (Sequoia)** 升到 **26 (Tahoe)**，
-那是**另一套流程**（升级会必然打断 Wi-Fi 与 OCLP root patch）⇒ 见 **`os-upgrade-15-to-26.md`**。
-
-一句话：**核心动作是给按版本分构建的 kext 加 `MinKernel`/`MaxKernel`**（旧版上限 `24.99.99`、新版 `MinKernel 25.0.0`），
-升级前关 FileVault + 保护第三方 kext，升级后补条目 + 重打 root patch。
+没有首选工具所需环境 / 输入，或其规则无法满足本次明确保留项时，保留 [RapidEFI 备选流程](rapidefi-first-efi.md)及 [OpenCore 官方方法](official-docs-method.md)。[kext / OC 更新](kext-and-oc-update.md)是另一类维护任务，完整重建不替代每个依赖和功能的判断。

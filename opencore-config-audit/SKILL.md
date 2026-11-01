@@ -1,9 +1,9 @@
 ---
 name: opencore-config-audit
-description: 审查、修改与维护黑苹果 OpenCore EFI：config.plist 校验、BIOS/ACPI、启动故障与耗时、kext、Intel 核显、AMD CPU 与硬件驱动、系统升级、SMBIOS 和 OpenCanopy。用于明确的 OpenCore/黑苹果任务，以及本技能的使用说明；普通 macOS 应用或权限问题仅在证据指向 EFI、驱动或 AMFI 配置时使用。
+description: 审查、修改与维护黑苹果 OpenCore EFI：优先用 1401 构建及按日志诊断重建，另含 config.plist 校验、BIOS/ACPI、启动故障与耗时、kext、Intel 核显、AMD CPU 与硬件驱动、系统升级、SMBIOS 和 OpenCanopy。用于明确的 OpenCore/黑苹果任务，以及本技能的使用说明；普通 macOS 应用或权限问题仅在证据指向 EFI、驱动或 AMFI 配置时使用。
 metadata:
-  version: "0.45.0"
-  description_en: Audit and maintain hackintosh OpenCore EFI configurations, diagnose boot failures, and manage ACPI, kexts, Intel integrated graphics, AMD CPU monitoring and power management, hardware drivers, macOS upgrades, SMBIOS and OpenCanopy. Use for OpenCore/hackintosh tasks and skill usage questions; general macOS app issues require evidence of an EFI, driver or AMFI connection.
+  version: "0.46.0"
+  description_en: Prefer 1401 for building OpenCore EFI and rebuilding from boot evidence. Audit hackintosh configurations, diagnose boot failures, and manage ACPI, kexts, Intel integrated graphics, AMD CPU monitoring and power management, hardware drivers, macOS upgrades, SMBIOS and OpenCanopy. Use for OpenCore/hackintosh tasks and skill usage questions; general macOS app issues require evidence of an EFI, driver or AMFI connection.
   agent_created: "true"
 ---
 
@@ -19,12 +19,13 @@ metadata:
 
 | 当前任务 | 读取的专题 |
 |---|---|
-| 装不上、黑屏、卡代码、循环重启 | [分层排障](references/boot-failure-debug.md)，先定位固件 / OC / 内核 / 用户态 |
+| 安装棒失败、按日志诊断重建 | [1401 首选流程](references/1401-efi-workflow.md)，保留原棒证据后诊断与重建；未覆盖的问题再用[分层排障](references/boot-failure-debug.md) |
+| 已有系统黑屏、卡代码、循环重启 | [分层排障](references/boot-failure-debug.md)，先定位固件 / OC / 内核 / 用户态 |
 | 配置审查、逐键判断 | [官方文档方法](references/official-docs-method.md)；需取证时读 [日志与调试](references/logs-and-debug.md) |
 | 开机慢、停顿 | [启动时间线](references/boot-timeline.md) |
 | 工具缺失、版本不对 | [工具链](references/toolchain.md)；只补当前任务需要的工具 |
 | 装机前 BIOS、硬件选型 | [BIOS 设置](references/bios-settings.md)、[权威来源](references/ecosystem-sources.md)、[工具索引](references/laobamac-toolkit.md) |
-| 尚无 EFI、从零安装 | [基础 EFI](references/rapidefi-first-efi.md)、[生命周期](references/lifecycle.md)；已有可用 EFI 时无需重走装机流程 |
+| 尚无 EFI、从零安装、完整重建 | 优先 [1401 构建与调试](references/1401-efi-workflow.md)，[生命周期](references/lifecycle.md)串联验收；[RapidEFI](references/rapidefi-first-efi.md) / 官方手工方法备选，已有可用 EFI 不默认整份覆盖 |
 | ACPI / SSDT 检查、编译 | [ACPI 与 SSDT](references/acpi-ssdt.md) |
 | 启动项丢失、切换引导盘 | [固件启动项](references/boot-entries.md) |
 | 磁盘屏蔽、kext 精简 | [磁盘与 kext](references/disks-and-kexts.md) |
@@ -52,7 +53,7 @@ metadata:
 
 1. 确认用户目标、目标机器和输入是离线 EFI 副本还是正在使用的 ESP。离线审查直接检查提供的文件。
 2. 确认 OpenCore 版本、构建、macOS / Darwin 版本及相关硬件。macOS 可读 `nvram 4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102:opencore-version`；不能运行时从配置、二进制和日志交叉核实，区分已知事实与推测。
-3. 按需用 [toolcheck.sh](scripts/toolcheck.sh) 检查依赖；缺工具的处理见工具链专题。`ocvalidate` 必须与目标 OpenCore 版本一致，缺失或版本不明时不能声称官方校验通过。
+3. 1401 流程记录工具版本、实际扫描 / 构建变更与校验类型；Sample 降级检查不等于官方 ocvalidate 已运行。手工或补充检查按需用 [toolcheck.sh](scripts/toolcheck.sh) 检查依赖；缺工具的处理见工具链专题。`ocvalidate` 必须与目标 OpenCore 版本一致，缺失或版本不明时不能声称官方校验通过。
 4. 获取同版官方发布包与 `Configuration` 文档。官方说明和驱动作者源码 / README 优先于论坛与本机案例；涉及最新版本、兼容范围或下载地址时重新核实一手来源。
 5. 用 `Sample.plist` 做语义对照，结合日志解释偏离。把结论分为「有依据保留 / 建议修改 / 可选清理 / 证据不足」；默认值差异本身不是错误，`ocvalidate` 通过也不代表硬件适配正确。
 6. 先分析已有证据；不足以诊断时再考虑 DEBUG 构建、SysReport 或额外日志。卡死、panic、循环重启是现象，不能只凭现象认定根因。
@@ -62,7 +63,7 @@ metadata:
 - 盘号和挂载点会变化。按卷 / 分区 UUID 与当前设备信息确认目标；不能硬编码 `disk0`，也不能仅凭卷名 `EFI` 决定写入对象。EFI 分区不写入屏蔽清单。
 - 改 live 配置前重新读取并计算 sha256，备份原件；用 [oc-edit-safe.sh](scripts/oc-edit-safe.sh) 的 `begin` / `finish` 包装修改。中断后重新检查磁盘文件与备份，不假定文件自动回滚。发现并发写入时重新比对基线。
 - 以便于归因的小组改动推进；相互依赖的文件和条目一起修改。移动 kext / SSDT / 驱动时同步配置引用；删多个数组元素时从高索引往低删。
-- 完成 `plutil -lint`、同版本 `ocvalidate`、启用条目引用检查及语义 diff。任何一项失败即停止后续同步和成功报告，修复或回滚。
+- 按任务与运行平台完成配置语法 / 结构、启用引用与语义 diff，并记录实际执行的同版本官方校验。1401 在 Windows 4551 下的降级检查按专题记录覆盖与官方未运行项，不要求 Windows 先运行 macOS 的 plutil，也不能写成官方已通过。任何实际检查失败即停止后续同步与成功报告，修复或回滚。
 - 校验后同步工作区镜像与版本存档，核对 sha。实际写 ESP 后执行 `sync` → 卸载 → 重挂 → sha 复验；离线副本无需挂卸载。无法完成复验时明确标注未完成。
 - 换 OpenCore 版本或构建时同步官方 `OpenCore.efi`、`BOOTx64.efi` 及已使用的同名 Drivers，保留仍需使用的第三方驱动；升级前复核配置迁移与依赖。
 - 更新前识别上游、Dortania commit 构建、厂商修改与钉版关系，不能仅凭 tag、版本号、体积或构建年代认定来源或兼容性。按版本分构建的 kext 以 `MinKernel` / `MaxKernel` 避免重叠或遗漏。
@@ -79,7 +80,7 @@ metadata:
 |---|---|
 | 工具、官方资料 | [toolcheck.sh](scripts/toolcheck.sh)、[fetch-opencore-docs.sh](scripts/fetch-opencore-docs.sh)、[get-iasl.sh](scripts/get-iasl.sh) |
 | 配置验证与安全编辑 | [oc-verify.sh](scripts/oc-verify.sh)、[oc-edit-safe.sh](scripts/oc-edit-safe.sh) |
-| 切换构建 | [oc-swap-build.sh](scripts/oc-swap-build.sh) |
+| 手工同版本构建切换（备选） | [oc-swap-build.sh](scripts/oc-swap-build.sh)，完整按日志重建优先走 1401 |
 | 日志、耗时与停顿窗口 | [grab-logs.sh](scripts/grab-logs.sh)、[boot-timeline.sh](scripts/boot-timeline.sh)、[find-boot-gap.sh](scripts/find-boot-gap.sh) |
 | kext、CPU、内存检查 | [kext-inventory.sh](scripts/kext-inventory.sh)、[cpu-freq-probe.sh](scripts/cpu-freq-probe.sh)、[e-cores-check.sh](scripts/e-cores-check.sh)、[cpu-name-check.sh](scripts/cpu-name-check.sh)、[mem-check.sh](scripts/mem-check.sh) |
 | Windows BIOS 只读检查 | [bios-audit.ps1](scripts/bios-audit.ps1) |

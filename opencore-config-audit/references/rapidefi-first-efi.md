@@ -1,4 +1,6 @@
-# 从零开始：在 Windows 上生成一份基础 EFI（RapidEFI）
+# 备选：用 RapidEFI 生成基础 EFI
+
+当前首选为 [1401 构建、按日志诊断重建](1401-efi-workflow.md)。本文件保留原 RapidEFI 方法，在首选环境 / 输入不可得、规则不覆盖需求或用户明确选择时使用；以下旧流程按实际工具版本复核，不与 1401 同时管理同一产物。
 
 > ★ **另一个从零生成 EFI 的选择**：`laobamac/SimpleKaruzi` —— *"一款专门用于简化 OpenCore EFI 创建过程的工具，
 > 通过自动化基本设置流程并提供标准化配置"*（**AGPL-3.0**）。
@@ -10,7 +12,7 @@
 
 ## 0. 什么时候用这份
 
-- 手上**还没有**任何能启动的 OpenCore EFI，要从零装黑苹果
+- 首选1401不适合当前环境或需求，手上还没有能启动的 EFI，改用本备选方法
 - 手上只有 Windows（或 Linux/macOS），想在装机前先做出一份**能引导安装盘**的基础 EFI
 - 已经有 EFI 只是想重做一份对照 ⇒ 也可以，但**不要直接覆盖在用的那份**
 
@@ -56,7 +58,7 @@
   视平台处理 CFG Lock / VT-d（记下当前值，后面按文档决定要不要 `AppleXcpmCfgLock` / `DisableIoMapper`）
 - **目标机硬件信息要准**：CPU 型号、显卡（含 PCI ID）、有线/无线网卡型号、声卡 codec、磁盘接口
 - **准备一个备用 U 盘**（测试启动专用），以及在用系统的完整备份
-- 三码（Serial / MLB / UUID / ROM）**必须自己生成**（如 `macserial`），不要照抄别人的
+- 新装且没有可保留身份时，自己生成 Serial / MLB / UUID / ROM（如 `macserial`），不照抄；已有稳定身份在重建时单独核对并按用户目标保留
 
 ## 5. 生成之后必须做的四件事
 
@@ -68,7 +70,7 @@
    scripts/oc-verify.sh <EFI/OC/config.plist> ./_oc-docs-audit
    ```
    重点核对：`Kernel>Block IOPCIFamily/IONDRVSupport`、`SecureBootModel`、`csr-active-config`、
-   `ResizeGpuBars`/`ResizeAppleGpuBars`、`NVRAM>Add` 的键是否都在 `Delete` 里
+   `ResizeGpuBars`/`ResizeAppleGpuBars`、仅需覆盖已有变量时才配对应 `NVRAM>Delete`
 2. **USB 端口映射**：不要靠 `Kernel>Quirks>XhciPortLimit`（文档明确「should be avoided」）——
    用 USB 端口图（如 USBToolBox + `UTBMap.kext`）把端口限制在 15 个以内
 3. **平台相关 SSDT**：按官方 `Docs/AcpiSamples/` 逐条对照你机器的设备再决定加不加（见 `acpi-ssdt.md`）
@@ -80,12 +82,12 @@
 ## 6. 接进本 skill 的安全流程
 
 ```
-Windows 上生成基础 EFI（本文档）
+备选：RapidEFI 上生成基础 EFI（本文档）
       ↓ 拷到 U 盘，先在备用 U 盘上试启动（不要覆盖在用 EFI）
       ↓ 能进安装器 / 能进系统
 确认目标 ESP → scripts/oc-verify.sh 校验 → 按官方文档逐键对照
       ↓ 每改一项：scripts/oc-edit-safe.sh begin / finish（备份 + 语义 diff + sha + 重挂复验）
-      ↓ 日志取证（scripts/grab-logs.sh）：0 ACPI 报错、选择器项正确、无 OC WARN/ERROR
+      ↓ 日志取证（scripts/grab-logs.sh）：核实覆盖与实际症状，0 ACPI 报错不代表全部正确
 完成
 ```
 
