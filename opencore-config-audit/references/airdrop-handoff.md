@@ -38,7 +38,8 @@ kmutil showloaded --list-only
 | `AirportItlwm` | 按官方 FAQ 区分 Handoff / 通用剪贴板与不支持的 AirDrop |
 | `itlwm.kext` | 不套用 `AirportItlwm` 的支持列表，查该产物自己的限制 |
 | 博通原生栈 / 补丁方案 | 核对目标 macOS、驱动与补丁兼容性，再实测 AirDrop / Handoff |
-| MediaTek 原生或第三方方案 | 按芯片、具体驱动版本和实现路线核实，见 MediaTek 专题 |
+| **MediaTek：MtkWireless** | 优先按 [MtkWireless 专题](mtkwireless.md)核对目标设备、系统和各功能的上游状态；不从旧 MediaTek 驱动推断 AirDrop / Handoff 能力 |
+| MediaTek Sunrise / 旧第三方方案 | 作为备选按芯片、具体驱动版本和实现路线核实；见 [MediaTek 专题](mediatek-wifi.md) |
 
 不要仅为 Handoff 一项功能要求用户更换 Broadcom 网卡。需要购置硬件时，先核实当前系统的兼容范围及用户需求。
 
@@ -49,4 +50,5 @@ kmutil showloaded --list-only
 - [博通无线](broadcom-wifi.md)
 - [Intel 无线](intel-wifi.md)
 - [MediaTek 无线](mediatek-wifi.md)
+- [MtkWireless](mtkwireless.md)
 - [SMBIOS 与身份信息](smbios-and-serials.md)

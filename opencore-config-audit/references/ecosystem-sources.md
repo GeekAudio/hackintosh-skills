@@ -63,9 +63,9 @@
 | 硬件 | 作者 / 仓库 | 详见 |
 |---|---|---|
 | **Intel 无线** | **`OpenIntelWireless`** —— `itlwm` ★7.1k · `IntelBluetoothFirmware` ★2.5k · `HeliPort` ★1.3k（原作者 **`zxystd`**） | `intel-wifi.md` |
-| **MediaTek 无线 / 蓝牙** | **`GeekAudio/mediatek-sunrise-hackintosh`（MT7922 Sunrise Pack）** —— macOS 26 原生 Sunrise 的一站式包（固件 + `AppleSunrise.kext` + SSDT + 伪装片段 + macOS 15 第三方 kext 全套）· ★ **`flxxxxddd/SimpleMtkWlan`（fork，v1.5.0：`AirportMtkWlan` 原生菜单 / `SimpleMtkWlan` 以太网式，二选一）** + `laobamac/SimpleMtkBtFw`（第三方路线） | `mediatek-wifi.md` |
+| **MediaTek 无线 / 蓝牙** | Wi-Fi / USB 蓝牙优先核对 **`Dino-VN/MtkWireless`** 的设备与 macOS 支持范围，见 [MtkWireless 专题](mtkwireless.md)；旧路线保留为备选：`GeekAudio/mediatek-sunrise-hackintosh`（MT7922 Sunrise Pack）及 `flxxxxddd/SimpleMtkWlan`（v1.5.0：`AirportMtkWlan` 原生菜单 / `SimpleMtkWlan` 以太网式）；`laobamac/SimpleMtkBtFw` 作为未覆盖目标 USB 蓝牙时的备选 | `mediatek-wifi.md` / `mtkwireless.md` |
 | **博通无线 / 蓝牙** | **Acidanthera** —— `AirportBrcmFixup` / `BrcmPatchRAM` | `broadcom-wifi.md` |
-| **MediaTek** | **`laobamac`** —— `SimpleMtkWlan` / `SimpleMtkBtFw` | `mediatek-wifi.md` |
+| **MediaTek（旧项目 / 上游来源）** | **`laobamac`** —— `SimpleMtkWlan` / `SimpleMtkBtFw`；Wi-Fi / USB 蓝牙选型优先看 [MtkWireless 专题](mtkwireless.md)，旧方案分别核对仓库状态 | `mediatek-wifi.md` / `mtkwireless.md` |
 | **有线网卡** | **`Mieze`** —— `LucyRTL8125Ethernet` ★296 · `IntelMausiEthernet` ★413 · `RTL8111_driver_for_OS_X` ★717 · `IntelLucy` ★76 · `RTL812xLucy` ★22<br>**`Shaneee`** —— `AppleIGB` ★30<br>**`laobamac`** —— `SimpleVGBE` 等 | `ethernet-drivers.md` |
 | **声卡** | **Acidanthera**（`AppleALC`）· ★★ **`5T33Z0`**（`AppleALC-Guides` —— **定制 layout 的实操主参考**、17 个现成 dump、`alc-verb`；另有 `OCLP4Hackintosh` 的 `Audio_Tahoe.md`）· **`perez987`**（`AppleHDA-gone-on-macOS-26-Tahoe` 指南）· **`Mirone`**（`MyKextInstaller`）· **`laobamac`**（`SimpleLoader` / `SimpleHDA` / `SimpleVoodooHDA`）· **`chris1111`**（VoodooHDA 脚本上游） | `applealc-custom.md` |
 | **Intel Xe-LP 核显** | **`b00t0x/WhateverXe`**（Lilu 插件）+ `WhateverXe-Graphics`（图形载荷与 AuxKC）；按 GPU / 接口区分实验实现和实机证据 | [核显专题](intel-xe-graphics.md) |

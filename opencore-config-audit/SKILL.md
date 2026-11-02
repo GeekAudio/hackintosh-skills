@@ -1,9 +1,9 @@
 ---
 name: opencore-config-audit
-description: 审查、修改与维护黑苹果 OpenCore EFI：优先用 1401 构建及按日志诊断重建，另含 config.plist 校验、BIOS/ACPI、启动故障与耗时、Windows 双系统兼容、kext、Intel 核显、AMD CPU 与硬件驱动、系统升级、SMBIOS 和 OpenCanopy。用于明确的 OpenCore/黑苹果任务，以及本技能的使用说明；普通 macOS 应用或权限问题仅在证据指向 EFI、驱动或 AMFI 配置时使用。
+description: 审查、修改与维护黑苹果 OpenCore EFI：优先用 1401 构建及按日志诊断重建，另含 config.plist 校验、BIOS/ACPI、启动故障与耗时、Windows 双系统兼容、kext、Intel 核显、AMD CPU、MediaTek MtkWireless 与硬件驱动、系统升级、SMBIOS 和 OpenCanopy。用于明确的 OpenCore/黑苹果任务，以及本技能的使用说明；普通 macOS 应用或权限问题仅在证据指向 EFI、驱动或 AMFI 配置时使用。
 metadata:
-  version: "0.47.0"
-  description_en: Prefer 1401 for building OpenCore EFI and rebuilding from boot evidence. Audit hackintosh configurations, diagnose boot failures, check Windows coexistence, and manage ACPI, kexts, Intel integrated graphics, AMD CPU monitoring and power management, hardware drivers, macOS upgrades, SMBIOS and OpenCanopy. Use for OpenCore/hackintosh tasks and skill usage questions; general macOS app issues require evidence of an EFI, driver or AMFI connection.
+  version: "0.48.0"
+  description_en: Prefer 1401 for building OpenCore EFI and rebuilding from boot evidence. Audit hackintosh configurations, diagnose boot failures, check Windows coexistence, and manage ACPI, kexts, Intel integrated graphics, AMD CPU monitoring and power management, MediaTek MtkWireless, hardware drivers, macOS upgrades, SMBIOS and OpenCanopy. Use for OpenCore/hackintosh tasks and skill usage questions; general macOS app issues require evidence of an EFI, driver or AMFI connection.
   agent_created: "true"
 ---
 
@@ -34,7 +34,8 @@ metadata:
 | macOS 15 → 26 | [系统升级](references/os-upgrade-15-to-26.md)，核对目标系统与各驱动的支持范围 |
 | NVIDIA | [显卡驱动](references/nvidia-driver.md) |
 | Intel Xe-LP 核显、WhateverXe | [Xe 核显适配](references/intel-xe-graphics.md)，先核对 GPU / 系统 / 接口支持边界 |
-| Intel / MediaTek / 博通无线 | [Intel](references/intel-wifi.md)、[MediaTek](references/mediatek-wifi.md)、[博通](references/broadcom-wifi.md)，只选目标芯片对应项 |
+| MediaTek MT7921 / MT7922、MtkWireless | 优先 [MtkWireless](references/mtkwireless.md)，按设备、系统 build 分别核对 Wi-Fi / BT；未覆盖时选 [MediaTek 备选](references/mediatek-wifi.md) |
+| Intel / 博通无线 | [Intel](references/intel-wifi.md)、[博通](references/broadcom-wifi.md)，只选目标芯片对应项 |
 | 有线网卡、接口顺序 | [有线驱动](references/ethernet-drivers.md)、[en0 与接口顺序](references/network-en0-order.md) |
 | AirDrop / 接力 | [连续互通排障](references/airdrop-handoff.md) |
 | 黑苹果驱动相关的 AMFI / TCC / Gatekeeper | [权限与安全设置](references/amfi-and-tcc.md) |

@@ -118,7 +118,7 @@ Windows 端优先用 App 自带构建校验和写棒复验；本技能的 Bash �
 ## 6. 写入、上传、恢复与备选
 
 - **本地采集与发送分开**：Check this PC / 本地诊断不上传；失败日志和 Send logs 有发送确认。仅获本地构建 / 排障授权时取消发送、保存本地材料。需要提交时先预览脱敏和发送范围；已有明确发送授权则依其执行，不重复询问。收到 report ID 只证明那次提交，不能代替启动或功能验证。
-- **Mac 驱动 Setup 有实际改动**：会定位启动 EFI、预览 / 授权、备份后写配置及驱动，可能调整 SIP / SecureBootModel。用户只要重建 EFI 或只读检查时，不顺手安装 NVIDIA、Xe、测试驱动或改权限。Xe / AMD CPU 等功能仍按各自专题核对。
+- **Mac 驱动 Setup 有实际改动**：会定位启动 EFI、预览 / 授权、备份后写配置及驱动，可能调整 SIP / SecureBootModel。用户只要重建 EFI 或只读检查时，不顺手安装 NVIDIA、Xe、测试驱动或改权限。MediaTek 驱动优先按 [MtkWireless](mtkwireless.md)核对本轮候选；生成器未覆盖目标方案时选择其支持的重建或离线备选，不伪造 profile。Xe / AMD CPU 等功能仍按各自专题核对。
 - **回退先用完整备份与备用引导**。选择器的 Start once without NVIDIA driver / Remove NVIDIA driver 处理驱动范围；前者当前也会单次停用 WEX。它们不是完整 EFI、BIOS 或其它补丁的还原器。
 - 没有合适 Windows / 目标输入、1401 不覆盖当前场景，或需精确保留其无法迁移的配置时，使用 [RapidEFI 备选](rapidefi-first-efi.md) / [手工方案](official-docs-method.md)、[生命周期中的手工 DEBUG 与复验](lifecycle.md)。保留用户已选硬件和功能，不因某工具不覆盖就默认替换它们。
 

@@ -1,17 +1,18 @@
 # MediaTek 无线网卡（MT7921 / MT7922 / RZ608 / RZ616）在 macOS 上的支持与流程
 
+> **MediaTek 驱动优先路线已更新**：先按 [MtkWireless 专题](mtkwireless.md)核对其支持的设备、macOS 版本与安装方式；目标组合匹配时优先使用该方案。本文保留芯片 / 总线识别、Apple Sunrise 与原有 SimpleMtkWlan / AirportMtkWlan 路线，作为识别和备选资料。
 > macOS 26 的部分构建可找到 Apple Sunrise 驱动与部分 MediaTek 固件。
 > **文件存在、设备 ID 匹配、固件齐全与实际可用是不同证据**；按芯片、总线和系统构建核实，见 §0.3 / §1.5。
 > 原生与第三方路线按目标机器的验证结果选择，不能仅凭文件清单承诺免驱。
 >
-> 上游（第三方路线）`laobamac` 的三个仓库（同一作者，也是本 skill 里 Intel 无线用的那个 fork 作者）
+> 原有第三方路线的上游来源 `laobamac` 三个仓库（同一作者，也是本 skill 里 Intel 无线用的那个 fork 作者）
 > - **Wi-Fi（PCIe）**：`laobamac/SimpleMtkWlan` —— *"An experimental macOS kernel extension for MediaTek MT792x PCIe wireless adapters."*
 > - **蓝牙（USB）**：`laobamac/SimpleMtkBtFw` —— *"a MediaTek USB Bluetooth driver for macOS"*
 > - **Wi-Fi 客户端**：`laobamac/SimpleMTKClient` —— 菜单栏 App（`SimpleMTK`）
 >
-> ★★ **2026-10-13 起的实用进展：第三方 Wi-Fi 请用 `flxxxxddd/SimpleMtkWlan` 这个 fork**（上游 laobamac 仓库的 fork，
+> ★★ **旧第三方路线记录：`flxxxxddd/SimpleMtkWlan` fork**（上游 laobamac 仓库的 fork，
 > 分支 **`mt7921-fixes`**，**有 CI 构建的 release**）—— 它修好了「MT7921 / RZ608 能 attach 但过不了流量」的问题，
-> 并补上 **802.11n（HT20/40）+ 802.11ac（VHT80）**。详见 §4。
+> 并补上 **802.11n（HT20/40）+ 802.11ac（VHT80）**。该路线作为 MtkWireless 之外的备选，详见 §4。
 >
 > ★★★ **2026-10-16：原生路线有人打包好了 —— `GeekAudio/mediatek-sunrise-hackintosh`（MT7922 Sunrise Pack）**
 > 把原来散在 tonymacx86 帖子附件里的东西收齐了：**MT7922 Wi-Fi 固件**（linux-firmware 官方 + SHA256SUMS）·
@@ -19,13 +20,13 @@
 > **免编译的 `DeviceProperties` 伪装片段** · `Kernel>Add` 片段 · boot-args 清单 · macOS 15 第三方 kext 全套（含**预编译 SimpleMTK.app**）。
 > ⇒ **要用原生 Sunrise 路线，先拿这个包**，不用去翻 69 页帖子找附件。详见 §1.5。
 >
-> ★★★ **2026-10-18 起的重大变化：第三方路线也出「原生 Wi-Fi 菜单」了**
+> ★★★ **旧第三方路线记录：`flxxxxddd/SimpleMtkWlan` v1.3.0 起也提供「原生 Wi-Fi 菜单」**
 > `flxxxxddd/SimpleMtkWlan` **v1.3.0 起**同时发布两个 kext，**同一套硬件层、只能启用一个**：
 > - **`AirportMtkWlan.kext`** —— 卡是**真正的 macOS Wi-Fi 接口**（`IO80211Family` / Skywalk：原生菜单、
 >   系统设置里能选网络、钥匙串存密码），**Tahoe 上不需要 OCLP root patch、不需要降级 `IOSkywalkFamily`**；
-> - **`SimpleMtkWlan.kext`** —— 老形态，以太网式 `enX` + `SimpleMTK` 菜单栏客户端（任何能加载的 macOS 版本）。
+> - **`SimpleMtkWlan.kext`** —— 老形态，以太网式 `enX` + `SimpleMTK` 菜单栏客户端；按各发行版的设备和系统支持范围核对。
 >
-> ⇒ **「第三方 = 没有原生菜单」这个旧结论作废**，见 §4.1 / §4.7。
+> ⇒ 对该旧方案而言，「第三方 = 没有原生菜单」这个旧结论作废，见 §4.1 / §4.7；不要外推到其他驱动。
 >
 > ★★ **本文件的证据分级约定**（引用结论时请连带层级一起引用）：
 > **【源码/plist 实证】** > **【上游 README 声明】** > **【他人实测】**。
@@ -87,14 +88,17 @@ BT_RAM_CODE_MT7922 · MT7923 · MT7923A0 · SRS_7922
   提取法：`hdiutil attach` KDK.dmg → `pkgutil --expand-full KernelDebugKit.pkg` →
   `KDK.pkg/Payload/System/Library/Extensions/AppleSunrise.kext`（x86_64+arm64e，LSMinimumSystemVersion 26.7）
 
-### 0.2 四条路线怎么选
+### 0.2 MediaTek 路线怎么选
+
+Wi-Fi 与 USB 蓝牙先看 [MtkWireless 专题](mtkwireless.md)及其证据边界；只有目标卡与目标 macOS 构建都在其支持范围内时才按该方案推进。以下 Sunrise / SimpleMtkWlan 资料保留为原生路线、USB 蓝牙及备选 Wi-Fi 路线。
 
 | 路线 | 蓝牙 | Wi-Fi | 前提 |
 |---|---|---|---|
+| **优先：MtkWireless** | 按其专题列明的范围 | 按其专题列明的范围 | 只对已核实的目标芯片 / macOS 组合优先；安装和验证见 [MtkWireless 专题](mtkwireless.md) |
 | **① 原生（Sunrise）** | 按 PCIe 控制器与固件验证 | 按 PCI ID、HAL 与固件验证 | 在对应系统构建中确认 Sunrise 文件；存在文件不等于已验证支持 |
 | ② 第三方 `SimpleMtkBtFw` | ✅ 有 release | — | 蓝牙走 **USB** 的老款模块 |
-| ③ 第三方 `SimpleMtkWlan` | — | ⚠️ **以太网式接口**（v1.5.0） | 任何能加载的版本；接受 `enX` + `SimpleMTK` 客户端 App |
-| **④ 第三方 `AirportMtkWlan`** | — | ✅ **原生 Wi-Fi 菜单**（v1.3.0+） | **macOS 26 Tahoe** + `DisableIoMapper=true` |
+| ③ 旧第三方 `SimpleMtkWlan` | — | ⚠️ **以太网式接口**（该仓库 v1.5.0） | 按 §4 对应发行版核实；接受 `enX` + `SimpleMTK` 客户端 App |
+| **④ 旧第三方 `AirportMtkWlan`** | — | 该仓库 v1.3.0+ 提供原生 Wi-Fi 菜单 | 按 §4 的具体发行版核实设备、macOS 与前置条件（v1.5.0 记录含 Tahoe 26 + `DisableIoMapper=true`） |
 
 > 先只读核对目标系统与设备，再选择路线；驱动已正确绑定且功能通过时无需新增组件。
 > WLAN 与蓝牙分别判断：USB 蓝牙可用第三方固件加载器，不据此排除同模块 Wi-Fi 的其他路线。
@@ -105,8 +109,9 @@ BT_RAM_CODE_MT7922 · MT7923 · MT7923A0 · SRS_7922
 | 部件 | 第三方路线状态 | 依据 |
 |---|---|---|
 | 蓝牙（USB） | 可用 | `SimpleMtkBtFw` 有 **`1.0.0`** release；issue #1 标题即 *"MT7922 bluetooth is working"*（fork：`flxxxxddd/SimpleMtkBtFw`，AirPods 音频可用） |
-| Wi-Fi（PCIe）· 原生菜单 | ★ **v1.3.0 起可用** | `AirportMtkWlan`：Tahoe 上真原生接口，**不需要 OCLP 补丁**；但 **802.11ax 未支持**、**WPA3-only 不支持**、**AWDL 未实现 ⇒ 无 AirDrop** ⇒ §4.7 |
-| Wi-Fi（PCIe）· 以太网式 | ★ 能用，有硬限制 | `SimpleMtkWlan`：**MT7921 / RZ608 实测能连上网**；**无原生菜单**、当前版本未实现 AWDL ⇒ §4 |
+| MtkWireless | 首选路线 | 支持范围、构建和状态以 [专题](mtkwireless.md)列明的上游证据为准；不从旧驱动推断 |
+| Wi-Fi（PCIe）· 原生菜单 | 旧方案 v1.3.0+ | `flxxxxddd/AirportMtkWlan`：上游 v1.5.0 状态记录的功能限制见 §4；仅描述该仓库与版本 |
+| Wi-Fi（PCIe）· 以太网式 | 旧方案 | `flxxxxddd/SimpleMtkWlan`：MT7921 / RZ608 的历史实测与该版本限制见 §4；不能外推到 MtkWireless |
 
 > 需要 AirDrop 时，按目标系统选择已有验证的支持方案；**Intel `AirportItlwm` 不支持 AirDrop**。
 > Handoff / 通用剪贴板与 Wi-Fi 6 分别核对，见 [连续互通专题](airdrop-handoff.md) 和
@@ -122,7 +127,7 @@ ls /System/Library/DriverExtensions/ | grep -i sunrise
 system_profiler SPUSBDataType    | grep -i -E "MediaTek|0x0e8d"   # USB 侧（老款）
 ioreg -l -p IODeviceTree | grep -i "14c3"                          # PCIe 侧（含 792a 蓝牙功能）
 
-# ③ 系统是哪个大版本？（Sequoia 没有 Sunrise ⇒ 只能走第三方）
+# ③ 系统是哪个大版本？（Sequoia 没有 Sunrise；再核对 MtkWireless 与旧备选的适用范围）
 sw_vers -productVersion && uname -r
 
 # ④ 形成原生路线候选后，继续核对芯片总线、匹配、固件、HAL 与关联/实际流量证据
@@ -313,7 +318,7 @@ DEXT 的 `Info.plist` **只匹配 `0x7922`**（另 7923 / 7932），而 **RZ616 
 | 方案 | 做法 | 代价 |
 |---|---|---|
 | **① 核实可替换硬件** | 先确认实际芯片 / PCI ID、目标系统构建与实机报告；不因存在 MT7932 固件就承诺 RZ717 免驱 | 验证不足时不建议为此购卡 |
-| **② 第三方 kext 路线** | 同一卡按构建二选一：`AirportMtkWlan` 提供原生 Wi-Fi 菜单，`SimpleMtkWlan` 提供以太网式接口；USB 蓝牙按需配 `SimpleMtkBtFw`，均核对对应发布说明（§4） | 不需要系统卷无线 root patch；AWDL / AirDrop 未实现，HE、WPA3 与 Handoff 分别按具体构建核对 |
+| **② 旧第三方 kext 路线** | `flxxxxddd` 的同一卡产物按构建二选一：`AirportMtkWlan` 提供原生 Wi-Fi 菜单，`SimpleMtkWlan` 提供以太网式接口；USB 蓝牙按需评估 `SimpleMtkBtFw`（§4） | 按该仓库具体发布物核对系统卷补丁需求、AWDL / AirDrop、HE、WPA3 与 Handoff；这些记录不代表 MtkWireless |
 | **③ 只要蓝牙** | 按实际 USB / PCIe 控制器确认固件来源与加载方式，已有固件不等于已绑定设备 | 单独验证蓝牙功能 |
 | **④ 实验原生驱动** | 仅在目标构建与固件需求明确时评估系统卷修改 | 需可恢复的原封印快照或完整恢复方案；补固件仍不保证成功 |
 
@@ -327,7 +332,7 @@ DEXT 的 `Info.plist` **只匹配 `0x7922`**（另 7923 / 7932），而 **RZ616 
 
 - **原生路线理论上支持 AWDL** —— f10 在 macOS 26.3 beta + KDK_26.3 kext 上是**唯一见到完整 AWDL 支持**的配置；
 - **但 MT7922 实测成功率有限，不保证** ⇒ **别为了 AirDrop 走这条路**；
-- AirDrop：本原生实验路线尚无足够验证，当前第三方驱动也未实现；不要推荐不支持 AirDrop 的 Intel AirportItlwm 作为兜底。
+- AirDrop：本原生实验路线尚无足够验证；`flxxxxddd/SimpleMtkWlan` v1.5.0 的状态记录见 §4。MtkWireless 的能力按[其专题](mtkwireless.md)单独核对，不从旧驱动推断；也不要推荐不支持 AirDrop 的 Intel AirportItlwm 作为兜底。
 - Handoff / 通用剪贴板：按具体驱动的支持声明判断，不能和 AirDrop 捆绑。
 - Wi-Fi 6：按网卡与构建分别核对 HE 支持 / 实验开关，不能承诺换成任意 Broadcom 或 Intel 卡即可获得。
 
@@ -346,13 +351,13 @@ DEXT 的 `Info.plist` **只匹配 `0x7922`**（另 7923 / 7932），而 **RZ616 
 
 ### Sequoia（macOS 15）怎么办
 
-Sequoia **没有**这两个 dext ⇒ 原生路线走不通，只能走下面的第三方路线（§3 / §4）。
+Sequoia **没有**这两个 dext ⇒ 原生 Sunrise 路线走不通。先核对 [MtkWireless 专题](mtkwireless.md)是否列出目标系统 / 设备组合；不覆盖时再评估下方旧第三方路线（§3 / §4）。
 
 ## 2. 项目分工（上游 vs fork —— 别认错仓库）
 
 | 项目 | 管什么 | 形态 | 有 Release？ | 现状 |
 |---|---|---|---|---|
-| ★ **`flxxxxddd/SimpleMtkWlan`**（**fork**，分支 `mt7921-fixes`） | **Wi-Fi（PCIe）** | **两个 kext**（`AirportMtkWlan` / `SimpleMtkWlan`，同一硬件层） | ✅ **v1.1.0 → v1.5.0**（CI 构建；**v1.3.0 起加 `AirportMtkWlan`**） | **★ 第三方路线就用它** —— MT7921/RZ608 实测能上网；`0616` 在 v1.5.0 匹配列表里【plist 实证】 |
+| `flxxxxddd/SimpleMtkWlan`（旧第三方备选，fork 分支 `mt7921-fixes`） | **Wi-Fi（PCIe）** | **两个 kext**（`AirportMtkWlan` / `SimpleMtkWlan`，同一硬件层） | ✅ **v1.1.0 → v1.5.0**（CI 构建；v1.3.0 起加 `AirportMtkWlan`） | 仅供 MtkWireless 不覆盖且本身符合目标条件时评估；MT7921/RZ608 实测与 `0616` plist 匹配只属于该旧方案 |
 | `laobamac/SimpleMtkWlan`（**上游**） | Wi-Fi（PCIe） | kext（+ `mtk80211` 兼容层） | ❌ **无**（必须自编译） | 上游主线，bring-up 中；fork 的修复**还没回到主线** |
 | `laobamac/SimpleMtkBtFw` / fork `flxxxxddd/SimpleMtkBtFw` | **蓝牙固件加载**（firmware loader + patcher） | **两个** kext | ✅ **`1.0.0`** | 可用（fork 说明：AirPods 音频可用） |
 | `laobamac/SimpleMTKClient` | Wi-Fi 菜单栏客户端 | App（`SimpleMTK`） | ❌ **上游确无 release**（2026-10-16 API+网页双查） | **必需的** —— 见 §4.1。2026-10-16 已在本机从其源码编译出 `SimpleMTK-1.0.0.zip`（内嵌 Sparkle 2.10.0 源码构建；因 `sandbox-exec` 被系统策略禁用，需先剥离两个未用的 SPM 依赖再编 KeychainAccess/Sparkle） |
@@ -438,8 +443,8 @@ ioreg -l -p IOService | grep -i -E "FirmwareLoaded|fw_name"
 
 **两者共同的三条硬限制（README Status 表）：**
 
-1. 当前 v1.5.0 的上游状态表未支持 **AirDrop / Handoff / Continuity（AWDL）**。
-   这不是由原生菜单 / 以太网式接口单独决定的，也不能推广为其他驱动或未来版本永远无法实现。
+1. `flxxxxddd/SimpleMtkWlan` v1.5.0 的上游状态表未支持 **AirDrop / Handoff / Continuity（AWDL）**。
+   这是该仓库 / 版本的状态，不能推广为 MtkWireless 或未来版本也不支持。
 2. **❌ 802.11ax（HE / Wi-Fi 6）** —— 状态表写 `not yet`；但安装节又说 `itlwm_he=1` 是「实验性开关」
    ⇒ **两处口径不一致，属未验证，别当结论**。
 3. **❌ WPA3-only（SAE）** 网络连不上。
@@ -461,7 +466,7 @@ ioreg -l -p IOService | grep -i -E "FirmwareLoaded|fw_name"
 ⇒ 对 RZ616 的诚实结论：**匹配规则支持（plist 实证）、驱动大概率能用（同芯片同 HAL），但没有公开的 Tahoe 实测**。
 **别把它当"已验证"引用。**
 
-### 4.3 能力矩阵（README Status 摘要）
+### 4.3 能力矩阵（`flxxxxddd/SimpleMtkWlan` v1.5.0 README Status 摘要）
 
 | 能力 | 状态 |
 |---|---|
@@ -479,7 +484,7 @@ ioreg -l -p IOService | grep -i -E "FirmwareLoaded|fw_name"
 | **802.11ax（HE）** | ❌ 尚未 |
 | **原生 macOS Wi-Fi 菜单** | `AirportMtkWlan` 在 Tahoe 支持；`SimpleMtkWlan` 使用 SimpleMTK |
 | **睡眠 / 唤醒** | 当前 README 声明支持；目标机器仍需实测 |
-| **AirDrop / Handoff / Continuity** | 当前版本未支持 |
+| **AirDrop / Handoff / Continuity** | v1.5.0 状态表未支持 |
 
 ### 4.4 安装（**有 release，不用自编译**）
 
@@ -602,9 +607,9 @@ xcodebuild -project SimpleMtkWlan.xcodeproj -scheme SimpleMtkWlan \
 ### 4.8 风险与前置
 
 - 备份 EFI、备好可引导 U 盘；**禁用该 kext 即回到「无驱动」状态**
-- 当前第三方版本未支持 AirDrop / Continuity，WPA3-only 不支持；HE 在状态表与实验开关说明间仍有不一致。
+- `flxxxxddd/SimpleMtkWlan` v1.5.0 的上游状态表记录不支持 AirDrop / Continuity、WPA3-only 不支持；HE 在状态表与实验开关说明间仍有不一致。MtkWireless 能力按[其专题](mtkwireless.md)单独核对。
   按所需功能分别选择，不把 Intel AirportItlwm 当作 AirDrop 替代方案，见 §6 决策树
-  （★ 原生 Wi-Fi 菜单 **v1.3.0 起有了**，别再按「第三方一定没有菜单」下判断，见 §4.4.1）
+  （★ `flxxxxddd/AirportMtkWlan` v1.3.0 起有原生 Wi-Fi 菜单；此状态不代表 MtkWireless，见 §4.4.1）
 - ★ 装上后 **`en0` 归属可能变化**（`SimpleMtkWlan` 是以太网式接口）⇒ 参考 **`network-en0-order.md`**
   （两种形态都应记录实际 `enX`；不能仅凭驱动形态保证接口编号不变）
 
@@ -653,28 +658,31 @@ Status                                // → 失败原因
 ## 5. 支线：USB 网卡 ≠ 主板上的 PCIe 卡
 
 `Network-Weather/mt76-usb-macos` —— 用户态 mt76 USB 驱动，覆盖 **MT7921U（AWUS036AXML）/ MT7925U（Nighthawk A9000）** 这类**USB 网卡**。
-**这和主板/笔记本上的 MT7922（PCIe）是两回事**，别混：PCIe 卡走 `SimpleMtkWlan`，USB 网卡走这个。
+**这和主板/笔记本上的 MT7922（PCIe）是两回事**，别混：支持范围内的 PCIe 卡优先 MtkWireless，旧 SimpleMtkWlan 作为备选；USB 网卡另核该 USB 项目。
 （另有实机参考：`thanhnndev/ga403wm-hackintosh`，ASUS ROG Zephyrus G14 + MT7925。）
 
 ## 6. 决策树
 
 ```
-芯片是 MediaTek MT792x（14c3:7922 / 7923 / 7932 / 7961 / 0608）？
+芯片是 MediaTek MT792x（先读实际 PCI ID，含 7961 / 0608 / 7922 / 0616 等）？
 │
 ├─ 系统是 macOS 26+，且蓝牙走 PCIe（14c3:792a）
 │   └─► 路线 ①候选：核对 Sunrise 文件、匹配、HAL / 固件，再实测（§1.5）；不承诺免操作
 │           └─ 不认 ⇒ **先拿 `GeekAudio/mediatek-sunrise-hackintosh`**（固件/HAL kext/伪装片段都在里面），
 │              再按 §1.5 的「社区做法」补：注入 AppleSunrise.kext（HAL）+ device-id 伪装 + 固件（看芯片！）
 │
-├─ 系统是 Sequoia，或蓝牙走 USB（0x0e8d）
-│   └─► 路线 ②：SimpleMtkBtFw（有 release，成功率高）
-│           记得 §3.2 的两个坑：不改产品名 + 注入两条 NVRAM data
+├─ 蓝牙走 USB（按实际 VID:PID 核对）
+│   ├─► 优先核对 MtkWirelessBT；按目标 build、补丁匹配和实际功能判断
+│   └─► 未覆盖才评估旧路线 ②：SimpleMtkBtFw（§3），不由 Wi-Fi 的系统范围推断 BT 支持
 │
 └─ 要 Wi-Fi
-   ├─ macOS 26+ 且芯片在 7922 / 7923 / 7932 里 ─► ★ 先试原生（路线 ①）
+   ├─ 先按 MtkWireless 专题（mtkwireless.md）确认目标设备与系统支持范围
+   │   └─► 支持时优先按该专题；未覆盖时再检查下方原生和旧第三方路线
+   │
+   ├─ macOS 26+ 且芯片在 7922 / 7923 / 7932 里 ─► 再评估原生 Sunrise（路线 ①）
    │
    ├─ 要 AirDrop
-   │   └─► 当前第三方版本未支持；按目标系统寻找已验证方案，不推荐 Intel AirportItlwm 作为 AirDrop 兜底
+   │   └─► 按 MtkWireless 与所选备选驱动各自的版本状态判断；旧 SimpleMtkWlan v1.5.0 不支持，不推荐 Intel AirportItlwm 作为兜底
    │
    ├─ 要 Handoff / 通用剪贴板
    │   └─► 按具体驱动功能表核对；AirportItlwm 与 AirDrop 的支持范围不同（airdrop-handoff.md）
@@ -682,12 +690,12 @@ Status                                // → 失败原因
    ├─ 要 Wi-Fi 6(HE)
    │   └─► 核对具体网卡、构建和实验开关；不把换卡或存在开关当作已验证可用
    │
-   ├─ 要「原生 Wi-Fi 菜单」但不想动系统卷（macOS 26）
+   ├─ MtkWireless 不覆盖时，要原生 Wi-Fi 菜单且不想动系统卷（macOS 26）
    │   └─► ★ 路线 ④：`AirportMtkWlan`（§4.4.1）—— 原生接口，需 `DisableIoMapper=true`
    │        ★ 0616(RZ616) 在 v1.5.0 匹配列表里【plist 实证】，但 Tahoe+0616 无公开实测
    │
-   └─ 接受「以太网式接口 + 菜单栏客户端」，只要能上网
-       ├─ MT7921 / MT7921K(RZ608) ─► ★ 路线 ③：flxxxxddd/SimpleMtkWlan release（§4）
+   └─ MtkWireless 未覆盖目标组合，且接受「以太网式接口 + 菜单栏客户端」时才评估旧方案
+       ├─ MT7921 / MT7921K(RZ608) ─► 评估 flxxxxddd/SimpleMtkWlan release（§4）
        │                               实测 5 GHz VHT80 30–50 Mbit/s、开机自动加入
        └─ MT7922（7922 / 0616）─► 先试原生；原生不行才上 ③（fork 在 Tahoe 上只有 legacy 20 MHz）
                     ★ 先确认卡没被 SSDT-Disable_Network 藏起来（§4.4 第 3 步）
@@ -709,7 +717,7 @@ Status                                // → 失败原因
 | 重启后驱动 not running | **热重启不给 M.2 卡断电** ⇒ 驱动会自动恢复（WFSYS reset → PCIe FLR）；不行就**彻底关机再上电**（§4.5） |
 | Wi-Fi 慢 / 不如真 Mac | ① `stats` 里 `rx_swdec` 应远小于 `rx_hwdec`；② **测速时关掉 SimpleMTK 菜单**；③ 剩余瓶颈 = AP 的 Block Ack Request 固件未上送（100 ms 乱序超时） |
 | 2.4 GHz 无线键鼠在上网时卡顿 | **同频段射频共存，不是驱动 bug** ⇒ 卡留在 5 GHz，或把接收器用延长线挪开 |
-| 开机 ~2 s 的 `element modified after free` panic | 测试机上是 **`NVMeFix.kext`**，**不是本驱动** —— 别赖错对象 |
+| 开机 ~2 s 的 `element modified after free` panic | 历史测试机曾与 **`NVMeFix.kext`** 相关；按实际 panic 回溯与可回滚 A/B 判断，不能由同一症状排除无线驱动 |
 | **原生路线**：`IOUserServer(com.apple.AppleSunriseWLAN) has crashed too many times` panic / DEXT 反复重启拖垮系统 | 0x7922 伪装后的已知现象 ⇒ 加 **`mtk.wlan.startdelay=30`**（个别卡 **45**）；终极手段 **`mtk.wlan.hangonstart=1`**（§1.5） |
 | **原生路线**：日志停在 `wlanRemove` + `Disabling PCI device` | ★ **驱动已放弃设备** —— 调试失败的**终点信号**：多半缺 `wifi.cfg` / 固件没写对位置或名字（`WIFI_RAM_CODE_MT7922_1.bin` 要改名 **`W7922_1.bin`**）⇒ 照 `§1.5` 日志判读表逐条对 |
 | **原生路线**：满屏 `wlanCfgSet ... no empty entry` | 缺 `wifi.cfg` —— **不致命**（观察项），但只补固件缺它仍可能收不了场 |
@@ -723,8 +731,8 @@ Status                                // → 失败原因
 - 按具体构建、目标系统和安装方式核对 `SecureBootModel` / SIP；不能由「非 Apple 签名」直接推出关闭保护。
   EFI 注入、系统侧安装与系统卷 root patch 分别判断，已有设置可用时保留；确需修改时记录作者依据、原值与恢复路径。
   参考 [OpenCore SecureBootModel 定义](https://github.com/acidanthera/OpenCorePkg/blob/master/Docs/Configuration.tex)。
-- `SimpleMtkWlan` 是 **GPLv2 的实验性项目**；`flxxxxddd` 的 fork **有 CI 构建的 release**（v1.1.0 → **v1.5.0**），
-  但**上游主线仍是 bring-up 状态、没有 release** ⇒ **第三方路线认准 fork 的 release**（§2 / §4）。
+- `SimpleMtkWlan` 是 **GPLv2 的实验性项目**；`flxxxxddd` 的 fork 有 CI 构建的 release（v1.1.0 → **v1.5.0**），
+  而 `laobamac` 上游主线当时仍是 bring-up 状态、没有 release。这些发布情况仅针对 §2 / §4 的旧方案，不代表 MtkWireless；使用前分别核对各自发布页。
   从源码构建前先看清 `CREDITS.md` 与固件再分发条款（固件按 MediaTek 固件许可，同 linux-firmware）
 - ★ **fork 的 issue 是关的** ⇒ 反馈/求助回上游 `laobamac/SimpleMtkWlan`；fork 默认分支是 **`mt7921-fixes`**
 - 与其他无线专题的关系：互斥要求针对同一设备的不同实现；多卡机器按各设备实际需求保留驱动。

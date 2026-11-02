@@ -5,6 +5,8 @@
 >
 > **分工**：有线网卡见 `ethernet-drivers.md` · 无线网卡见 `mediatek-wifi.md` / `intel-wifi.md` ·
 > 声卡见 `applealc-custom.md` · NVIDIA 见 `nvidia-driver.md` · ACPI 见 `acpi-ssdt.md`。
+>
+> **MediaTek Wi-Fi / USB 蓝牙路由**：先查 [MtkWireless 专题](mtkwireless.md)是否覆盖目标设备与 macOS；本索引里的 `SimpleMtkWlan` 等旧项目仅按各自仓库和版本评估为备选；USB 蓝牙同样先核对新方案覆盖范围。
 
 ## ★★ 先看这条：哪些项目已存档（2026-06）
 
@@ -135,5 +137,5 @@
 | **macOS 26 想要回启动台** | `SimpleLaunchPadRestore` / `SimpleLaunchpad` |
 | **PVE 上装 macOS** | `PVE-OpenCore` |
 
-> ★ **所有这些第三方 kext 都非 Apple 签名** ⇒ 需要 `SecureBootModel=Disabled`，SIP 视情况放宽。
+> ★ **本索引所列的这些 laobamac 第三方 kext** 非 Apple 签名；是否要求 `SecureBootModel=Disabled`、是否需调整 SIP，应按具体 kext 的签名与安装方式核对。
 > ★ 下载时**核对来源仓库与文件哈希**；**已存档的项目不会再修 bug**。
