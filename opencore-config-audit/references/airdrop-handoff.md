@@ -6,7 +6,9 @@
 
 [Apple 连续互通要求](https://support.apple.com/en-us/108046) 按功能列出设备与系统条件，应选择目标功能核对账号、开关及无线连接要求，不能将所有功能简化为一个接口判据。
 
-[OpenIntelWireless FAQ](https://openintelwireless.github.io/itlwm/FAQ.html) 说明：`AirportItlwm` 支持的连续互通功能限于 Handoff 与通用剪贴板；AirDrop 不在支持范围。`itlwm.kext` 使用 `IOEthernetController`，与 `AirportItlwm` 的能力不同。因此，「没有 Broadcom / AWDL 就一定没有 Handoff」不是通用结论。
+OpenIntelWireless 原版 `AirportItlwm` 的 FAQ 将 Handoff 与通用剪贴板列入能力范围，同时明确不支持 AirDrop。其 Monterey 及以后版本的 Handoff 记录限移动设备发往 Mac。原版 `itlwm.kext` 使用 `IOEthernetController`，按其自身说明判断功能。[OpenIntelWireless FAQ](https://openintelwireless.github.io/itlwm/FAQ.html)
+
+明确需要 Intel AirDrop 时，可评估加入 AWDL 的独立 fork [ForbiddenItlwm](forbidden-itlwm.md)。按发布包、精确 macOS 构建、网卡和配套蓝牙核对作者验证与用户报告，分别验证 AirDrop 双向收件、Handoff、通用剪贴板及其它所需功能。
 
 [Dortania iServices 指南](https://dortania.github.io/OpenCore-Post-Install/universal/iservices.html#fixing-en0) 检查 `en0` 的存在与 built-in 标记，并允许不同接口类型。无线为 `en1` 不构成需要重排接口的证据，见 [接口顺序](network-en0-order.md)。
 
@@ -35,8 +37,9 @@ kmutil showloaded --list-only
 
 | 方案 | 如何判断 |
 |---|---|
-| `AirportItlwm` | 按官方 FAQ 区分 Handoff / 通用剪贴板与不支持的 AirDrop |
+| OpenIntelWireless 原版 `AirportItlwm` / laobamac 构建 | 按各自文档核对；原版 FAQ 列出 Handoff / 通用剪贴板，两条常规路线均不支持 AirDrop |
 | `itlwm.kext` | 不套用 `AirportItlwm` 的支持列表，查该产物自己的限制 |
+| **Intel AirDrop 实验候选：ForbiddenItlwm** | 按[专题](forbidden-itlwm.md)核对精确构建、网卡、配套蓝牙和双向传输证据 |
 | 博通原生栈 / 补丁方案 | 核对目标 macOS、驱动与补丁兼容性，再实测 AirDrop / Handoff |
 | **MediaTek：MtkWireless** | 优先按 [MtkWireless 专题](mtkwireless.md)核对目标设备、系统和各功能的上游状态；不从旧 MediaTek 驱动推断 AirDrop / Handoff 能力 |
 | MediaTek Sunrise / 旧第三方方案 | 作为备选按芯片、具体驱动版本和实现路线核实；见 [MediaTek 专题](mediatek-wifi.md) |

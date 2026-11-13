@@ -79,10 +79,9 @@ ls -1 /Volumes            # 屏蔽生效后应只剩 Macintosh HD（+ 需要时�
 | `BlueToolFixup` | 部分 Broadcom 蓝牙 |
 | `CPUFriend` + DataProvider | 定制 CPU 电源数据 |
 
-> ★ **Intel 无线/蓝牙三件套**（`itlwm` 或 `AirportItlwm` + `IntelBluetoothFirmware` / `IntelBTPatcher`，新版系统还要 `BlueToolFixup`）
-> 只在**机器上确实是 Intel 网卡**时才需要：
-> 换成 Broadcom 等原生卡之后，它们属于「已换硬件的驱动」，可以删（清理步骤见 `intel-wifi.md` §5）；
-> 反之，用 Intel 网卡的机器则**必须**有它们，别当成"用不到"删掉。
+> **Intel 无线与蓝牙**按当前驱动组合和实际设备判断。常规路线见 [Intel 无线](intel-wifi.md)。
+> ForbiddenItlwm 的 BTLEAdvFixup 接管 IntelBTPatcher 的挂钩，组合与互斥项见 [安装专题](forbidden-itlwm.md)。
+> 换卡后先确认旧文件和条目没有服务其它设备，再按 Intel 无线专题 §5 清理。
 
 ### 2.4 删除流程
 

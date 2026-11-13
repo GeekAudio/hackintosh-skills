@@ -62,7 +62,8 @@
 
 | 硬件 | 作者 / 仓库 | 详见 |
 |---|---|---|
-| **Intel 无线** | **`OpenIntelWireless`** —— `itlwm` ★7.1k · `IntelBluetoothFirmware` ★2.5k · `HeliPort` ★1.3k（原作者 **`zxystd`**） | `intel-wifi.md` |
+| **Intel 无线** | **`OpenIntelWireless`** —— `itlwm` ★7.1k · `IntelBluetoothFirmware` ★2.5k · `HeliPort` ★1.3k（原作者 **`zxystd`**）；这是普通 Wi-Fi 路线 | `intel-wifi.md` |
+| **Intel AWDL / AirDrop 实验** | [`retropineaple/ForbiddenItlwm`](https://github.com/retropineaple/ForbiddenItlwm) —— 基于 AirportItlwm 的独立 fork；作者按 macOS 版本发布专用 Wi-Fi kext 与配套 BTLEAdvFixup，仍属 public beta，须按精确系统 build 核对 | [ForbiddenItlwm 专题](forbidden-itlwm.md) |
 | **MediaTek 无线 / 蓝牙** | Wi-Fi / USB 蓝牙优先核对 **`Dino-VN/MtkWireless`** 的设备与 macOS 支持范围，见 [MtkWireless 专题](mtkwireless.md)；旧路线保留为备选：`GeekAudio/mediatek-sunrise-hackintosh`（MT7922 Sunrise Pack）及 `flxxxxddd/SimpleMtkWlan`（v1.5.0：`AirportMtkWlan` 原生菜单 / `SimpleMtkWlan` 以太网式）；`laobamac/SimpleMtkBtFw` 作为未覆盖目标 USB 蓝牙时的备选 | `mediatek-wifi.md` / `mtkwireless.md` |
 | **博通无线 / 蓝牙** | **Acidanthera** —— `AirportBrcmFixup` / `BrcmPatchRAM` | `broadcom-wifi.md` |
 | **MediaTek（旧项目 / 上游来源）** | **`laobamac`** —— `SimpleMtkWlan` / `SimpleMtkBtFw`；Wi-Fi / USB 蓝牙选型优先看 [MtkWireless 专题](mtkwireless.md)，旧方案分别核对仓库状态 | `mediatek-wifi.md` / `mtkwireless.md` |

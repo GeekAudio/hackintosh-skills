@@ -1,20 +1,21 @@
-# Intel 无线网卡驱动安装方法（AirportItlwm / itlwm）
+# Intel 无线网卡驱动选择与安装
 
 > 上游：`OpenIntelWireless/itlwm`（zxystd 等）。
 > 实践中用得较多的 fork：**`laobamac/itlwm`**（<https://github.com/laobamac/itlwm>）——
 > 它为 **macOS Sequoia 15.2+** 与 **macOS 26 Tahoe** 分别提供 `AirportItlwm` 构建。
-> 下文「官方口径」= 该 fork README 原文，「通用做法」= OpenCore 注入的常规步骤。
+> 下文的版本区间、依赖和配置示例针对该 fork。需要 Intel AirDrop 时，单独评估 [ForbiddenItlwm](forbidden-itlwm.md) 的发布包、目标系统构建和实测范围。
 
-## 0. 先分清两种形态
+## 0. 先按目标选路线
 
-| 形态 | 表现 | 版本要求 |
+| 目标 | 路线 | 选择条件 |
 |---|---|---|
-| **`AirportItlwm`** | **原生** Wi-Fi：出现在系统 Wi-Fi 菜单里，不需要额外客户端 | **必须与 macOS 版本匹配的构建**（不同 macOS 的 ABI 不同） |
-| `itlwm` | 走 ioctl，需要一个用户态客户端（HeliPort）来扫描/连接 | 跨版本可用性较好 |
+| 常规联网，使用系统 Wi-Fi 菜单 | **`AirportItlwm`**，下文列出 laobamac 构建 | 核对目标 macOS ABI 和实际网卡 |
+| 常规联网，可使用额外客户端 | 上游 `itlwm.kext` + HeliPort，客户端通过 ioctl 扫描和连接 | 按该发行版检查网卡和系统范围 |
+| 明确需要在 Intel 网卡上测试 AirDrop | [ForbiddenItlwm 实验路线](forbidden-itlwm.md) | 先核对精确 macOS 构建号、网卡及配套蓝牙；用备用 EFI 验证并保留常规联网回退 |
 
-本 fork 提供的是 **`AirportItlwm`**（Sequoia 目标 + Tahoe 目标），README 里没有 `itlwm` 形态的说明。
+laobamac 的 Sequoia / Tahoe 发布说明针对 **`AirportItlwm`** 两个目标。`itlwm.kext` + HeliPort 按 OpenIntelWireless 的发布与说明选择。
 
-## 1. 官方口径（laobamac/itlwm README 原文要点）
+## 1. laobamac/itlwm 的发布说明
 
 **版本线（★ 最关键）**
 
@@ -46,7 +47,7 @@ xcodebuild -project itlwm.xcodeproj -scheme AirportItlwm-Sequoia \
 
 - 上游文档（Intro / Compatibility / FAQ）：<https://OpenIntelWireless.github.io/itlwm>
 
-## 2. 装进 OpenCore（通用做法）
+## 2. 将 laobamac 的 AirportItlwm 装进 OpenCore
 
 1. 将所需构建放进 `EFI/OC/Kexts/`。双系统并存时，分别命名外层 bundle 为 `AirportItlwm-Sequoia.kext` 与 `AirportItlwm-Tahoe.kext`（示例名称），不要将两份同名 `AirportItlwm.kext` 互相覆盖，也不要让两个条目指向同一份文件。
 2. 在 `Kernel → Add` 加条目，按实际 `OSBundleLibraries` 核对依赖与加载顺序。所述 fork 的
@@ -72,9 +73,9 @@ system_profiler SPAirPortDataType | head -30           # 是否出现 Wi-Fi 接�
 networksetup -listallhardwareports                    # 看有没有 Wi-Fi 端口（en0/en1）
 ```
 
-## 3. Intel 蓝牙要另外装（别混）
+## 3. 常规 Intel 蓝牙路线
 
-Intel 无线网卡上的**蓝牙**不由 itlwm 负责，需要：
+常规 Wi-Fi 驱动和蓝牙组件分别核对。下表列出 Intel 蓝牙的常用组件：
 
 | kext | 作用 |
 |---|---|
@@ -84,16 +85,18 @@ Intel 无线网卡上的**蓝牙**不由 itlwm 负责，需要：
 
 > 对照：Broadcom 卡走的是另一套（`BrcmPatchRAM*` / `BlueToolFixup` + 系统原生 `IO80211` 栈）。
 
+使用 ForbiddenItlwm 的 AirDrop 实验路线时，按[配套蓝牙与互斥说明](forbidden-itlwm.md)部署。`BTLEAdvFixup` 与 `IntelBTPatcher` 钩住同一函数，启用配套 `BTLEAdvFixup` 的系统须禁用 `IntelBTPatcher`。
+
 ## 4. 排错
 
 | 现象 | 检查 |
 |---|---|
 | Wi-Fi 完全不出现在系统里 | 查目标设备匹配、启用状态、实际 Apple 网络栈依赖与当前 macOS **ABI**（Sequoia/Tahoe 别装错）；不要以 Lilu 是否加载判断 AirportItlwm 状态 |
 | kext 加载了但没有接口 | `MinKernel`/`MaxKernel` 是否把当前 Darwin 排除掉了（`uname -r`）；`system_profiler SPAirPortDataType` 里有没有接口 |
-| 能连 2.4G 连不上 5G / 连上很慢 | HE 是否开了（`itlwm_he=1`）、信道/加密方式是否在支持列表内（WPA3-only 与强制 PMF **不支持**） |
-| AirDrop 不可用 | [上游 FAQ](https://openintelwireless.github.io/itlwm/FAQ.html) 未将 AirDrop 列入 AirportItlwm 的支持功能；先核对具体 fork 与版本的能力，见 [连续互通排查](airdrop-handoff.md) |
-| Handoff / 通用剪贴板不可用 | 上游 AirportItlwm 支持这两项，不能与 AirDrop 一并判为不支持。核对当前构建、蓝牙、账号与功能开关，见 [连续互通排查](airdrop-handoff.md) |
-| 装完蓝牙坏 | 蓝牙是另一组 kext（§3），先确认那三个的状态 |
+| 能连 2.4G 连不上 5G / 连上很慢 | 在 laobamac 的构建上核对 HE 开关（`itlwm_he=1`）与信道、加密方式；其发布说明列 WPA3-only 与强制 PMF 为未支持 |
+| AirDrop 不可用 | 先辨认具体构建。OpenIntelWireless 原版 AirportItlwm 和本专题所列 laobamac 构建均不支持 AirDrop；ForbiddenItlwm 按[实验路线](forbidden-itlwm.md)及[连续互通排查](airdrop-handoff.md)核对 |
+| Handoff / 通用剪贴板不可用 | [OpenIntelWireless FAQ](https://openintelwireless.github.io/itlwm/FAQ.html) 将这两项列为原版 AirportItlwm 的能力。核对所用构建、蓝牙、账号与功能开关，见[连续互通排查](airdrop-handoff.md) |
+| 装完蓝牙坏 | 检查实际安装路线的蓝牙依赖与互斥条件，见 §3 |
 
 ## 5. 与「换网卡」的关系（重要）
 
@@ -106,11 +109,11 @@ Intel 无线网卡上的**蓝牙**不由 itlwm 负责，需要：
 - ★★ **换卡后要确认 `en0` 归属** —— 内核按**驱动挂载先后**给 `en` 编号（与 PCI 顺序无关），
   换卡 / 增删驱动会让 `en0` 换人 ⇒ **详见 `network-en0-order.md`**（有线可以是 `en0`，不要求无线必须排第一）
 
-> **互斥判断针对同一设备的不同实现**（例如同一卡上的 `itlwm` 与 `AirportItlwm`），不是禁止多卡机器使用不同驱动。
+> 同一无线设备只选一套驱动。`itlwm`、`AirportItlwm` 和 `ForbiddenItlwm` 的迁移还须核对目标系统的配套互斥约束。
 > 先核对 vendor/device ID 与实际绑定对象。MediaTek（MT7921 / MT7922 / RZ608）的具体路线与限制见
 > [MediaTek 专题](mediatek-wifi.md)，是否换卡取决于所需功能和目标系统验证。
 
 ## 6. 安全提示
 
 - 放宽 `SecureBootModel` / SIP 前，核实具体构建、目标系统与当前故障确实需要，说明恢复路径；不能把所有第三方 kext 都归为同一安全设置需求
-- 从 fork 的 Releases 下载时，注意核对来源仓库与文件哈希；上游是 `OpenIntelWireless/itlwm`，本 fork 是个人维护的分支，**Tahoe 支持仍属「需要逐网卡验证」的状态**
+- 从 Releases 下载时核对来源仓库与发布包。laobamac 构建的 Tahoe 兼容性须逐网卡验证，ForbiddenItlwm 的实验范围按[该路线](forbidden-itlwm.md)逐系统构建核对。

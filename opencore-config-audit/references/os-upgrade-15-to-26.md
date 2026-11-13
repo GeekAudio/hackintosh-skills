@@ -103,6 +103,8 @@ MaxKernel      = 24.99.99
 | **Intel** | `AirportItlwm-Sequoia.kext`（`Min 24.2.0` / `Max 24.99.99`） | `AirportItlwm-Tahoe.kext`（`Min 25.0.0` / `Max 25.99.99`） | `intel-wifi.md`；bundle 目录名按两份构建分别命名 |
 | **MediaTek MT792x** | 本次 MtkWirelessWifi 不支持 Darwin 24，保留经验证的 Sequoia 备选；BT 单独核对 | 优先 [MtkWireless](mtkwireless.md)：Wi-Fi `Min 25.0.0` / `Max 25.99.99`；BT 功能按目标系统 build 与页面补丁另核 | `mtkwireless.md` / `mediatek-wifi.md` |
 
+> Intel 行描述的是 AirportItlwm 普通 Wi-Fi 的 Darwin 版本分流。Intel AWDL / AirDrop 是独立实验路线：截至 2026-11-14，作者的 `ForbiddenItlwm 0.5.3-test1` 仍是 public beta，按 macOS 版本提供专用 kext；精确 build 清单、配套 BTLEAdvFixup 与验证边界见 [ForbiddenItlwm 专题](forbidden-itlwm.md)。未列入作者检查范围的 build 不应推定 AirDrop 可用；AirportItlwm 的 Darwin 24.x / 25.x 范围不能推导出 AWDL 已支持或通过实测。
+
 > ★★ **博通这条是踩过的坑**：`AirPortBrcmNIC.kext` 的 `MaxKernel=24.99.99` 是 **OCLP 2.5.1 写死的**，
 > 而 **OCLP 2.5.1 根本没有 Tahoe 支持** ⇒ 升到 26 后 Wi-Fi 直接消失。
 > **必须换 OCLP 3.0.0-rc.3+**（它的 `payloads/Config/config.plist` 里才有 `AirPortBrcmNIC-Tahoe.kext` 那条）。
@@ -358,7 +360,7 @@ ls -lt /Volumes/EFI/opencore-*.txt | head
 
 ## 11. 与其它 reference 的关系
 
-- **网卡细节** → `broadcom-wifi.md`（博通，按系统分路线）、`intel-wifi.md`（Intel，Sequoia/Tahoe 两套 ABI）、`mtkwireless.md`（MediaTek 优先核对的路线）、`mediatek-wifi.md`（芯片识别、原生 Sunrise 与旧备选）
+- **网卡细节** → `broadcom-wifi.md`（博通，按系统分路线）、`intel-wifi.md`（Intel 普通 Wi-Fi，Sequoia/Tahoe 两套 ABI）、`forbidden-itlwm.md`（Intel AWDL / AirDrop 实验路线）、`mtkwireless.md`（MediaTek 优先核对的路线）、`mediatek-wifi.md`（芯片识别、原生 Sunrise 与旧备选）
 - **机型与三码**（**独立决策，不跟升级混在一起做**）→ **`smbios-and-serials.md`**（ACPI 依赖、身份一致性、CPUFriend 与内存配置的条件检查）
 - **安全改 ESP 的流程** → [技能入口的修改与复验](../SKILL.md#修改与复验) + `scripts/oc-edit-safe.sh`
 - **日志判读** → `logs-and-debug.md`；**耗时分析** → `boot-timeline.md`

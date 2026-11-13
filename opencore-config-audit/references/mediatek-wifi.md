@@ -113,7 +113,7 @@ Wi-Fi 与 USB 蓝牙先看 [MtkWireless 专题](mtkwireless.md)及其证据边�
 | Wi-Fi（PCIe）· 原生菜单 | 旧方案 v1.3.0+ | `flxxxxddd/AirportMtkWlan`：上游 v1.5.0 状态记录的功能限制见 §4；仅描述该仓库与版本 |
 | Wi-Fi（PCIe）· 以太网式 | 旧方案 | `flxxxxddd/SimpleMtkWlan`：MT7921 / RZ608 的历史实测与该版本限制见 §4；不能外推到 MtkWireless |
 
-> 需要 AirDrop 时，按目标系统选择已有验证的支持方案；**Intel `AirportItlwm` 不支持 AirDrop**。
+> 需要 AirDrop 时，按目标系统选择已有验证的支持方案；**OpenIntelWireless 原版 `AirportItlwm` 不支持 AirDrop**。
 > Handoff / 通用剪贴板与 Wi-Fi 6 分别核对，见 [连续互通专题](airdrop-handoff.md) 和
 > [OpenIntelWireless FAQ](https://openintelwireless.github.io/itlwm/FAQ.html)。
 
@@ -332,7 +332,7 @@ DEXT 的 `Info.plist` **只匹配 `0x7922`**（另 7923 / 7932），而 **RZ616 
 
 - **原生路线理论上支持 AWDL** —— f10 在 macOS 26.3 beta + KDK_26.3 kext 上是**唯一见到完整 AWDL 支持**的配置；
 - **但 MT7922 实测成功率有限，不保证** ⇒ **别为了 AirDrop 走这条路**；
-- AirDrop：本原生实验路线尚无足够验证；`flxxxxddd/SimpleMtkWlan` v1.5.0 的状态记录见 §4。MtkWireless 的能力按[其专题](mtkwireless.md)单独核对，不从旧驱动推断；也不要推荐不支持 AirDrop 的 Intel AirportItlwm 作为兜底。
+- AirDrop：本原生实验路线尚无足够验证；`flxxxxddd/SimpleMtkWlan` v1.5.0 的状态记录见 §4。MtkWireless 的能力按[其专题](mtkwireless.md)单独核对，不从旧驱动推断；也不要推荐不支持 AirDrop 的上游原版 AirportItlwm 作为兜底。
 - Handoff / 通用剪贴板：按具体驱动的支持声明判断，不能和 AirDrop 捆绑。
 - Wi-Fi 6：按网卡与构建分别核对 HE 支持 / 实验开关，不能承诺换成任意 Broadcom 或 Intel 卡即可获得。
 
@@ -608,7 +608,7 @@ xcodebuild -project SimpleMtkWlan.xcodeproj -scheme SimpleMtkWlan \
 
 - 备份 EFI、备好可引导 U 盘；**禁用该 kext 即回到「无驱动」状态**
 - `flxxxxddd/SimpleMtkWlan` v1.5.0 的上游状态表记录不支持 AirDrop / Continuity、WPA3-only 不支持；HE 在状态表与实验开关说明间仍有不一致。MtkWireless 能力按[其专题](mtkwireless.md)单独核对。
-  按所需功能分别选择，不把 Intel AirportItlwm 当作 AirDrop 替代方案，见 §6 决策树
+  按所需功能分别选择，不把上游原版 AirportItlwm 当作 AirDrop 替代方案，见 §6 决策树
   （★ `flxxxxddd/AirportMtkWlan` v1.3.0 起有原生 Wi-Fi 菜单；此状态不代表 MtkWireless，见 §4.4.1）
 - ★ 装上后 **`en0` 归属可能变化**（`SimpleMtkWlan` 是以太网式接口）⇒ 参考 **`network-en0-order.md`**
   （两种形态都应记录实际 `enX`；不能仅凭驱动形态保证接口编号不变）
@@ -682,7 +682,7 @@ Status                                // → 失败原因
    ├─ macOS 26+ 且芯片在 7922 / 7923 / 7932 里 ─► 再评估原生 Sunrise（路线 ①）
    │
    ├─ 要 AirDrop
-   │   └─► 按 MtkWireless 与所选备选驱动各自的版本状态判断；旧 SimpleMtkWlan v1.5.0 不支持，不推荐 Intel AirportItlwm 作为兜底
+   │   └─► 按 MtkWireless 与所选备选驱动各自的版本状态判断；旧 SimpleMtkWlan v1.5.0 不支持，不推荐上游原版 AirportItlwm 作为兜底
    │
    ├─ 要 Handoff / 通用剪贴板
    │   └─► 按具体驱动功能表核对；AirportItlwm 与 AirDrop 的支持范围不同（airdrop-handoff.md）
